@@ -6,14 +6,18 @@ using json = nlohmann::json;
 
 namespace mkh_avro {
 
+int encode_int(ErlNifEnv*, ERL_NIF_TERM, std::vector<uint8_t>*);
+int encode_long(ErlNifEnv*, ERL_NIF_TERM, std::vector<uint8_t>*);
+int encode_primitive(std::string, ErlNifEnv*, ERL_NIF_TERM, std::vector<uint8_t>*);
+
 struct SchemaItem{
     std::string fieldName;
     std::vector<std::string> fieldTypes;
     bool nullable;
 
-    SchemaItem(std::string name, std::string type){
+    SchemaItem(std::string name, std::string ftype){
         fieldName = name;
-        fieldTypes.push_back(type);
+        fieldTypes.push_back(ftype);
         nullable = 0;
     }
 
@@ -87,34 +91,57 @@ std::vector<SchemaItem> read_schema(std::string schemaName){
     return schema;
 }
 
-std::vector<uint8_t> encode(std::string atype, ErlNifEnv* env, ERL_NIF_TERM term){
-    if("int" == atype){
-
-    }else if("long" == atype){
-
-    }else if("float" == atype){
-
-    }else if("double" == atype){
-
-    }else if("string" == atype){
-
-    }else if("bool" == atype){
-
+int encode(std::vector<std::string > atypes, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t>* ret){
+    auto alen = atypes.size();
+    if(alen == 1){
+        return encode_primitive(atypes[0], env, term, ret);
+    }else{
+        return encode_primitive(atypes[0], env, term, ret);
     }
-
 }
 
-std::vector<uint8_t> encode_int(ErlNifEnv* env, ERL_NIF_TERM input){
+int encode_primitive(std::string atype, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t>* ret){
+    if("int" == atype){
+        return encode_int(env, term, ret);
+    }else if("long" == atype){
+        return encode_long(env, term, ret);
+    }else if("float" == atype){
+        return encode_long(env, term, ret);
+    }else{
+        return 2;
+    }
+}
+
+int encode_int(ErlNifEnv* env, ERL_NIF_TERM input, std::vector<uint8_t>* ret){
     std::array<uint8_t, 5> output;
-    std::vector<uint8_t> ret;
     int32_t i32;
+    long unsigned int i;
     
     if (!enif_get_int(env, input, &i32)) {
-        return enif_make_badarg(env);
+        return 1;
     }
 
     auto len = mkh_avro::encodeInt32(i32, output);
-    return ret;
+    for(i = 0; i < len; i++){
+        ret->push_back(output[i]);
+    }
+    return 0;
+}
+
+int encode_long(ErlNifEnv* env, ERL_NIF_TERM input, std::vector<uint8_t>* ret){
+    std::array<uint8_t, 10> output;
+    int64_t i64;
+    long unsigned int i;
+    
+    if (!enif_get_int64(env, input, &i64)) {
+        return 1;
+    }
+
+    auto len = mkh_avro::encodeInt64(i64, output);
+    for(i = 0; i < len; i++){
+        ret->push_back(output[i]);
+    }
+    return 0;
 }
 
 }

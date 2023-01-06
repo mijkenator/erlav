@@ -78,6 +78,7 @@ ERL_NIF_TERM supertest(ErlNifEnv* env, ERL_NIF_TERM input){
     ErlNifBinary retbin;
     int len;
     std::vector<uint8_t> retv;
+    std::vector<uint8_t> rv;
 
     if(!enif_is_map(env, input)){
     	return enif_make_badarg(env);
@@ -94,8 +95,13 @@ ERL_NIF_TERM supertest(ErlNifEnv* env, ERL_NIF_TERM input){
 
         if(enif_get_map_value(env, input, key, &val)){
             std::cout << "Getting value ...." << '\n' << '\r';
-            std::vector<uint8_t> rv = mkh_avro::encode(it.fieldTypes, val, env);
-            retv.insert(retv.end(), rv.begin(), rv.end());
+            rv.clear();
+            int encodeCode = mkh_avro::encode(it.fieldTypes, env, val, &rv);
+            if(encodeCode == 0){
+                retv.insert(retv.end(), rv.begin(), rv.end());
+            }else{
+                throw encodeCode;
+            }
         }
     }
 

@@ -44,10 +44,15 @@ etest() ->
 
 etest(2) ->
     Term = #{
-        <<"intField">> => 1,
-        <<"longField">> => 2
+        <<"intField">> => 789,
+        <<"longField">> => 2989898111
     },
-    encode(7, Term);
+    Ret = encode(7, Term),
+    io:format("c++ ret: ~p ~n", [Ret]),
+    {ok, SchemaJSON} = file:read_file("priv/tschema2.avsc"),
+    Decoder = avro:make_simple_decoder(SchemaJSON, []),
+    Decoder(Ret);
+
 etest(1) ->
     EA1 = [iolist_to_binary(avro_binary_encoder:encode_value({avro_value,{avro_primitive_type,<<"int">>,[]},X})) 
            ||  X <- lists:seq(1,10)],
