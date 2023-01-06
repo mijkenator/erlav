@@ -8,6 +8,8 @@ namespace mkh_avro {
 
 int encode_int(ErlNifEnv*, ERL_NIF_TERM, std::vector<uint8_t>*);
 int encode_long(ErlNifEnv*, ERL_NIF_TERM, std::vector<uint8_t>*);
+int encode_float(ErlNifEnv*, ERL_NIF_TERM, std::vector<uint8_t>*);
+int encode_double(ErlNifEnv*, ERL_NIF_TERM, std::vector<uint8_t>*);
 int encode_primitive(std::string, ErlNifEnv*, ERL_NIF_TERM, std::vector<uint8_t>*);
 
 struct SchemaItem{
@@ -106,9 +108,11 @@ int encode_primitive(std::string atype, ErlNifEnv* env, ERL_NIF_TERM term, std::
     }else if("long" == atype){
         return encode_long(env, term, ret);
     }else if("float" == atype){
-        return encode_long(env, term, ret);
+        return encode_float(env, term, ret);
+    }else if("double" == atype){
+        return encode_double(env, term, ret);
     }else{
-        return 2;
+        return 99999;
     }
 }
 
@@ -134,13 +138,48 @@ int encode_long(ErlNifEnv* env, ERL_NIF_TERM input, std::vector<uint8_t>* ret){
     long unsigned int i;
     
     if (!enif_get_int64(env, input, &i64)) {
-        return 1;
+        return 2;
     }
 
     auto len = mkh_avro::encodeInt64(i64, output);
     for(i = 0; i < len; i++){
         ret->push_back(output[i]);
     }
+    return 0;
+}
+
+int encode_float(ErlNifEnv* env, ERL_NIF_TERM input, std::vector<uint8_t>* ret){
+    float f;
+    double dbl;
+    //long unsigned int i;
+    
+    std::cout << "EF1" << '\n' << '\r';
+    if (!enif_get_double(env, input, &dbl)) {
+        return 3;
+    }
+
+    f = dbl;
+    std::cout << "EF2" << f << '\n' << '\r';
+    auto len = sizeof(float);
+    const auto *p = reinterpret_cast<const uint8_t *>(&f);
+
+    std::cout << "EF3:" << len << '\n' << '\r';
+    ret->assign(p, p+len);
+    std::cout << "EF4" << '\n' << '\r';
+    return 0;
+
+}
+
+int encode_double(ErlNifEnv* env, ERL_NIF_TERM input, std::vector<uint8_t>* ret){
+    double dbl;
+    
+    if (!enif_get_double(env, input, &dbl)) {
+        return 4;
+    }
+
+    auto len = sizeof(double);
+    const auto *p = reinterpret_cast<const uint8_t *>(&dbl);
+    ret->assign(p, p+len);
     return 0;
 }
 

@@ -98,6 +98,7 @@ ERL_NIF_TERM supertest(ErlNifEnv* env, ERL_NIF_TERM input){
             rv.clear();
             int encodeCode = mkh_avro::encode(it.fieldTypes, env, val, &rv);
             if(encodeCode == 0){
+                std::cout << '\t' << ".... OK " << '\n' << '\r';
                 retv.insert(retv.end(), rv.begin(), rv.end());
             }else{
                 throw encodeCode;

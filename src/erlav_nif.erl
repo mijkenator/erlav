@@ -37,15 +37,23 @@ etest() ->
     {ok, SchemaJSON} = file:read_file("priv/tschema2.avsc"),
     Encoder = avro:make_simple_encoder(SchemaJSON, []),
     Term = #{
-        <<"intField">> => 1,
-        <<"longField">> => 2
+        <<"intField">> => 789,
+        <<"longField">> => 2989898111,
+        <<"doubleField">> => 11.2345,
+        <<"floatField">> => 23.12
+        %<<"boolField">> => true,
+        %<<"stringField">> => <<"asdadasdasdasd3453534dfgdgd123456789">>
     },
     iolist_to_binary(Encoder(Term)).
 
 etest(2) ->
     Term = #{
         <<"intField">> => 789,
-        <<"longField">> => 2989898111
+        <<"longField">> => 2989898111,
+        <<"doubleField">> => 11.2345,
+        <<"floatField">> => 23.12
+        %<<"boolField">> => true,
+        %<<"stringField">> => <<"asdadasdasdasd3453534dfgdgd123456789">>
     },
     Ret = encode(7, Term),
     io:format("c++ ret: ~p ~n", [Ret]),
