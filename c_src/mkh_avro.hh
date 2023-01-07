@@ -10,6 +10,9 @@ int encode_int(ErlNifEnv*, ERL_NIF_TERM, std::vector<uint8_t>*);
 int encode_long(ErlNifEnv*, ERL_NIF_TERM, std::vector<uint8_t>*);
 int encode_float(ErlNifEnv*, ERL_NIF_TERM, std::vector<uint8_t>*);
 int encode_double(ErlNifEnv*, ERL_NIF_TERM, std::vector<uint8_t>*);
+int encode_string(ErlNifEnv*, ERL_NIF_TERM, std::vector<uint8_t>*);
+int encode_boolean(ErlNifEnv*, ERL_NIF_TERM, std::vector<uint8_t>*);
+int enif_get_bool(ErlNifEnv*, ERL_NIF_TERM, bool*);
 int encode_primitive(std::string, ErlNifEnv*, ERL_NIF_TERM, std::vector<uint8_t>*);
 
 struct SchemaItem{
@@ -111,6 +114,10 @@ int encode_primitive(std::string atype, ErlNifEnv* env, ERL_NIF_TERM term, std::
         return encode_float(env, term, ret);
     }else if("double" == atype){
         return encode_double(env, term, ret);
+    }else if("string" == atype){
+        return encode_string(env, term, ret);
+    }else if("boolean" == atype){
+        return encode_boolean(env, term, ret);
     }else{
         return 99999;
     }
@@ -181,6 +188,58 @@ int encode_double(ErlNifEnv* env, ERL_NIF_TERM input, std::vector<uint8_t>* ret)
     const auto *p = reinterpret_cast<const uint8_t *>(&dbl);
     ret->assign(p, p+len);
     return 0;
+}
+
+int encode_string(ErlNifEnv* env, ERL_NIF_TERM input, std::vector<uint8_t>* ret){
+    std::string strt;
+    std::array<uint8_t, 10> output;
+    ErlNifBinary sbin;
+
+    if (!enif_inspect_binary(env, input, &sbin)) {
+        return 5;
+    }
+    strt.assign((const char*)sbin.data, sbin.size);
+
+    auto len = strt.size();
+    const auto *p = reinterpret_cast<const uint8_t *>(strt.c_str());
+
+    auto len2 = mkh_avro::encodeInt64(len, output);
+    auto plen = len + len2;
+
+    auto *p_array = new uint8_t[plen];
+    memcpy(p_array, output.data(), len2);
+    memcpy(p_array+len2, p, len);
+    ret->assign(p_array, p_array+plen);
+    delete[] p_array;
+
+    return 0;
+}
+
+int encode_boolean(ErlNifEnv* env, ERL_NIF_TERM input, std::vector<uint8_t>* ret){
+    bool bl;
+    
+    std::cout << "EB0:" << '\n' << '\r';
+    if (!enif_get_bool(env, input, &bl)) {
+        return 6;
+    }
+    std::cout << "EB1:" << '\n' << '\r';
+
+    ret->push_back(bl ? 1: 0);
+    std::cout << "EB2:" << '\n' << '\r';
+    return 0;
+}
+
+inline int enif_get_bool(ErlNifEnv* env, ERL_NIF_TERM term, bool* cond)
+{
+    char atom[256];
+    int  len;
+    if ((len = enif_get_atom(env, term, atom, sizeof(atom), ERL_NIF_LATIN1)) == 0) {
+        return false;
+    }
+    
+    *cond = (std::strcmp(atom, "false") != 0 && std::strcmp(atom, "nil") != 0);
+    
+    return true;
 }
 
 }
