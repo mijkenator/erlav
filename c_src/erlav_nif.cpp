@@ -17,6 +17,7 @@ ERL_NIF_TERM encode_double(ErlNifEnv*, ERL_NIF_TERM);
 ERL_NIF_TERM encode_bool(ErlNifEnv*, ERL_NIF_TERM);
 ERL_NIF_TERM encode_string(ErlNifEnv*, ERL_NIF_TERM);
 ERL_NIF_TERM supertest(ErlNifEnv*, ERL_NIF_TERM);
+ERL_NIF_TERM testencode(ErlNifEnv*, ERL_NIF_TERM);
 int enif_get_bool(ErlNifEnv*, ERL_NIF_TERM, bool*);
 
 int add (int a, int b)
@@ -64,10 +65,55 @@ ERL_NIF_TERM encode_nif(ErlNifEnv* env, int argc,
         return encode_string(env, argv[1]);
     }else if(7 == enc_type){
         return supertest(env, argv[1]);
+    }else if(8 == enc_type){
+        return testencode(env, argv[1]);
     }else{
         return enif_make_badarg(env);
     }
 
+}
+
+ERL_NIF_TERM testencode(ErlNifEnv* env, ERL_NIF_TERM input){
+    ERL_NIF_TERM binary;
+    ERL_NIF_TERM key;
+    ERL_NIF_TERM val;
+    ErlNifBinary bin;
+    ErlNifBinary retbin;
+    int len;
+    std::vector<uint8_t> retv;
+    std::vector<uint8_t> rv;
+
+    if(!enif_is_map(env, input)){
+    	return enif_make_badarg(env);
+    }
+    auto schema = mkh_avro::read_schema("priv/tschema3.avsc");
+    
+    for( auto it: schema ){
+        std::cout << it.fieldName << '\n' << '\r';
+        len = it.fieldName.size();
+        enif_alloc_binary(len, &bin);
+        const auto *p = reinterpret_cast<const uint8_t *>(it.fieldName.c_str());
+        memcpy(bin.data, p, len);
+        key = enif_make_binary(env, &bin);
+
+        if(enif_get_map_value(env, input, key, &val)){
+            std::cout << "Getting value ...." << '\n' << '\r';
+            rv.clear();
+            int encodeCode = mkh_avro::encode(it, env, val, &rv);
+            if(encodeCode == 0){
+                std::cout << '\t' << ".... OK " << '\n' << '\r';
+                retv.insert(retv.end(), rv.begin(), rv.end());
+            }else{
+                throw encodeCode;
+            }
+        }
+    }
+
+    auto retlen = retv.size();
+    enif_alloc_binary(retlen, &retbin);
+    memcpy(retbin.data, retv.data(), retlen);
+    binary = enif_make_binary(env, &retbin);
+    return binary;
 }
 
 ERL_NIF_TERM supertest(ErlNifEnv* env, ERL_NIF_TERM input){
@@ -96,7 +142,7 @@ ERL_NIF_TERM supertest(ErlNifEnv* env, ERL_NIF_TERM input){
         if(enif_get_map_value(env, input, key, &val)){
             std::cout << "Getting value ...." << '\n' << '\r';
             rv.clear();
-            int encodeCode = mkh_avro::encode(it.fieldTypes, env, val, &rv);
+            int encodeCode = mkh_avro::encode(it, env, val, &rv);
             if(encodeCode == 0){
                 std::cout << '\t' << ".... OK " << '\n' << '\r';
                 retv.insert(retv.end(), rv.begin(), rv.end());

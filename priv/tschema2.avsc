@@ -4,7 +4,7 @@
       {"name": "longField", "type": "long"},
       {"name": "floatField", "type": "float"},
       {"name": "doubleField", "type": "double"},
-      {"name": "stringField", "type": "string"},
+      {"name": "stringField", "type": ["null", "string"], "default": null},
       {"name": "boolField", "type": "boolean"}
   ]
 }

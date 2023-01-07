@@ -46,6 +46,29 @@ etest() ->
     },
     iolist_to_binary(Encoder(Term)).
 
+etest(3) ->
+    {ok, SchemaJSON} = file:read_file("priv/tschema3.avsc"),
+    Encoder = avro:make_simple_encoder(SchemaJSON, []),
+    Term = #{
+        <<"intField">> => 1,
+        <<"longField">> => 2
+    },
+    R1 = iolist_to_binary(Encoder(Term)),
+    io:format("R1: ~p ~n", [R1]),
+    Ret = encode(8, Term),
+    io:format("c++ ret: ~p ~n", [Ret]),
+    ok;
+
+
+etest(4) ->
+    {ok, SchemaJSON} = file:read_file("priv/tschema4.avsc"),
+    Encoder = avro:make_simple_encoder(SchemaJSON, []),
+    Term = #{
+        <<"intField">> => 1,
+        <<"longField">> => 2
+    },
+    iolist_to_binary(Encoder(Term));
+
 etest(2) ->
     Term = #{
         <<"intField">> => 789,

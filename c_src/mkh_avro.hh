@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include "include/json.hpp"
+#include <algorithm>
 using json = nlohmann::json;
 
 namespace mkh_avro {
@@ -18,12 +19,32 @@ int encode_primitive(std::string, ErlNifEnv*, ERL_NIF_TERM, std::vector<uint8_t>
 struct SchemaItem{
     std::string fieldName;
     std::vector<std::string> fieldTypes;
-    bool nullable;
+    bool nullable = 0;
+    bool defnull = 0;
+    bool isunion = 0;
 
+    void set_null_default(){
+        defnull = 1;
+    }
     SchemaItem(std::string name, std::string ftype){
         fieldName = name;
         fieldTypes.push_back(ftype);
-        nullable = 0;
+    }
+
+    SchemaItem(std::string name, json ftypes){
+        std::cout << "SIC1" << '\n' << '\r';
+        fieldName = name;
+        isunion = 1;
+        std::cout << "SIC2" << ftypes << '\n' << '\r';
+        for(auto i: ftypes){
+            std::cout << "SIC3" << i << '\n' << '\r';
+            if("null" == i){
+                nullable = 1;
+                fieldTypes.push_back(i);
+            } else {
+                fieldTypes.push_back(i);
+            }
+        }
     }
 
 };
@@ -90,18 +111,45 @@ std::vector<SchemaItem> read_schema(std::string schemaName){
     for(auto it: j){
         std::cout << it["name"] << "___" << it["type"] << '\n' << '\r';
         SchemaItem si(it["name"], it["type"]);
+        if(it.contains("default")){
+            if(it["default"].is_null()){
+                si.set_null_default();
+            }
+        }
         schema.push_back(si);
     }
 
     return schema;
 }
 
-int encode(std::vector<std::string > atypes, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t>* ret){
+int encode(SchemaItem it, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t>* ret){
+    std::vector<std::string> atypes = it.fieldTypes; 
     auto alen = atypes.size();
     if(alen == 1){
         return encode_primitive(atypes[0], env, term, ret);
     }else{
-        return encode_primitive(atypes[0], env, term, ret);
+        std::cout << "---------------------- UNION1 " << '\n' << '\r';
+        for (auto iter = atypes.begin(); iter != atypes.end(); ++iter) {
+            int index = std::distance(atypes.begin(), iter);
+            if(*iter != "null"){
+                std::cout << "---------------------- UNION2 " << *iter << '\n' << '\r';
+                int eret = encode_primitive(*iter, env, term, ret);
+                if(eret == 0){
+                    std::cout << "---------------------- UNION3 " << index << '\n' << '\r';
+                    std::array<uint8_t, 5> output;
+                    encodeInt32(index, output);
+                    ret->push_back(output[0]);
+                    std::rotate(ret->rbegin(), ret->rbegin() + 1, ret->rend());
+                    return 0;
+                }
+            }
+        }
+        if(it.defnull == 1){
+            std::cout << "---------------------- UNION4 " << '\n' << '\t';
+            ret->push_back(0);
+            std::rotate(ret->rbegin(), ret->rbegin() + 1, ret->rend());
+        }
+        return 666;
     }
 }
 
