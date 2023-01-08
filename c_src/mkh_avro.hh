@@ -32,12 +32,9 @@ struct SchemaItem{
     }
 
     SchemaItem(std::string name, json ftypes){
-        std::cout << "SIC1" << '\n' << '\r';
         fieldName = name;
         isunion = 1;
-        std::cout << "SIC2" << ftypes << '\n' << '\r';
         for(auto i: ftypes){
-            std::cout << "SIC3" << i << '\n' << '\r';
             if("null" == i){
                 nullable = 1;
                 fieldTypes.push_back(i);
@@ -128,14 +125,11 @@ int encode(SchemaItem it, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t
     if(alen == 1){
         return encode_primitive(atypes[0], env, term, ret);
     }else{
-        std::cout << "---------------------- UNION1 " << '\n' << '\r';
         for (auto iter = atypes.begin(); iter != atypes.end(); ++iter) {
             int index = std::distance(atypes.begin(), iter);
             if(*iter != "null"){
-                std::cout << "---------------------- UNION2 " << *iter << '\n' << '\r';
                 int eret = encode_primitive(*iter, env, term, ret);
                 if(eret == 0){
-                    std::cout << "---------------------- UNION3 " << index << '\n' << '\r';
                     std::array<uint8_t, 5> output;
                     encodeInt32(index, output);
                     ret->push_back(output[0]);
@@ -145,7 +139,6 @@ int encode(SchemaItem it, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t
             }
         }
         if(it.defnull == 1){
-            std::cout << "---------------------- UNION4 " << '\n' << '\t';
             ret->push_back(0);
             std::rotate(ret->rbegin(), ret->rbegin() + 1, ret->rend());
         }
@@ -208,19 +201,15 @@ int encode_float(ErlNifEnv* env, ERL_NIF_TERM input, std::vector<uint8_t>* ret){
     double dbl;
     //long unsigned int i;
     
-    std::cout << "EF1" << '\n' << '\r';
     if (!enif_get_double(env, input, &dbl)) {
         return 3;
     }
 
     f = dbl;
-    std::cout << "EF2" << f << '\n' << '\r';
     auto len = sizeof(float);
     const auto *p = reinterpret_cast<const uint8_t *>(&f);
 
-    std::cout << "EF3:" << len << '\n' << '\r';
     ret->assign(p, p+len);
-    std::cout << "EF4" << '\n' << '\r';
     return 0;
 
 }
@@ -266,14 +255,11 @@ int encode_string(ErlNifEnv* env, ERL_NIF_TERM input, std::vector<uint8_t>* ret)
 int encode_boolean(ErlNifEnv* env, ERL_NIF_TERM input, std::vector<uint8_t>* ret){
     bool bl;
     
-    std::cout << "EB0:" << '\n' << '\r';
     if (!enif_get_bool(env, input, &bl)) {
         return 6;
     }
-    std::cout << "EB1:" << '\n' << '\r';
 
     ret->push_back(bl ? 1: 0);
-    std::cout << "EB2:" << '\n' << '\r';
     return 0;
 }
 

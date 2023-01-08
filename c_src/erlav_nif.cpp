@@ -18,7 +18,7 @@ ERL_NIF_TERM encode_bool(ErlNifEnv*, ERL_NIF_TERM);
 ERL_NIF_TERM encode_string(ErlNifEnv*, ERL_NIF_TERM);
 ERL_NIF_TERM supertest(ErlNifEnv*, ERL_NIF_TERM);
 ERL_NIF_TERM testencode(ErlNifEnv*, ERL_NIF_TERM);
-ERL_NIF_TERM do_encode_int(ErlNifEnv*, int, ERL_NIF_TERM);
+ERL_NIF_TERM do_encode_int(ErlNifEnv*, int, const ERL_NIF_TERM*);
 int enif_get_bool(ErlNifEnv*, ERL_NIF_TERM, bool*);
 
 std::map<int, std::vector<mkh_avro::SchemaItem > > encoders_map;
@@ -81,10 +81,10 @@ ERL_NIF_TERM do_encode_nif(ErlNifEnv* env, int argc,
         return enif_make_badarg(env);
     }
     
-    return do_encode_int(env, enc_ref, argv[1]);
+    return do_encode_int(env, enc_ref, &argv[1]);
 }
 
-ERL_NIF_TERM do_encode_int(ErlNifEnv* env, int schema_id, ERL_NIF_TERM input){
+ERL_NIF_TERM do_encode_int(ErlNifEnv* env, int schema_id, const ERL_NIF_TERM* input){
     ERL_NIF_TERM binary;
     ERL_NIF_TERM key;
     ERL_NIF_TERM val;
@@ -94,25 +94,22 @@ ERL_NIF_TERM do_encode_int(ErlNifEnv* env, int schema_id, ERL_NIF_TERM input){
     std::vector<uint8_t> retv;
     std::vector<uint8_t> rv;
 
-    if(!enif_is_map(env, input)){
+    if(!enif_is_map(env, *input)){
     	return enif_make_badarg(env);
     }
     auto schema = encoders_map[schema_id];
     
     for( auto it: schema ){
-        std::cout << it.fieldName << '\n' << '\r';
         len = it.fieldName.size();
         enif_alloc_binary(len, &bin);
         const auto *p = reinterpret_cast<const uint8_t *>(it.fieldName.c_str());
         memcpy(bin.data, p, len);
         key = enif_make_binary(env, &bin);
 
-        if(enif_get_map_value(env, input, key, &val)){
-            std::cout << "Getting value ...." << '\n' << '\r';
+        if(enif_get_map_value(env, *input, key, &val)){
             rv.clear();
             int encodeCode = mkh_avro::encode(it, env, val, &rv);
             if(encodeCode == 0){
-                std::cout << '\t' << ".... OK " << '\n' << '\r';
                 retv.insert(retv.end(), rv.begin(), rv.end());
             }else{
                 throw encodeCode;
