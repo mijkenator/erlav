@@ -94,9 +94,13 @@ ERL_NIF_TERM do_encode_int(ErlNifEnv* env, int schema_id, const ERL_NIF_TERM* in
     std::vector<uint8_t> retv;
     std::vector<uint8_t> rv;
 
+    retv.reserve(10000);
+    rv.reserve(1000);
+
     if(!enif_is_map(env, *input)){
     	return enif_make_badarg(env);
     }
+
     auto schema = encoders_map[schema_id];
     
     for( auto it: schema ){

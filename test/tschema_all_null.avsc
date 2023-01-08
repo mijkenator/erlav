@@ -1,0 +1,11 @@
+{"type": "record", "name":"Interop", "namespace": "org.apache.avro",
+  "fields": [
+      {"name": "intField", "type": ["null", "int"], "default": null},
+      {"name": "longField", "type": ["null", "long"], "default": null},
+      {"name": "floatField", "type": ["null", "float"], "default": null},
+      {"name": "doubleField", "type": ["null", "double"], "default": null},
+      {"name": "stringField", "type": ["null", "string"], "default": null},
+      {"name": "boolField", "type": ["null", "boolean"], "default": null}
+  ]
+}
+
