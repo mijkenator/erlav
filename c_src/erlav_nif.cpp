@@ -18,7 +18,11 @@ ERL_NIF_TERM encode_bool(ErlNifEnv*, ERL_NIF_TERM);
 ERL_NIF_TERM encode_string(ErlNifEnv*, ERL_NIF_TERM);
 ERL_NIF_TERM supertest(ErlNifEnv*, ERL_NIF_TERM);
 ERL_NIF_TERM testencode(ErlNifEnv*, ERL_NIF_TERM);
+ERL_NIF_TERM do_encode_int(ErlNifEnv*, int, ERL_NIF_TERM);
 int enif_get_bool(ErlNifEnv*, ERL_NIF_TERM, bool*);
+
+std::map<int, std::vector<mkh_avro::SchemaItem > > encoders_map;
+std::map<std::string, int> schema_map;
 
 int add (int a, int b)
 {
@@ -40,6 +44,87 @@ ERL_NIF_TERM add_nif(ErlNifEnv* env, int argc,
     
     int result = add(a, b);
     return enif_make_int(env, result);
+}
+
+ERL_NIF_TERM create_encoder_nif(ErlNifEnv* env, int argc, 
+    const ERL_NIF_TERM argv[])
+{
+    ErlNifBinary sbin;
+    std::string key;
+    int ret;
+    
+    if (!enif_inspect_binary(env, argv[0], &sbin)) {
+        return enif_make_int(env, 0);
+    }
+    key.assign((const char*)sbin.data, sbin.size);
+
+    if(schema_map.find(key) != schema_map.end()){
+        ret = schema_map[key];
+        return enif_make_int(env, ret);
+    }else{
+        ret = schema_map.size() + 1;
+        schema_map[key] = ret;
+        auto schema = mkh_avro::read_schema(key);
+        encoders_map[ret] = schema;
+    }
+
+    return enif_make_int(env, ret);
+}
+
+
+ERL_NIF_TERM do_encode_nif(ErlNifEnv* env, int argc, 
+    const ERL_NIF_TERM argv[])
+{
+    int enc_ref = 0;
+    
+    if (!enif_get_int(env, argv[0], &enc_ref)) {
+        return enif_make_badarg(env);
+    }
+    
+    return do_encode_int(env, enc_ref, argv[1]);
+}
+
+ERL_NIF_TERM do_encode_int(ErlNifEnv* env, int schema_id, ERL_NIF_TERM input){
+    ERL_NIF_TERM binary;
+    ERL_NIF_TERM key;
+    ERL_NIF_TERM val;
+    ErlNifBinary bin;
+    ErlNifBinary retbin;
+    int len;
+    std::vector<uint8_t> retv;
+    std::vector<uint8_t> rv;
+
+    if(!enif_is_map(env, input)){
+    	return enif_make_badarg(env);
+    }
+    auto schema = encoders_map[schema_id];
+    
+    for( auto it: schema ){
+        std::cout << it.fieldName << '\n' << '\r';
+        len = it.fieldName.size();
+        enif_alloc_binary(len, &bin);
+        const auto *p = reinterpret_cast<const uint8_t *>(it.fieldName.c_str());
+        memcpy(bin.data, p, len);
+        key = enif_make_binary(env, &bin);
+
+        if(enif_get_map_value(env, input, key, &val)){
+            std::cout << "Getting value ...." << '\n' << '\r';
+            rv.clear();
+            int encodeCode = mkh_avro::encode(it, env, val, &rv);
+            if(encodeCode == 0){
+                std::cout << '\t' << ".... OK " << '\n' << '\r';
+                retv.insert(retv.end(), rv.begin(), rv.end());
+            }else{
+                throw encodeCode;
+            }
+        }
+    }
+
+    auto retlen = retv.size();
+    enif_alloc_binary(retlen, &retbin);
+    memcpy(retbin.data, retv.data(), retlen);
+    binary = enif_make_binary(env, &retbin);
+    return binary;
 }
 
 ERL_NIF_TERM encode_nif(ErlNifEnv* env, int argc, 
@@ -290,7 +375,9 @@ inline int enif_get_bool(ErlNifEnv* env, ERL_NIF_TERM term, bool* cond)
 ErlNifFunc nif_funcs[] = 
 {
     {"add", 2, add_nif},
-    {"encode", 2, encode_nif}
+    {"encode", 2, encode_nif},
+    {"create_encoder", 1, create_encoder_nif},
+    {"do_encode", 2, do_encode_nif}
 };
 
 ERL_NIF_INIT(erlav_nif, nif_funcs, nullptr, 

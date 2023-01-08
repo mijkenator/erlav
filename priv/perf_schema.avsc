@@ -1,0 +1,20 @@
+{"type": "record", "name":"Interop", "namespace": "org.apache.avro",
+  "fields": [
+      {"name": "intField", "type": "int"},
+      {"name": "longField", "type": "long"},
+      {"name": "floatField", "type": "float"},
+      {"name": "doubleField", "type": "double"},
+      {"name": "stringField", "type": "string"},
+      {"name": "boolField", "type": "boolean"},
+      {"name": "stringField1", "type": "string"},
+      {"name": "stringField2", "type": "string"},
+      {"name": "stringField3", "type": "string"},
+      {"name": "stringField4", "type": "string"},
+      {"name": "stringField5", "type": "string"},
+      {"name": "stringField6", "type": "string"},
+      {"name": "stringField7", "type": "string"},
+      {"name": "stringField8", "type": "string"},
+      {"name": "stringField9", "type": "string"},
+      {"name": "stringField10", "type": "string"}
+  ]
+}

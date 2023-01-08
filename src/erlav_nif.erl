@@ -1,8 +1,8 @@
 -module(erlav_nif).
 
--export([add/2, encode/2, etest/0, etest/1]).
+-export([add/2, encode/2, etest/0, etest/1, create_encoder/1, do_encode/2]).
 
--nifs([add/2, encode/2]).
+-nifs([add/2, encode/2, create_encoder/1, do_encode/2]).
 
 -on_load(init/0).
 
@@ -30,8 +30,14 @@ add(_A, _B) ->
 encode(_A, _B) ->
     not_loaded(?LINE).
     
+do_encode(_A, _B) ->
+    not_loaded(?LINE).
+
 not_loaded(Line) ->
     erlang:nif_error({not_loaded, [{module, ?MODULE}, {line, Line}]}).
+
+create_encoder(_A) ->
+    not_loaded(?LINE).
 
 etest() ->
     {ok, SchemaJSON} = file:read_file("priv/tschema2.avsc"),
