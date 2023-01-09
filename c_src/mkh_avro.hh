@@ -167,32 +167,24 @@ int encode_primitive(std::string atype, ErlNifEnv* env, ERL_NIF_TERM term, std::
 int encode_int(ErlNifEnv* env, ERL_NIF_TERM input, std::vector<uint8_t>* ret){
     std::array<uint8_t, 5> output;
     int32_t i32;
-    long unsigned int i;
     
     if (!enif_get_int(env, input, &i32)) {
         return 1;
     }
-
     auto len = mkh_avro::encodeInt32(i32, output);
-    for(i = 0; i < len; i++){
-        ret->push_back(output[i]);
-    }
+    ret->assign(output.data(), output.data() + len);
     return 0;
 }
 
 int encode_long(ErlNifEnv* env, ERL_NIF_TERM input, std::vector<uint8_t>* ret){
     std::array<uint8_t, 10> output;
     int64_t i64;
-    long unsigned int i;
     
     if (!enif_get_int64(env, input, &i64)) {
         return 2;
     }
-
     auto len = mkh_avro::encodeInt64(i64, output);
-    for(i = 0; i < len; i++){
-        ret->push_back(output[i]);
-    }
+    ret->assign(output.data(), output.data() + len);
     return 0;
 }
 
@@ -228,26 +220,17 @@ int encode_double(ErlNifEnv* env, ERL_NIF_TERM input, std::vector<uint8_t>* ret)
 }
 
 int encode_string(ErlNifEnv* env, ERL_NIF_TERM input, std::vector<uint8_t>* ret){
-    std::string strt;
     std::array<uint8_t, 10> output;
     ErlNifBinary sbin;
 
     if (!enif_inspect_binary(env, input, &sbin)) {
         return 5;
     }
-    strt.assign((const char*)sbin.data, sbin.size);
 
-    auto len = strt.size();
-    const auto *p = reinterpret_cast<const uint8_t *>(strt.c_str());
-
+    auto len = sbin.size;
     auto len2 = mkh_avro::encodeInt64(len, output);
-    auto plen = len + len2;
-
-    auto *p_array = new uint8_t[plen];
-    memcpy(p_array, output.data(), len2);
-    memcpy(p_array+len2, p, len);
-    ret->assign(p_array, p_array+plen);
-    delete[] p_array;
+    ret->insert(ret->end(), output.data(), output.data() + len2);
+    ret->insert(ret->end(), sbin.data, sbin.data + len);
 
     return 0;
 }
