@@ -125,6 +125,7 @@ int encode(SchemaItem it, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t
     if(alen == 1){
         return encode_primitive(atypes[0], env, term, ret);
     }else{
+        ret->insert(ret->begin(), 0); // reserve first for type index
         for (auto iter = atypes.begin(); iter != atypes.end(); ++iter) {
             int index = std::distance(atypes.begin(), iter);
             if(*iter != "null"){
@@ -132,16 +133,16 @@ int encode(SchemaItem it, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t
                 if(eret == 0){
                     std::array<uint8_t, 5> output;
                     encodeInt32(index, output);
-                    ret->push_back(output[0]);
-                    std::rotate(ret->rbegin(), ret->rbegin() + 1, ret->rend());
+                    ret->insert(ret->begin(), output[0]);
+                    //std::rotate(ret->rbegin(), ret->rbegin() + 1, ret->rend());
                     return 0;
                 }
             }
         }
-        if(it.defnull == 1){
-            ret->push_back(0);
-            std::rotate(ret->rbegin(), ret->rbegin() + 1, ret->rend());
-        }
+        //if(it.defnull == 1){
+        //    ret->push_back(0);
+        //    std::rotate(ret->rbegin(), ret->rbegin() + 1, ret->rend());
+        //}
         return 666;
     }
 }
@@ -172,7 +173,8 @@ int encode_int(ErlNifEnv* env, ERL_NIF_TERM input, std::vector<uint8_t>* ret){
         return 1;
     }
     auto len = mkh_avro::encodeInt32(i32, output);
-    ret->assign(output.data(), output.data() + len);
+    //ret->assign(output.data(), output.data() + len);
+    ret->insert(ret->end(), output.data(), output.data() + len);
     return 0;
 }
 
@@ -184,7 +186,8 @@ int encode_long(ErlNifEnv* env, ERL_NIF_TERM input, std::vector<uint8_t>* ret){
         return 2;
     }
     auto len = mkh_avro::encodeInt64(i64, output);
-    ret->assign(output.data(), output.data() + len);
+    //ret->assign(output.data(), output.data() + len);
+    ret->insert(ret->end(), output.data(), output.data() + len);
     return 0;
 }
 
@@ -201,7 +204,8 @@ int encode_float(ErlNifEnv* env, ERL_NIF_TERM input, std::vector<uint8_t>* ret){
     auto len = sizeof(float);
     const auto *p = reinterpret_cast<const uint8_t *>(&f);
 
-    ret->assign(p, p+len);
+    //ret->assign(p, p+len);
+    ret->insert(ret->end(), p, p + len);
     return 0;
 
 }
@@ -215,7 +219,8 @@ int encode_double(ErlNifEnv* env, ERL_NIF_TERM input, std::vector<uint8_t>* ret)
 
     auto len = sizeof(double);
     const auto *p = reinterpret_cast<const uint8_t *>(&dbl);
-    ret->assign(p, p+len);
+    //ret->assign(p, p+len);
+    ret->insert(ret->end(), p, p + len);
     return 0;
 }
 

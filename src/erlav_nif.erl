@@ -1,6 +1,10 @@
 -module(erlav_nif).
 
--export([add/2, encode/2, etest/0, etest/1, create_encoder/1, do_encode/2, perf_tst/0]).
+-export([
+        add/2, encode/2, etest/0, etest/1, 
+        create_encoder/1, do_encode/2, perf_tst/0,
+        null_tst/0
+        ]).
 
 -nifs([add/2, encode/2, create_encoder/1, do_encode/2]).
 
@@ -179,4 +183,36 @@ perf_tst() ->
     CTime = erlang:system_time(millisecond) - CStart,
 
     io:format(" - ETime: ~p , CTime: ~p ~n", [ETime, CTime]),
+    ok.
+
+null_tst() ->
+    %{ok, SchemaJSON} = file:read_file("test/tschema_all_null.avsc"),
+    %Encoder = avro:make_simple_encoder(SchemaJSON, []),
+    %Term = #{
+    %    <<"intField">> => 789,
+    %    <<"longField">> => 2989898111,
+    %    <<"doubleField">> => 11.2345,
+    %    <<"floatField">> => 23.12,
+    %    <<"boolField">> => true,
+    %    <<"stringField">> => <<"asdadasdasdasd3453534dfgdgd123456789">>
+    %},
+    %R1 = iolist_to_binary(Encoder(Term)),
+    %SchemaId = erlav_nif:create_encoder(<<"test/tschema_all_null.avsc">>),
+    %Ret = erlav_nif:do_encode(SchemaId, Term),
+    %io:format("~nErl ret: ~p ~n", [R1]),
+    %io:format("C++ ret: ~p ~n", [Ret]),
+
+
+    {ok, SchemaJSON1} = file:read_file("priv/tschema3.avsc"),
+    Encoder1 = avro:make_simple_encoder(SchemaJSON1, []),
+    Term1 = #{
+        <<"intField">> => 1,
+        <<"longField">> => 2
+    },
+    Re1 = iolist_to_binary(Encoder1(Term1)),
+    SchemaId1 = erlav_nif:create_encoder(<<"priv/tschema3.avsc">>),
+    Re2 = erlav_nif:do_encode(SchemaId1, Term1),
+    io:format("~n1.Erl ret: ~p ~n", [Re1]),
+    io:format("2.C++ ret: ~p ~n", [Re2]),
+
     ok.
