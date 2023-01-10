@@ -3,7 +3,7 @@
 -export([
         add/2, encode/2, etest/0, etest/1, 
         create_encoder/1, do_encode/2, perf_tst/0,
-        null_tst/0
+        null_tst/0, bool_tst/0
         ]).
 
 -nifs([add/2, encode/2, create_encoder/1, do_encode/2]).
@@ -211,6 +211,21 @@ null_tst() ->
     },
     Re1 = iolist_to_binary(Encoder1(Term1)),
     SchemaId1 = erlav_nif:create_encoder(<<"priv/tschema3.avsc">>),
+    Re2 = erlav_nif:do_encode(SchemaId1, Term1),
+    io:format("~n1.Erl ret: ~p ~n", [Re1]),
+    io:format("2.C++ ret: ~p ~n", [Re2]),
+
+    ok.
+
+bool_tst() ->
+    {ok, SchemaJSON1} = file:read_file("test/tschema_bool.avsc"),
+    Encoder1 = avro:make_simple_encoder(SchemaJSON1, []),
+    Term1 = #{
+        <<"boolField">> => true,
+        <<"longField">> => 2
+    },
+    Re1 = iolist_to_binary(Encoder1(Term1)),
+    SchemaId1 = erlav_nif:create_encoder(<<"test/tschema_bool.avsc">>),
     Re2 = erlav_nif:do_encode(SchemaId1, Term1),
     io:format("~n1.Erl ret: ~p ~n", [Re1]),
     io:format("2.C++ ret: ~p ~n", [Re2]),

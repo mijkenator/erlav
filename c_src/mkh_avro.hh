@@ -133,7 +133,7 @@ int encode(SchemaItem it, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t
                 if(eret == 0){
                     std::array<uint8_t, 5> output;
                     encodeInt32(index, output);
-                    ret->insert(ret->begin(), output[0]);
+                    ret->at(0) = output[0];
                     //std::rotate(ret->rbegin(), ret->rbegin() + 1, ret->rend());
                     return 0;
                 }
