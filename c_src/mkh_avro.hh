@@ -106,7 +106,6 @@ std::vector<SchemaItem> read_schema(std::string schemaName){
     json j = data["fields"];
     std::vector<SchemaItem> schema;
     for(auto it: j){
-        std::cout << it["name"] << "___" << it["type"] << '\n' << '\r';
         SchemaItem si(it["name"], it["type"]);
         if(it.contains("default")){
             if(it["default"].is_null()){
@@ -134,15 +133,15 @@ int encode(SchemaItem it, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t
                     std::array<uint8_t, 5> output;
                     encodeInt32(index, output);
                     ret->at(0) = output[0];
-                    //std::rotate(ret->rbegin(), ret->rbegin() + 1, ret->rend());
                     return 0;
                 }
             }
         }
-        //if(it.defnull == 1){
-        //    ret->push_back(0);
-        //    std::rotate(ret->rbegin(), ret->rbegin() + 1, ret->rend());
-        //}
+        if(it.defnull == 1){
+            return 0;
+        }else{
+            std::cout << it.fieldName << "  " << it.defnull << '\n' << '\r';
+        }
         return 666;
     }
 }

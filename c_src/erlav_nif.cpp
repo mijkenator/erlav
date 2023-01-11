@@ -118,6 +118,8 @@ ERL_NIF_TERM do_encode_int(ErlNifEnv* env, int schema_id, const ERL_NIF_TERM* in
             }else{
                 throw encodeCode;
             }
+        }else if(it.defnull == 1){
+            retv.push_back(0);
         }
     }
 

@@ -54,5 +54,15 @@ null_all_test() ->
     R21 = iolist_to_binary(Encoder(Term2)),
     SchemaId = erlav_nif:create_encoder(<<"test/tschema_all_null.avsc">>),
     Ret2 = erlav_nif:do_encode(SchemaId, Term2),
-    ?assertEqual(R21, Ret2).
+    ?assertEqual(R21, Ret2),
+    
+    Term3 = #{
+        <<"intField">> => 1,
+        <<"longField">> => 2
+    },
+    R31 = iolist_to_binary(Encoder(Term3)),
+    Ret3 = erlav_nif:do_encode(SchemaId, Term3),
+    ?assertEqual(R31, Ret3),
+    
+    ok.
 
