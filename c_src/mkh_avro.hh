@@ -3,18 +3,21 @@
 #include <fstream>
 #include "include/json.hpp"
 #include <algorithm>
+#include <typeinfo>
 using json = nlohmann::json;
 
 namespace mkh_avro {
 
 int encode_int(ErlNifEnv*, ERL_NIF_TERM, std::vector<uint8_t>*);
 int encode_long(ErlNifEnv*, ERL_NIF_TERM, std::vector<uint8_t>*);
+int encode_long_fast(ErlNifEnv*, int64_t, std::vector<uint8_t>*);
 int encode_float(ErlNifEnv*, ERL_NIF_TERM, std::vector<uint8_t>*);
 int encode_double(ErlNifEnv*, ERL_NIF_TERM, std::vector<uint8_t>*);
 int encode_string(ErlNifEnv*, ERL_NIF_TERM, std::vector<uint8_t>*);
 int encode_boolean(ErlNifEnv*, ERL_NIF_TERM, std::vector<uint8_t>*);
 int enif_get_bool(ErlNifEnv*, ERL_NIF_TERM, bool*);
 int encode_primitive(std::string, ErlNifEnv*, ERL_NIF_TERM, std::vector<uint8_t>*);
+int encode_array(std::string, ErlNifEnv*, ERL_NIF_TERM&, std::vector<uint8_t>*);
 
 struct SchemaItem{
     std::string fieldName;
@@ -22,29 +25,46 @@ struct SchemaItem{
     bool nullable = 0;
     bool defnull = 0;
     bool isunion = 0;
+    uint8_t obj_type = 0; // 0 - primitive, 1 - array, 2 - object
 
     void set_null_default(){
         defnull = 1;
     }
-    SchemaItem(std::string name, std::string ftype){
+    /*SchemaItem(std::string name, std::string ftype){
+        std::cout << "SI1:" << ftype << '\n' << '\r';
         fieldName = name;
         fieldTypes.push_back(ftype);
-    }
+    }*/
 
     SchemaItem(std::string name, json ftypes){
         fieldName = name;
         isunion = 1;
-        for(auto i: ftypes){
-            if("null" == i){
-                nullable = 1;
-                fieldTypes.push_back(i);
-            } else {
-                fieldTypes.push_back(i);
+        if(ftypes.is_array()){
+            for(auto i: ftypes){
+                //std::cout << "SI2:" << i << '\n' << '\r';
+                if("null" == i){
+                    nullable = 1;
+                    fieldTypes.push_back(i);
+                } else {
+                    fieldTypes.push_back(i);
+                }
             }
+        }else if(ftypes.is_object()){
+            //std::cout << "SI3:" << '\n' << '\r';
+            if(ftypes["type"] == "array"){
+                fieldTypes.push_back(ftypes["items"]);
+                obj_type = 1;
+            }
+        }else if(ftypes.is_string()){
+            //std::cout << "SI4:" << ftypes << '\n' << '\r';
+            //std::cout << typeid(ftypes).name() << '\n' << '\r';
+            fieldName = name;
+            fieldTypes.push_back(ftypes);
         }
     }
-
 };
+
+
 
 uint64_t encodeZigzag64(int64_t input) noexcept {
     // cppcheck-suppress shiftTooManyBitsSigned
@@ -122,8 +142,15 @@ int encode(SchemaItem it, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t
     std::vector<std::string> atypes = it.fieldTypes; 
     auto alen = atypes.size();
     if(alen == 1){
-        return encode_primitive(atypes[0], env, term, ret);
+        if(it.obj_type == 1){
+            std::cout << "E.ARRAY" << '\n' << '\r';
+            return encode_array(atypes[0], env, term, ret);
+        } else {
+            //std::cout << "E.TYPE" << atypes[0] << '\n' << '\r';
+            return encode_primitive(atypes[0], env, term, ret);
+        }
     }else{
+        //std::cout << "E.UNION:" << alen << '\n' << '\r';
         ret->insert(ret->begin(), 0); // reserve first for type index
         for (auto iter = atypes.begin(); iter != atypes.end(); ++iter) {
             int index = std::distance(atypes.begin(), iter);
@@ -144,6 +171,30 @@ int encode(SchemaItem it, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t
         }
         return 666;
     }
+}
+
+int encode_array(std::string atype, ErlNifEnv* env, ERL_NIF_TERM& term, std::vector<uint8_t>* ret){
+    unsigned int len;
+    std::vector<uint8_t> eret;
+    //int64_t tmpint;
+    std::cout << "E.ARRAY:" << atype << '\n' << '\r';
+
+    if(enif_is_list(env, term)){
+        enif_get_list_length(env, term, &len);
+        if(len > 0){
+            for(uint32_t i=0; i < len; i++){
+                ERL_NIF_TERM elem;
+                if(enif_get_list_cell(env, term, &elem, &term)){
+                    encode_primitive(atype, env, elem, &eret);
+                }
+            }
+            encode_long_fast(env, len, ret);
+            ret->insert(ret->end(), eret.data(), eret.data() + eret.size());
+            ret->push_back(0);
+        }
+        return 0;
+    }
+    return 667;
 }
 
 int encode_primitive(std::string atype, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t>* ret){
@@ -186,6 +237,13 @@ int encode_long(ErlNifEnv* env, ERL_NIF_TERM input, std::vector<uint8_t>* ret){
     }
     auto len = mkh_avro::encodeInt64(i64, output);
     //ret->assign(output.data(), output.data() + len);
+    ret->insert(ret->end(), output.data(), output.data() + len);
+    return 0;
+}
+
+int encode_long_fast(ErlNifEnv* env, int64_t input, std::vector<uint8_t>* ret){
+    std::array<uint8_t, 10> output;
+    auto len = mkh_avro::encodeInt64(input, output);
     ret->insert(ret->end(), output.data(), output.data() + len);
     return 0;
 }
