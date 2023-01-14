@@ -66,3 +66,33 @@ null_all_test() ->
     
     ok.
 
+
+array_test() ->
+    {ok, SchemaJSON1} = file:read_file("test/tschema_array.avsc"),
+    Encoder1 = avro:make_simple_encoder(SchemaJSON1, []),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    SchemaId = erlav_nif:create_encoder(<<"test/tschema_array.avsc">>),
+    Term1 = #{
+        <<"arrayField">> => [1]
+    },
+    Term2 = #{
+        <<"arrayField">> => [1,1]
+    },
+    Term3 = #{
+        <<"arrayField">> => [1,1,1]
+    },
+    Term4 = #{
+        <<"arrayField">> => [1,10000,1]
+    },
+    Term5 = #{
+        <<"arrayField">> => [10000]
+    },
+    A1 = maps:get(<<"arrayField">>,  maps:from_list(Decoder(erlav_nif:do_encode(SchemaId, Term1)))),
+    ?assertEqual([1], A1),
+    ?assertEqual(Term1, maps:from_list(Decoder(erlav_nif:do_encode(SchemaId, Term1)))),
+    ?assertEqual(Term2, maps:from_list(Decoder(erlav_nif:do_encode(SchemaId, Term2)))),
+    ?assertEqual(Term3, maps:from_list(Decoder(erlav_nif:do_encode(SchemaId, Term3)))),
+    ?assertEqual(Term4, maps:from_list(Decoder(erlav_nif:do_encode(SchemaId, Term4)))),
+    ?assertEqual(Term5, maps:from_list(Decoder(erlav_nif:do_encode(SchemaId, Term5)))),
+
+    ok.

@@ -1,0 +1,7 @@
+{"type": "record", "name":"Interop", "namespace": "erlav.test",
+  "fields": [
+      {"name": "arrayField", "type": ["null", {"type": "array", "items": "long"}], "default": null}
+  ]
+}
+
+

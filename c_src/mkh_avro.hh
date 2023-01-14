@@ -45,6 +45,10 @@ struct SchemaItem{
                 if("null" == i){
                     nullable = 1;
                     fieldTypes.push_back(i);
+                } else if(i.is_object() && (i["type"] == "array")){
+                    std::cout << "SI NULLABLE ARRAY:" << '\n' << '\r';
+                    fieldTypes.push_back(i["items"]);
+                    obj_type = 1;
                 } else {
                     fieldTypes.push_back(i);
                 }
@@ -155,7 +159,12 @@ int encode(SchemaItem it, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t
         for (auto iter = atypes.begin(); iter != atypes.end(); ++iter) {
             int index = std::distance(atypes.begin(), iter);
             if(*iter != "null"){
-                int eret = encode_primitive(*iter, env, term, ret);
+                int eret = 999;
+                if(it.obj_type == 1){ // array
+                    eret = encode_array(*iter, env, term, ret);
+                }else{
+                    eret = encode_primitive(*iter, env, term, ret);
+                }
                 if(eret == 0){
                     std::array<uint8_t, 5> output;
                     encodeInt32(index, output);

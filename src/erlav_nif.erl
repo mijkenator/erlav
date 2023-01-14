@@ -303,5 +303,24 @@ array_tst() ->
     io:format("2.C++ ret: ~p ~n", [Re2]),
     CtE = Decoder(Re2),
     io:format("C++ -> Erlang -> ~p ~n", [CtE]),
+    
+    {ok, SchemaJSON2} = file:read_file("test/tschema_array_null.avsc"),
+    Encoder2 = avro:make_simple_encoder(SchemaJSON2, []),
+    Decoder2 = avro:make_simple_decoder(SchemaJSON2, []),
+
+    io:format("------------------------------- ~n", []),
+    io:format("6.Erl ret: ~p ~n", [ iolist_to_binary(Encoder2(Term1)) ]),
+    SchemaId2 = erlav_nif:create_encoder(<<"test/tschema_array_null.avsc">>),
+    Re22 = erlav_nif:do_encode(SchemaId2, Term1),
+    io:format("7.C++ ret: ~p ~n", [Re22]),
+    CtE2 = Decoder2(Re22),
+    io:format("Should be: [1] C++ -> Erlang -> ~p ~n", [CtE2]),
+
+    io:format("------------------------------- ~n", []),
+    io:format("8.Erl ret: ~p ~n", [ iolist_to_binary(Encoder2(Term4)) ]),
+    Re23 = erlav_nif:do_encode(SchemaId2, Term4),
+    io:format("9.C++ ret: ~p ~n", [Re23]),
+    CtE23 = Decoder2(Re23),
+    io:format("Should be: [1,10000,1] C++ -> Erlang -> ~p ~n", [CtE23]),
 
     ok.
