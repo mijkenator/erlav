@@ -135,6 +135,7 @@ etest(1) ->
     ok.
 
 perf_tst() ->
+    LL = lists:seq(10000, 20000),
     {ok, SchemaJSON} = file:read_file("priv/perf_schema.avsc"),
     Encoder = avro:make_simple_encoder(SchemaJSON, []),
     Term = #{
@@ -163,7 +164,8 @@ perf_tst() ->
         <<"stringField17">> => <<"31d55319-16f7-4bfe-b1b0-973b258eb758">>,
         <<"stringField18">> => <<"31d55319-16f7-4bfe-b1b0-973b258eb758">>,
         <<"stringField19">> => <<"31d55319-16f7-4bfe-b1b0-973b258eb758">>,
-        <<"stringField20">> => <<"31d55319-16f7-4bfe-b1b0-973b258eb758">>
+        <<"stringField20">> => <<"31d55319-16f7-4bfe-b1b0-973b258eb758">>,
+        <<"longList">> => LL
     },
     R1 = iolist_to_binary(Encoder(Term)),
     SchemaId = erlav_nif:create_encoder(<<"priv/perf_schema.avsc">>),
@@ -175,7 +177,7 @@ perf_tst() ->
     %io:format("ERet: ~p ~n", [R1]),
     %io:format("CRet: ~p ~n", [Ret]),
 
-    L = lists:seq(1, 1000000),
+    L = lists:seq(1, 20000),
     EStart = erlang:system_time(millisecond),
     lists:foreach(fun(_)-> iolist_to_binary(Encoder(Term)) end, L),
     ETime = erlang:system_time(millisecond) - EStart,
@@ -235,6 +237,7 @@ bool_tst() ->
     ok.
 
 perf_tst1() ->
+    LL = lists:seq(10000, 20000),
     Term = #{
         <<"intField">> => 789,
         <<"longField">> => 2989898111,
@@ -261,7 +264,8 @@ perf_tst1() ->
         <<"stringField17">> => <<"31d55319-16f7-4bfe-b1b0-973b258eb758">>,
         <<"stringField18">> => <<"31d55319-16f7-4bfe-b1b0-973b258eb758">>,
         <<"stringField19">> => <<"31d55319-16f7-4bfe-b1b0-973b258eb758">>,
-        <<"stringField20">> => <<"31d55319-16f7-4bfe-b1b0-973b258eb758">>
+        <<"stringField20">> => <<"31d55319-16f7-4bfe-b1b0-973b258eb758">>,
+        <<"longList">> => LL
     },
     SchemaId = erlav_nif:create_encoder(<<"priv/perf_schema.avsc">>),
 

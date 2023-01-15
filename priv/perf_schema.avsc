@@ -25,6 +25,7 @@
       {"name": "stringField17", "type": ["null", "string"], "default": null},
       {"name": "stringField18", "type": ["null", "string"], "default": null},
       {"name": "stringField19", "type": ["null", "string"], "default": null},
-      {"name": "stringField20", "type": ["null", "string"], "default": null}
+      {"name": "stringField20", "type": ["null", "string"], "default": null},
+      {"name": "longList", "type": {"type": "array", "items": "long"}}
   ]
 }

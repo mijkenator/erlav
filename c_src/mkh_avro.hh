@@ -147,7 +147,7 @@ int encode(SchemaItem it, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t
     auto alen = atypes.size();
     if(alen == 1){
         if(it.obj_type == 1){
-            std::cout << "E.ARRAY" << '\n' << '\r';
+            //std::cout << "E.ARRAY" << '\n' << '\r';
             return encode_array(atypes[0], env, term, ret);
         } else {
             //std::cout << "E.TYPE" << atypes[0] << '\n' << '\r';
@@ -186,7 +186,7 @@ int encode_array(std::string atype, ErlNifEnv* env, ERL_NIF_TERM& term, std::vec
     unsigned int len;
     std::vector<uint8_t> eret;
     //int64_t tmpint;
-    std::cout << "E.ARRAY:" << atype << '\n' << '\r';
+    //std::cout << "E.ARRAY:" << atype << '\n' << '\r';
 
     if(enif_is_list(env, term)){
         enif_get_list_length(env, term, &len);
