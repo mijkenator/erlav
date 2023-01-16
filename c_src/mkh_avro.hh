@@ -25,17 +25,11 @@ struct SchemaItem{
     bool nullable = 0;
     bool defnull = 0;
     bool isunion = 0;
-    uint8_t obj_type = 0; // 0 - primitive, 1 - array, 2 - object
+    uint8_t obj_type = 0; // 0 - primitive, 1 - array, 2 - map, 3 - record
 
     void set_null_default(){
         defnull = 1;
     }
-    /*SchemaItem(std::string name, std::string ftype){
-        std::cout << "SI1:" << ftype << '\n' << '\r';
-        fieldName = name;
-        fieldTypes.push_back(ftype);
-    }*/
-
     SchemaItem(std::string name, json ftypes){
         fieldName = name;
         isunion = 1;
@@ -46,7 +40,6 @@ struct SchemaItem{
                     nullable = 1;
                     fieldTypes.push_back(i);
                 } else if(i.is_object() && (i["type"] == "array")){
-                    std::cout << "SI NULLABLE ARRAY:" << '\n' << '\r';
                     fieldTypes.push_back(i["items"]);
                     obj_type = 1;
                 } else {
@@ -58,6 +51,9 @@ struct SchemaItem{
             if(ftypes["type"] == "array"){
                 fieldTypes.push_back(ftypes["items"]);
                 obj_type = 1;
+            }else if(ftypes["type"] == "map"){
+                fieldTypes.push_back(ftypes["values"]);
+                obj_type = 2;
             }
         }else if(ftypes.is_string()){
             //std::cout << "SI4:" << ftypes << '\n' << '\r';

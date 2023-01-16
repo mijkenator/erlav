@@ -4,7 +4,7 @@
         add/2, encode/2, etest/0, etest/1, 
         create_encoder/1, do_encode/2, perf_tst/0,
         null_tst/0, bool_tst/0, perf_tst1/0,
-        array_tst/0
+        array_tst/0, map_tst/0
         ]).
 
 -nifs([add/2, encode/2, create_encoder/1, do_encode/2]).
@@ -328,3 +328,20 @@ array_tst() ->
     io:format("Should be: [1,10000,1] C++ -> Erlang -> ~p ~n", [CtE23]),
 
     ok.
+
+map_tst() ->
+    {ok, SchemaJSON1} = file:read_file("test/tschema_map.avsc"),
+    Encoder1 = avro:make_simple_encoder(SchemaJSON1, []),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    Term1 = #{
+              <<"mapField">> => 
+              #{
+                <<"k1">> => 1,
+                <<"k2">> => 2
+                }
+    },
+    io:format("------------------------------- ~n", []),
+    io:format("1.Erl ret: ~p ~n", [ iolist_to_binary(Encoder1(Term1)) ]),
+    
+    ok.
+
