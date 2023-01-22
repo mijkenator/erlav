@@ -192,7 +192,7 @@ int encode_map(std::string atype, ErlNifEnv* env, ERL_NIF_TERM& term, std::vecto
     std::map<std::string, ERL_NIF_TERM>::iterator amap_iter;
     std::array<uint8_t, 10> output;
 
-    std::cout << "EMAP1" << '\n' << '\r';
+    //std::cout << "EMAP1" << '\n' << '\r';
     if(enif_is_map(env, term)){
         if(enif_map_iterator_create(env, term, &iter, ERL_NIF_MAP_ITERATOR_HEAD)) {
             do{
@@ -207,17 +207,17 @@ int encode_map(std::string atype, ErlNifEnv* env, ERL_NIF_TERM& term, std::vecto
             } while(enif_map_iterator_next(env, &iter));
             //block header
             len = amap.size();
-            std::cout << "EMAP2 len" << len <<'\n' << '\r';
+            //std::cout << "EMAP2 len" << len <<'\n' << '\r';
             encode_long_fast(env, len, ret);
             for(amap_iter = amap.begin(); amap_iter != amap.end(); amap_iter++){
                 // encode key
-                std::cout << "EMAP3 key:" << amap_iter->first <<'\n' << '\r';
+                //std::cout << "EMAP3 key:" << amap_iter->first <<'\n' << '\r';
                 auto len2 = mkh_avro::encodeInt64(len, output);
                 ret->insert(ret->end(), output.data(), output.data() + len2);
                 ret->insert(ret->end(), amap_iter->first.data(), amap_iter->first.data() + len);
 
                 // encode value
-                std::cout << "EMAP4 value:" <<'\n' << '\r';
+                //std::cout << "EMAP4 value:" <<'\n' << '\r';
                 encode_primitive(atype, env, amap_iter->second, ret);
             }
             ret->push_back(0);
