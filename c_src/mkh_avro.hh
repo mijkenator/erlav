@@ -18,6 +18,7 @@ int encode_boolean(ErlNifEnv*, ERL_NIF_TERM, std::vector<uint8_t>*);
 int enif_get_bool(ErlNifEnv*, ERL_NIF_TERM, bool*);
 int encode_primitive(std::string, ErlNifEnv*, ERL_NIF_TERM, std::vector<uint8_t>*);
 int encode_array(std::string, ErlNifEnv*, ERL_NIF_TERM&, std::vector<uint8_t>*);
+int encode_map(std::string, ErlNifEnv*, ERL_NIF_TERM&, std::vector<uint8_t>*);
 
 struct SchemaItem{
     std::string fieldName;
@@ -145,6 +146,8 @@ int encode(SchemaItem it, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t
         if(it.obj_type == 1){
             //std::cout << "E.ARRAY" << '\n' << '\r';
             return encode_array(atypes[0], env, term, ret);
+        } else if(it.obj_type == 2){
+            return encode_map(atypes[0], env, term, ret);
         } else {
             //std::cout << "E.TYPE" << atypes[0] << '\n' << '\r';
             return encode_primitive(atypes[0], env, term, ret);
@@ -178,6 +181,51 @@ int encode(SchemaItem it, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t
     }
 }
 
+int encode_map(std::string atype, ErlNifEnv* env, ERL_NIF_TERM& term, std::vector<uint8_t>* ret){
+    ErlNifMapIterator iter;
+    ERL_NIF_TERM key;
+    ERL_NIF_TERM val;
+    ErlNifBinary sbin;
+    unsigned int len;
+    std::string mapkey;
+    std::map<std::string, ERL_NIF_TERM> amap;
+    std::map<std::string, ERL_NIF_TERM>::iterator amap_iter;
+    std::array<uint8_t, 10> output;
+
+    std::cout << "EMAP1" << '\n' << '\r';
+    if(enif_is_map(env, term)){
+        if(enif_map_iterator_create(env, term, &iter, ERL_NIF_MAP_ITERATOR_HEAD)) {
+            do{
+                if(!enif_map_iterator_get_pair(env, &iter, &key, &val)) {
+                    continue;
+                }
+                if (!enif_inspect_binary(env, key, &sbin)) {
+                    continue;
+                }
+                mapkey.assign((const char*)sbin.data, sbin.size);
+                amap.insert(std::pair<std::string, ERL_NIF_TERM>(mapkey, val));
+            } while(enif_map_iterator_next(env, &iter));
+            //block header
+            len = amap.size();
+            std::cout << "EMAP2 len" << len <<'\n' << '\r';
+            encode_long_fast(env, len, ret);
+            for(amap_iter = amap.begin(); amap_iter != amap.end(); amap_iter++){
+                // encode key
+                std::cout << "EMAP3 key:" << amap_iter->first <<'\n' << '\r';
+                auto len2 = mkh_avro::encodeInt64(len, output);
+                ret->insert(ret->end(), output.data(), output.data() + len2);
+                ret->insert(ret->end(), amap_iter->first.data(), amap_iter->first.data() + len);
+
+                // encode value
+                std::cout << "EMAP4 value:" <<'\n' << '\r';
+                encode_primitive(atype, env, amap_iter->second, ret);
+            }
+            ret->push_back(0);
+            return 0;
+        }
+    }
+    return 668;
+}
 int encode_array(std::string atype, ErlNifEnv* env, ERL_NIF_TERM& term, std::vector<uint8_t>* ret){
     unsigned int len;
     std::vector<uint8_t> eret;

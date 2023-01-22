@@ -96,3 +96,21 @@ array_test() ->
     ?assertEqual(Term5, maps:from_list(Decoder(erlav_nif:do_encode(SchemaId, Term5)))),
 
     ok.
+
+map_test() ->
+    {ok, SchemaJSON1} = file:read_file("test/tschema_map.avsc"),
+    Encoder1 = avro:make_simple_encoder(SchemaJSON1, []),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    Term1 = #{
+              <<"mapField">> => 
+              #{
+                <<"k1">> => 1,
+                <<"k2">> => 2
+                }
+    },
+    SchemaId = erlav_nif:create_encoder(<<"test/tschema_map.avsc">>),
+    Re2 = erlav_nif:do_encode(SchemaId, Term1),
+    RTerm = maps:from_list(Decoder(Re2)),
+    ?assertEqual(RTerm, #{<<"mapField">> => [{<<"k1">>,1},{<<"k2">>,2}]}),
+    %file:write_file("/tmp/rfile.txt", io_lib:format("~p~n", [RTerm]),[append]),
+    ok.
