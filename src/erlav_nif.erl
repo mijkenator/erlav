@@ -362,5 +362,9 @@ record_tst() ->
     io:format("------------------------------- ~n", []),
     io:format("1.Erl ret: ~p ~n", [ iolist_to_binary(Encoder1(Term1)) ]),
     
+    SchemaId = erlav_nif:create_encoder(<<"test/tschema_record.avsc">>),
+    io:format("Schema readed c++ ~n", []),
+    Re2 = erlav_nif:do_encode(SchemaId, Term1),
+    io:format("2.C++ ret: ~p ~n", [Re2]),
     ok.
 

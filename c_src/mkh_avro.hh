@@ -27,6 +27,7 @@ struct SchemaItem{
     bool defnull = 0;
     bool isunion = 0;
     uint8_t obj_type = 0; // 0 - primitive, 1 - array, 2 - map, 3 - record
+    std::vector<SchemaItem> record_schema;
 
     void set_null_default(){
         defnull = 1;
@@ -55,6 +56,18 @@ struct SchemaItem{
             }else if(ftypes["type"] == "map"){
                 fieldTypes.push_back(ftypes["values"]);
                 obj_type = 2;
+            }else if(ftypes["type"] == "record"){
+                for(auto it: ftypes["fields"]){
+                    SchemaItem si(it["name"], it["type"]);
+                    if(it.contains("default")){
+                        if(it["default"].is_null()){
+                            si.set_null_default();
+                        }
+                    }
+                    record_schema.push_back(si);
+                }
+                fieldTypes.push_back("record");
+                obj_type = 3;
             }
         }else if(ftypes.is_string()){
             //std::cout << "SI4:" << ftypes << '\n' << '\r';
@@ -65,7 +78,9 @@ struct SchemaItem{
     }
 };
 
-
+std::vector<SchemaItem> read_schema_json(json);
+int encode(SchemaItem, ErlNifEnv*, ERL_NIF_TERM, std::vector<uint8_t>*);
+int encode_record(std::vector<SchemaItem>, ErlNifEnv*, ERL_NIF_TERM&, std::vector<uint8_t>*);
 
 uint64_t encodeZigzag64(int64_t input) noexcept {
     // cppcheck-suppress shiftTooManyBitsSigned
@@ -124,8 +139,11 @@ std::vector<SchemaItem> read_schema(std::string schemaName){
     std::ifstream f(schemaName);
     json data = json::parse(f);
 
-    json j = data["fields"];
+    return read_schema_json(data["fields"]);
+}
+std::vector<SchemaItem> read_schema_json(json j){
     std::vector<SchemaItem> schema;
+
     for(auto it: j){
         SchemaItem si(it["name"], it["type"]);
         if(it.contains("default")){
@@ -135,19 +153,26 @@ std::vector<SchemaItem> read_schema(std::string schemaName){
         }
         schema.push_back(si);
     }
-
     return schema;
 }
 
 int encode(SchemaItem it, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t>* ret){
+    std::cout << "ENCODE start." << '\n' << '\r';
     std::vector<std::string> atypes = it.fieldTypes; 
     auto alen = atypes.size();
+    std::cout << "ENCODE alen:" << alen << '\n' << '\r';
+    for (std::string ats: atypes)
+        std::cout << ats << ' ';
+    std::cout << '\n' << '\r';
     if(alen == 1){
         if(it.obj_type == 1){
             //std::cout << "E.ARRAY" << '\n' << '\r';
             return encode_array(atypes[0], env, term, ret);
         } else if(it.obj_type == 2){
             return encode_map(atypes[0], env, term, ret);
+        } else if(it.obj_type == 3){
+            std::cout << "E.Record enc" << '\n' << '\r';
+            return encode_record(it.record_schema, env, term, ret);
         } else {
             //std::cout << "E.TYPE" << atypes[0] << '\n' << '\r';
             return encode_primitive(atypes[0], env, term, ret);
@@ -179,6 +204,39 @@ int encode(SchemaItem it, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t
         }
         return 666;
     }
+}
+
+int encode_record(std::vector<SchemaItem> schema, ErlNifEnv* env, ERL_NIF_TERM& term, std::vector<uint8_t>* retv){
+    ERL_NIF_TERM key;
+    ERL_NIF_TERM val;
+    ErlNifBinary bin;
+    int len;
+    std::vector<uint8_t> rv;
+    rv.reserve(1000);
+
+    std::cout << "ERECORD1" << '\n' << '\r';
+
+    for( auto it: schema ){
+        std::cout << "ERECORD2:" << it.fieldName << '\n' << '\r';
+        len = it.fieldName.size();
+        enif_alloc_binary(len, &bin);
+        const auto *p = reinterpret_cast<const uint8_t *>(it.fieldName.c_str());
+        memcpy(bin.data, p, len);
+        key = enif_make_binary(env, &bin);
+
+        if(enif_get_map_value(env, term, key, &val)){
+            rv.clear();
+            int encodeCode = encode(it, env, val, &rv);
+            if(encodeCode == 0){
+                retv->insert(retv->end(), rv.begin(), rv.end());
+            }else{
+                throw encodeCode;
+            }
+        }else if(it.defnull == 1){
+            retv->push_back(0);
+        }
+    }
+    return 0;
 }
 
 int encode_map(std::string atype, ErlNifEnv* env, ERL_NIF_TERM& term, std::vector<uint8_t>* ret){
