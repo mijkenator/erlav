@@ -150,3 +150,50 @@ map_test() ->
     ?assertEqual(TRet3, #{<<"mapField">> => [{<<"aaa">>,1},{<<"bbb">>,3},{<<"ccc">>,2}]}),
     ?assertEqual(TRet4, #{<<"mapField">> => [{<<"aaa">>,3},{<<"bbb">>,2},{<<"ccc">>,1}]}),
     ok.
+
+record_test() ->
+    {ok, SchemaJSON1} = file:read_file("test/tschema_record.avsc"),
+    %Encoder1 = avro:make_simple_encoder(SchemaJSON1, []),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    Term1 = #{
+              <<"recordField">> => #{
+                    <<"rec1field">> => 1,
+                    <<"rec2field">> => <<"koko">>,
+                    <<"rec3field">> => 2
+                }
+    },
+    
+    SchemaId = erlav_nif:create_encoder(<<"test/tschema_record.avsc">>),
+    Re2 = erlav_nif:do_encode(SchemaId, Term1),
+    M = maps:from_list(Decoder(Re2)),
+    %file:write_file("/tmp/rfile.txt", io_lib:format("~p~n", [RTerm]),[append]),
+    ?assertEqual(1, proplists:get_value(<<"rec1field">>, maps:get(<<"recordField">>, M))),
+    ?assertEqual(<<"koko">>, proplists:get_value(<<"rec2field">>, maps:get(<<"recordField">>, M))),
+    ?assertEqual(2, proplists:get_value(<<"rec3field">>, maps:get(<<"recordField">>, M))).
+
+record2_test() ->
+    {ok, SchemaJSON1} = file:read_file("test/tschema_record2.avsc"),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    Term1 = #{
+              <<"recordField">> => #{
+                    <<"rec1field">> => 1,
+                    <<"rec2field">> => <<"koko">>,
+                    <<"rec3field">> => 2,
+                    <<"rec4field">> => 112233,
+                    <<"rec5field">> => true,
+                    <<"rec6field">> => 11.22,
+                    <<"rec7field">> => 33.44
+                }
+    },
+    
+    SchemaId = erlav_nif:create_encoder(<<"test/tschema_record2.avsc">>),
+    Re2 = erlav_nif:do_encode(SchemaId, Term1),
+    M = maps:from_list(Decoder(Re2)),
+    %file:write_file("/tmp/rfile.txt", io_lib:format("~p~n", [RTerm]),[append]),
+    ?assertEqual(1, proplists:get_value(<<"rec1field">>, maps:get(<<"recordField">>, M))),
+    ?assertEqual(<<"koko">>, proplists:get_value(<<"rec2field">>, maps:get(<<"recordField">>, M))),
+    ?assertEqual(2, proplists:get_value(<<"rec3field">>, maps:get(<<"recordField">>, M))),
+    ?assertEqual(112233, proplists:get_value(<<"rec4field">>, maps:get(<<"recordField">>, M))),
+    ?assertEqual(true, proplists:get_value(<<"rec5field">>, maps:get(<<"recordField">>, M))),
+    ?assertEqual(11.22, proplists:get_value(<<"rec6field">>, maps:get(<<"recordField">>, M))),
+    ?assertEqual(33.44, proplists:get_value(<<"rec7field">>, maps:get(<<"recordField">>, M))).
