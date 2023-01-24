@@ -51,8 +51,23 @@ struct SchemaItem{
         }else if(ftypes.is_object()){
             //std::cout << "SI3:" << '\n' << '\r';
             if(ftypes["type"] == "array"){
-                fieldTypes.push_back(ftypes["items"]);
                 obj_type = 1;
+                if(ftypes["items"].is_object()){
+                    if(ftypes["items"]["type"] == "record"){
+                        fieldTypes.push_back("record");
+                        for(auto it: ftypes["items"]["fields"]){
+                            SchemaItem si(it["name"], it["type"]);
+                            if(it.contains("default")){
+                                if(it["default"].is_null()){
+                                    si.set_null_default();
+                                }
+                            }
+                            record_schema.push_back(si);
+                        }
+                    }
+                }else{
+                    fieldTypes.push_back(ftypes["items"]);
+                }
             }else if(ftypes["type"] == "map"){
                 fieldTypes.push_back(ftypes["values"]);
                 obj_type = 2;
@@ -81,6 +96,7 @@ struct SchemaItem{
 std::vector<SchemaItem> read_schema_json(json);
 int encode(SchemaItem, ErlNifEnv*, ERL_NIF_TERM, std::vector<uint8_t>*);
 int encode_record(std::vector<SchemaItem>, ErlNifEnv*, ERL_NIF_TERM&, std::vector<uint8_t>*);
+int encode_array_ofrec(std::vector<SchemaItem>, ErlNifEnv*, ERL_NIF_TERM&, std::vector<uint8_t>*);
 
 uint64_t encodeZigzag64(int64_t input) noexcept {
     // cppcheck-suppress shiftTooManyBitsSigned
@@ -167,7 +183,11 @@ int encode(SchemaItem it, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t
     if(alen == 1){
         if(it.obj_type == 1){
             //std::cout << "E.ARRAY" << '\n' << '\r';
-            return encode_array(atypes[0], env, term, ret);
+            if(atypes[0] == "record"){
+                return encode_array_ofrec(it.record_schema, env, term, ret);
+            }else{
+                return encode_array(atypes[0], env, term, ret);
+            }
         } else if(it.obj_type == 2){
             return encode_map(atypes[0], env, term, ret);
         } else if(it.obj_type == 3){
@@ -284,6 +304,28 @@ int encode_map(std::string atype, ErlNifEnv* env, ERL_NIF_TERM& term, std::vecto
     }
     return 668;
 }
+
+
+int encode_array_ofrec(std::vector<SchemaItem> schema, ErlNifEnv* env, ERL_NIF_TERM& term, std::vector<uint8_t>* ret){
+    unsigned int len;
+    
+    if(enif_is_list(env, term)){
+        enif_get_list_length(env, term, &len);
+        if(len > 0){
+            encode_long_fast(env, len, ret);
+            for(uint32_t i=0; i < len; i++){
+                ERL_NIF_TERM elem;
+                if(enif_get_list_cell(env, term, &elem, &term)){
+                    encode_record(schema, env, elem, ret);
+                }
+            }
+            ret->push_back(0);
+        }
+        return 0;
+    }
+    return 670;
+}
+
 int encode_array(std::string atype, ErlNifEnv* env, ERL_NIF_TERM& term, std::vector<uint8_t>* ret){
     unsigned int len;
     std::vector<uint8_t> eret;

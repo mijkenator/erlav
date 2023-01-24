@@ -1,0 +1,19 @@
+{"type": "record", "name":"Interop", "namespace": "erlav.test",
+  "fields": [
+      {"name": "arrayField", "type": {"type": "array", "items": {
+            "name": "arritem",
+            "type": "record",
+            "fields":[
+              {"name": "rec1field", "type": "long"},
+              {"name": "rec2field", "type": "string"},
+              {"name": "rec3field", "type": "long"},
+              {"name": "rec4field", "type": "int"},
+              {"name": "rec5field", "type": "boolean"},
+              {"name": "rec6field", "type": "double"},
+              {"name": "rec7field", "type": "float"}
+            ]
+        }
+      }}
+  ]
+}
+

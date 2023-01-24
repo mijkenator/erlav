@@ -4,7 +4,8 @@
         add/2, encode/2, etest/0, etest/1, 
         create_encoder/1, do_encode/2, perf_tst/0,
         null_tst/0, bool_tst/0, perf_tst1/0,
-        array_tst/0, map_tst/0, record_tst/0
+        array_tst/0, map_tst/0, record_tst/0,
+        array_rec_tst/0
         ]).
 
 -nifs([add/2, encode/2, create_encoder/1, do_encode/2]).
@@ -368,3 +369,28 @@ record_tst() ->
     io:format("2.C++ ret: ~p ~n", [Re2]),
     ok.
 
+array_rec_tst() ->
+    {ok, SchemaJSON1} = file:read_file("test/tschema_array_ofrecs.avsc"),
+    Encoder1 = avro:make_simple_encoder(SchemaJSON1, []),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    Term1 = #{
+              <<"arrayField">> => [
+                                   #{
+                                        <<"rec1field">> => 1,
+                                        <<"rec2field">> => <<"koko">>,
+                                        <<"rec3field">> => 2,
+                                        <<"rec4field">> => 112233,
+                                        <<"rec5field">> => true,
+                                        <<"rec6field">> => 11.22,
+                                        <<"rec7field">> => 33.44
+                                    }
+                ]
+    },
+    io:format("------------------------------- ~n", []),
+    io:format("1.Erl ret: ~p ~n", [ iolist_to_binary(Encoder1(Term1)) ]),
+    SchemaId = erlav_nif:create_encoder(<<"test/tschema_array_ofrecs.avsc">>),
+    io:format("Schema readed c++ ~n", []),
+    Re2 = erlav_nif:do_encode(SchemaId, Term1),
+    io:format("2.C++ ret: ~p ~n", [Re2]),
+
+    ok.
