@@ -32,12 +32,22 @@ struct SchemaItem{
     void set_null_default(){
         defnull = 1;
     }
+    void set_recursive_types(json ftypes){
+        for(auto it: ftypes){
+            SchemaItem si(it["name"], it["type"]);
+            if(it.contains("default")){
+                if(it["default"].is_null()){
+                    si.set_null_default();
+                }
+            }
+            record_schema.push_back(si);
+        }
+    }
     SchemaItem(std::string name, json ftypes){
         fieldName = name;
         isunion = 1;
         if(ftypes.is_array()){
             for(auto i: ftypes){
-                //std::cout << "SI2:" << i << '\n' << '\r';
                 if("null" == i){
                     nullable = 1;
                     fieldTypes.push_back(i);
@@ -49,21 +59,12 @@ struct SchemaItem{
                 }
             }
         }else if(ftypes.is_object()){
-            //std::cout << "SI3:" << '\n' << '\r';
             if(ftypes["type"] == "array"){
                 obj_type = 1;
                 if(ftypes["items"].is_object()){
                     if(ftypes["items"]["type"] == "record"){
                         fieldTypes.push_back("record");
-                        for(auto it: ftypes["items"]["fields"]){
-                            SchemaItem si(it["name"], it["type"]);
-                            if(it.contains("default")){
-                                if(it["default"].is_null()){
-                                    si.set_null_default();
-                                }
-                            }
-                            record_schema.push_back(si);
-                        }
+                        set_recursive_types(ftypes["items"]["fields"]);
                     }
                 }else{
                     fieldTypes.push_back(ftypes["items"]);
@@ -72,21 +73,11 @@ struct SchemaItem{
                 fieldTypes.push_back(ftypes["values"]);
                 obj_type = 2;
             }else if(ftypes["type"] == "record"){
-                for(auto it: ftypes["fields"]){
-                    SchemaItem si(it["name"], it["type"]);
-                    if(it.contains("default")){
-                        if(it["default"].is_null()){
-                            si.set_null_default();
-                        }
-                    }
-                    record_schema.push_back(si);
-                }
+                set_recursive_types(ftypes["fields"]);
                 fieldTypes.push_back("record");
                 obj_type = 3;
             }
         }else if(ftypes.is_string()){
-            //std::cout << "SI4:" << ftypes << '\n' << '\r';
-            //std::cout << typeid(ftypes).name() << '\n' << '\r';
             fieldName = name;
             fieldTypes.push_back(ftypes);
         }
