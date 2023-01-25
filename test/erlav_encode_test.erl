@@ -219,5 +219,7 @@ arrayofrec_test() ->
     Re2 = erlav_nif:do_encode(SchemaId, Term1),
     M = maps:from_list(Decoder(Re2)),
     [M1|_] = maps:get(<<"arrayField">>, M),
-    ?assertEqual(<<"koko">>,  proplists:get_value(<<"rec6field">>, M1)),
-    ?assertEqual(11.22,  proplists:get_value(<<"rec2field">>, M1)).
+    ?assertEqual(<<"koko">>,  proplists:get_value(<<"rec2field">>, M1)),
+    ?assertEqual(112233,  proplists:get_value(<<"rec4field">>, M1)),
+    ?assertEqual(true,  proplists:get_value(<<"rec5field">>, M1)),
+    ?assertEqual(11.22,  proplists:get_value(<<"rec6field">>, M1)).
