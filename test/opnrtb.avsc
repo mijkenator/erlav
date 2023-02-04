@@ -1,0 +1,2006 @@
+{
+  "namespace": "rtb.gateway.request",
+  "type": "record",
+  "name": "GatewayRequest",
+
+  "fields": [
+    {
+        "name": "event",
+        "type": "string"
+    },
+    {
+        "name": "sampling",
+        "type": ["null", "long", "string"],
+        "default": null
+    },
+    {
+        "name": "timestamp",
+        "type": ["null", "double", "long"],
+        "default": null
+    },
+    {
+        "name": "bid_request",
+        "type": ["null",{
+            "type": "record",
+            "name": "bid_request",
+            "fields":[
+                {
+                    "name": "id",
+                    "type": ["null","string","long"],
+                    "default": null
+                },
+                {
+                    "name": "imp",
+                    "type": ["null",{
+                        "type": "array",
+                        "items": 
+                            {
+                                "type": "record",
+                                "name": "bid_imp",
+                                "fields":[
+                                    {
+                                        "name": "id",
+                                        "type": ["null","string","long"],
+                                        "default": null
+                                    },
+                                    {
+                                        "name": "banner",
+                                        "type": ["null", {
+                                            "type": "record",
+                                            "name": "banner",
+                                            "fields": [
+                                                {
+                                                    "name":"w",
+                                                    "type":["null","long"],
+                                                    "default": null
+                                                },
+                                                {
+                                                    "name":"h",
+                                                    "type":["null","long"],
+                                                    "default": null
+                                                },
+                                                {
+                                                    "name":"pos",
+                                                    "type":["null","long"],
+                                                    "default": null
+                                                },
+                                                {
+                                                    "name":"btype",
+                                                    "type":["null",{
+                                                        "type": "array",
+                                                        "items": "long"
+                                                    }],
+                                                    "default": null
+                                                },
+                                                {
+                                                    "name":"battr",
+                                                    "type":["null",{
+                                                        "type": "array",
+                                                        "items": "long"
+                                                    }],
+                                                    "default": null
+                                                },
+                                                {
+                                                    "name":"expdir",
+                                                    "type":["null",{
+                                                        "type": "array",
+                                                        "items": "long"
+                                                    }],
+                                                    "default": null
+                                                },
+                                                {
+                                                    "name":"topframe",
+                                                    "type":["null","long"],
+                                                    "default": null
+                                                }
+                                            ]
+                                        }],
+                                        "default": null
+                                    },
+                                    {
+                                        "name": "video",
+                                        "type": ["null", {
+                                            "type": "record",
+                                            "name": "bid_video",
+                                            "fields": [
+                                                {
+                                                    "name": "mimes",
+                                                    "type": ["null", {
+                                                        "type": "array",
+                                                        "items": "string"
+                                                      }],
+                                                    "default": null
+                                                },
+                                                {
+                                                    "name":"linearity",
+                                                    "type":["null","long"],
+                                                    "default": null
+                                                },
+                                                {
+                                                    "name":"minduration",
+                                                    "type":["null","long"],
+                                                    "default": null
+                                                },
+                                                {
+                                                    "name":"maxduration",
+                                                    "type":["null","long"],
+                                                    "default": null
+                                                },
+                                                {
+                                                    "name":"protocol",
+                                                    "type":["null","long"],
+                                                    "default": null
+                                                },
+                                                {
+                                                    "name":"protocols",
+                                                    "type": ["null",{
+                                                        "type": "array",
+                                                        "items": "long"
+                                                      }],
+                                                    "default": null
+                                                },
+                                                {
+                                                    "name":"w",
+                                                    "type":"long"
+                                                },
+                                                {
+                                                    "name":"h",
+                                                    "type":"long"
+                                                },
+                                                {
+                                                    "name": "startdelay",
+                                                    "type": ["null","long"],
+                                                    "default": null
+                                                },
+                                                {
+                                                    "name":"battr",
+                                                    "type": ["null",{
+                                                        "type": "array",
+                                                        "items": "long"
+                                                    }],
+                                                    "default": null
+                                                },
+                                                {
+                                                    "name":"api",
+                                                    "type": ["null",{
+                                                        "type": "array",
+                                                        "items": "long"
+                                                    }],
+                                                    "default": null
+                                                },
+                                                {
+                                                    "name":"ext",
+                                                    "type":["null", {
+                                                        "type": "record",
+                                                        "name": "bid_video_ext",
+                                                        "fields":[
+                                                            {
+                                                                "name":"player_w",
+                                                                "type":["null", "long"],
+                                                                "default": null
+                                                            },
+                                                            {
+                                                                "name":"player_h",
+                                                                "type":["null", "long"],
+                                                                "default": null
+                                                            },
+                                                            {
+                                                                "name":"player_premium",
+                                                                "type":["null", "boolean"],
+                                                                "default": null
+                                                            },
+                                                            {
+                                                                "name":"vpaid",
+                                                                "type": ["null",{
+                                                                    "type": "array",
+                                                                    "items": "long"
+                                                                }],
+                                                                "default": null
+                                                            },
+                                                            {
+                                                                "name": "site_id",
+                                                                "type": ["null", "string", "long"],
+                                                                "default": null
+                                                            },
+                                                            {
+                                                                "name": "contentgrouplists",
+                                                                "type": ["null", {
+                                                                    "type": "array",
+                                                                    "items": "long"
+                                                                }],
+                                                                "default": null
+                                                            }
+                                                        ]
+                                                    }],
+                                                    "default": null
+                                                },
+                                                {
+                                                    "name":"placement",
+                                                    "type":["null","long"],
+                                                    "default": null
+                                                },
+                                                {
+                                                    "name":"sequence",
+                                                    "type":["null","long"],
+                                                    "default": null
+                                                },
+                                                {
+                                                    "name":"skip",
+                                                    "type":["null","long"],
+                                                    "default": null
+                                                },
+                                                {
+                                                    "name":"skipafter",
+                                                    "type":["null","long"],
+                                                    "default": null
+                                                },
+                                                {
+                                                    "name":"playbackmethod",
+                                                    "type": ["null", {
+                                                        "type": "array",
+                                                        "items": "long"
+                                                      }],
+                                                      "default": null
+                                                },
+                                                {
+                                                    "name":"pos",
+                                                    "type":["null","long"],
+                                                    "default": null
+                                                }
+                                            ]
+                                        }],
+                                        "default": null
+                                    },
+                                    {
+                                        "name": "native",
+                                        "type": ["null", {
+                                            "type": "record",
+                                            "name": "bid_native",
+                                            "fields": [
+                                                {
+                                                    "name":"request",
+                                                    "type":["null",{
+                                                        "type": "record",
+                                                        "name": "native_req",
+                                                        "fields": [
+                                                            {
+                                                                "name":"ver",
+                                                                "type":["null","string"],
+                                                                "default": null
+                                                            },
+                                                            {
+                                                                "name":"context",
+                                                                "type":["null","long"],
+                                                                "default": null
+                                                            },
+                                                            {
+                                                                "name":"contextsubtype",
+                                                                "type":["null","long"],
+                                                                "default": null
+                                                            },
+                                                            {
+                                                                "name":"plcmttype",
+                                                                "type":["null","long"],
+                                                                "default": null
+                                                            },
+                                                            {
+                                                                "name":"plcmtcnt",
+                                                                "type":["null","long"],
+                                                                "default": null
+                                                            },
+                                                            {
+                                                                "name":"seq",
+                                                                "type":["null","long"],
+                                                                "default": null
+                                                            },
+                                                            {
+                                                                "name":"assests",
+                                                                "type":["null",{
+                                                                    "type": "array",
+                                                                    "items": {
+                                                                        "type": "record",
+                                                                        "name": "native_req_asset",
+                                                                        "fields": [
+                                                                            {
+                                                                                "name": "id",
+                                                                                "type": "long"
+                                                                            },
+                                                                            {
+                                                                                "name": "required",
+                                                                                "type": "long"
+                                                                            },
+                                                                            {
+                                                                                "name": "title",
+                                                                                "type": ["null","long"],
+                                                                                "default": null
+                                                                            },
+                                                                            {
+                                                                                "name": "img",
+                                                                                "type": ["null",{
+                                                                                    "type": "record",
+                                                                                    "name": "native_req_img",
+                                                                                    "fields": [
+                                                                                        {
+                                                                                            "name": "type",
+                                                                                            "type": ["null","long"],
+                                                                                            "default": null
+                                                                                        },
+                                                                                        {
+                                                                                            "name": "w",
+                                                                                            "type": ["null","long"],
+                                                                                            "default": null
+                                                                                        },
+                                                                                        {
+                                                                                            "name": "wmin",
+                                                                                            "type": ["null","long"],
+                                                                                            "default": null
+                                                                                        },
+                                                                                        {
+                                                                                            "name": "h",
+                                                                                            "type": ["null","long"],
+                                                                                            "default": null
+                                                                                        },
+                                                                                        {
+                                                                                            "name": "hmin",
+                                                                                            "type": ["null","long"],
+                                                                                            "default": null
+                                                                                        },
+                                                                                        {
+                                                                                            "name": "mimes",
+                                                                                            "type": ["null",{
+                                                                                                "type": "array",
+                                                                                                "items": "string"
+                                                                                            }],
+                                                                                            "default": null
+                                                                                        }
+                                                                                    ]
+                                                                                }],
+                                                                                "default": null
+                                                                            },
+                                                                            {
+                                                                                "name": "video",
+                                                                                "type": ["null",{
+                                                                                    "type": "record",
+                                                                                    "name": "native_req_video",
+                                                                                    "fields":[
+                                                                                        {
+                                                                                            "name": "mimes",
+                                                                                            "type": ["null", {
+                                                                                                "type": "array",
+                                                                                                "items": "string"
+                                                                                            }],
+                                                                                            "default": null
+                                                                                        },
+                                                                                        {
+                                                                                            "name": "minduration",
+                                                                                            "type": ["null","long"],
+                                                                                            "default": null
+                                                                                        },
+                                                                                        {
+                                                                                            "name": "maxduration",
+                                                                                            "type": ["null","long"],
+                                                                                            "default": null
+                                                                                        },
+                                                                                        {
+                                                                                            "name": "protocols",
+                                                                                            "type": ["null", {
+                                                                                                "type": "array",
+                                                                                                "items": "long"
+                                                                                            }],
+                                                                                            "default": null
+                                                                                        }
+                                                                                    ]
+                                                                                }],
+                                                                                "default": null
+                                                                            },
+                                                                            {
+                                                                                "name": "data",
+                                                                                "type": ["null",{
+                                                                                    "type": "record",
+                                                                                    "name": "native_req_data",
+                                                                                    "fields": [
+                                                                                        {
+                                                                                            "name": "type",
+                                                                                            "type": "long"
+                                                                                        },
+                                                                                        {
+                                                                                            "name": "len",
+                                                                                            "type": ["null","long"],
+                                                                                            "default": null
+                                                                                        }
+                                                                                    ]
+                                                                                }],
+                                                                                "default": null
+                                                                            }
+                                                                        ]
+                                                                    }
+                                                                }],
+                                                                "default": null
+                                                            },
+                                                            {
+                                                                "name":"aurlsupport",
+                                                                "type":["null","long"],
+                                                                "default": null
+                                                            },
+                                                            {
+                                                                "name":"durlsupport",
+                                                                "type":["null","long"],
+                                                                "default": null
+                                                            },
+                                                            {
+                                                                "name":"eventtrackers",
+                                                                "type":["null",{
+                                                                    "type": "array",
+                                                                    "items": {
+                                                                        "type": "record",
+                                                                        "name": "native_req_tracker",
+                                                                        "fields": [
+                                                                            {
+                                                                                "name":"event",
+                                                                                "type":["null","long"],
+                                                                                "default": null
+                                                                            },
+                                                                            {
+                                                                                "name":"methods",
+                                                                                "type":["null",{
+                                                                                    "type": "array",
+                                                                                    "items": "long"
+                                                                                }],
+                                                                                "default": null
+                                                                            }
+                                                                        ]
+                                                                    }
+                                                                }],
+                                                                "default": null
+                                                            },
+                                                            {
+                                                                "name":"privacy",
+                                                                "type":["null","long"],
+                                                                "default": null
+                                                            }
+                                                        ]
+                                                    }],
+                                                    "default": null
+                                                },
+                                                {
+                                                    "name":"ver",
+                                                    "type":["null","string"],
+                                                    "default": null
+                                                },
+                                                {
+                                                    "name":"battr",
+                                                    "type":["null",{
+                                                        "type": "array",
+                                                        "items": "long"
+                                                    }],
+                                                    "default": null
+                                                }
+                                            ]
+                                        }],
+                                        "default": null
+                                    },
+                                    {
+                                        "name": "pmp",
+                                        "type": [
+                                           "null",
+                                          {
+                                            "type": "record",
+                                            "name": "pmp",
+                                            "fields": [
+                                                {
+                                                    "name": "private_auction",
+                                                    "type":["null","long"],
+                                                    "default": null
+                                                },
+                                                {
+                                                    "name": "deals",
+                                                    "type": ["null",{
+                                                        "type": "array",
+                                                        "items": {
+                                                            "type": "record",
+                                                            "name": "deals",
+                                                            "fields": [
+
+
+                                                                {
+                                                                    "name": "id",
+                                                                    "type": "string"
+                                                                },
+                                                                {
+                                                                    "name": "bidfloor",
+                                                                    "type": ["null","double","long"],
+                                                                    "default": null
+                                                                },
+                                                                {
+                                                                    "name": "bidfloorcur",
+                                                                    "type": ["null","string"],
+                                                                    "default": null
+                                                                },
+                                                                {
+                                                                    "name": "wseat",
+                                                                    "type": ["null",{
+                                                                        "type": "array",
+                                                                        "items": "string"
+                                                                    }],
+                                                                    "default": null
+                                                                },
+                                                                {
+                                                                    "name": "at",
+                                                                    "type": ["null", "long"],
+                                                                    "default": null
+                                                                },
+                                                                {
+                                                                    "name": "ext",
+                                                                    "type": ["null",{
+                                                                        "type": "record",
+                                                                        "name": "bid_deal_ext",
+                                                                        "fields": [
+                                                                            {
+                                                                                "name": "priority",
+                                                                                "type": ["null","string"],
+                                                                                "default": null
+                                                                            },
+                                                                            {
+                                                                                "name": "maxduration",
+                                                                                "type": ["null","long"],
+                                                                                "default": null
+                                                                            },
+                                                                            {
+                                                                                "name": "wadvs",
+                                                                                "type": ["null", {
+                                                                                    "type": "array",
+                                                                                    "items": "string"
+                                                                                }],
+                                                                                "default": null
+                                                                            }
+                                                                        ]
+                                                                    }],
+                                                                    "default": null
+                                                                }
+
+                                                            ]
+                                                        }
+                                                    }],
+                                                    "default": null
+                                                }
+                                            ]
+                                        }],
+                                        "default": null
+                                    },                            
+                                    {
+                                        "name": "bidfloor",
+                                        "type": ["null","float","long"],
+                                        "default": null
+                                    },
+                                    {
+                                        "name": "secure",
+                                        "type": ["null","long"],
+                                        "default": null
+                                    },
+                                    {
+                                        "name": "exp",
+                                        "type": ["null","long"],
+                                        "default": null
+                                    },
+                                    {
+                                        "name": "tagid",
+                                        "type": ["null", "string"],
+                                        "default": null
+                                    },
+                                    {
+                                        "name": "instl",
+                                        "type": ["null", "long"],
+                                        "default": null
+                                    },
+                                    {
+                                        "name": "ext",
+                                        "type": ["null",{
+                                            "type": "record",
+                                            "name": "bid_imp_ext",
+                                            "fields": [
+                                                {
+                                                    "name": "allowed_types",
+                                                    "type": ["null", {
+                                                        "type": "array",
+                                                        "items": "long"
+                                                    }],
+                                                    "default": null
+                                                },
+                                                {
+                                                    "name": "w",
+                                                    "type": ["null", {
+                                                        "type": "array",
+                                                        "items": "long"
+                                                    }],
+                                                    "default": null
+                                                },
+                                                {
+                                                    "name": "h",
+                                                    "type": ["null", {
+                                                        "type": "array",
+                                                        "items": "long"
+                                                    }],
+                                                    "default": null
+                                                },
+                                                {
+                                                    "name": "private",
+                                                    "type": "boolean"
+                                                },
+                                                {
+                                                    "name": "deal_ids",
+                                                    "type": ["null", {
+                                                        "type": "array",
+                                                        "items": "string"
+                                                    }],
+                                                    "default": null
+                                                },
+                                                {
+                                                    "name": "exchange_seat_ids",
+                                                    "type": ["null", {
+                                                        "type": "array",
+                                                        "items": "long"
+                                                    }],
+                                                    "default": null
+                                                },
+                                                {
+                                                    "name": "impression_responses",
+                                                    "type": ["null", {
+                                                            "type": "array",
+                                                            "items": {
+                                                                
+                                                                "type": "record",
+                                                                "name": "impression_resp_rec",
+                                                                "fields":[
+                                                                    {
+                                                                        "name": "id",
+                                                                        "type": "string"
+                                                                    },
+                                                                    {
+                                                                        "name": "impid",
+                                                                        "type": "string"
+                                                                    },
+                                                                    {
+                                                                        "name": "price",
+                                                                        "type": ["null","float","long"],
+                                                                        "default": null
+                                                                    },
+                                                                    {
+                                                                        "name": "ext",
+                                                                        "type": {
+                                                                            "type": "record",
+                                                                            "name": "impression_responses_ext",
+                                                                            "fields":[
+                                                                                {
+                                                                                    "name": "bidder_id",
+                                                                                    "type": "long"
+                                                                                },
+                                                                                {
+                                                                                    "name": "dsp_id",
+                                                                                    "type": "long"
+                                                                                },
+                                                                                {
+                                                                                    "name": "buyer_id",
+                                                                                    "type": "long"
+                                                                                },
+                                                                                {
+                                                                                    "name": "advertiser_id",
+                                                                                    "type": "long"
+                                                                                },
+                                                                                {
+                                                                                    "name": "flight_id",
+                                                                                    "type": "long"
+                                                                                },
+                                                                                {
+                                                                                    "name": "creative_group_lookup_id",
+                                                                                    "type": ["string","long"]
+                                                                                },
+                                                                                {
+                                                                                    "name": "deal_id",
+                                                                                    "type": ["null", "string"],
+                                                                                    "default": null
+                                                                                },
+                                                                                {
+                                                                                    "name": "bidder_bid_price",
+                                                                                    "type": ["long","float"]
+                                                                                }
+                                                                            ]
+                                                                        }
+                                                                    }
+                                                                ]                                                        
+                                                                
+                                                            }                                           
+                                                    }],
+                                                    "default": null
+                                                },
+
+                                                {
+                                                    "name": "filtered_flight_ids",
+                                                    "type": ["null", {
+                                                        "name": "filtered_flight_ids_map",
+                                                        "type": "map",
+                                                        "values": {
+                                                            "type": "array",
+                                                            "items": "long"
+                                                        }
+                                                    }],
+                                                    "default": null
+                                                },
+                                                {
+                                                    "name": "filtered_paced_flight_ids",
+                                                    "type": ["null", {
+                                                        "name": "filtered_paced_flight_ids_map",
+                                                        "type": "map",
+                                                        "values": {
+                                                            "type": "array",
+                                                            "items": "long"
+                                                        }
+                                                    }],
+                                                    "default": null
+                                                }
+                                            ]
+                                        }],
+                                        "default": null
+                                    }
+                                ]
+                            }
+                    }],
+                    "default": null
+                },
+                {
+                    "name": "app",
+                    "type": ["null",{
+                        "type": "record",
+                        "name": "app",
+                        "fields":[
+                            {
+                                "name": "id",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "privacypolicy",
+                                "type": ["null","long"],
+                                "default": null
+                            },
+                            {
+                                "name": "name",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "domain",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "cat",
+                                "type": ["null", {
+                                  "type": "array",
+                                  "items": "string"
+                                }],
+                                "default": null
+                            },
+                            {
+                                "name": "sectioncat",
+                                "type": ["null", {
+                                  "type": "array",
+                                  "items": "string"
+                                }],
+                                "default": null
+                            },
+                            {
+                                "name": "pagecat",
+                                "type": ["null", {
+                                  "type": "array",
+                                  "items": "string"
+                                }],
+                                "default": null
+                            },
+                            {
+                                "name": "ver",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "bundle",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "paid",
+                                "type": ["null","long"],
+                                "default": null
+                            },
+                            {
+                                "name": "publisher",
+                                "type": ["null",{
+                                    "type": "record",
+                                    "name": "publisher",
+                                    "fields": [
+                                        {
+                                            "name": "id",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "domain",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        }
+                                    ]
+                                }],
+                                "default": null 
+                            },
+                            {
+                                "name": "content",
+                                "type": ["null",{
+                                    "type": "record",
+                                    "name": "content",
+                                    "fields": [
+                                        {
+                                            "name": "genre",
+                                            "type": ["null","string"],
+                                            "default": null
+                                        }
+                                    ]
+                                }],
+                                "default": null 
+                            },
+                            {
+                                "name": "storeurl",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "ext",
+                                "type": {
+                                    "type": "record",
+                                    "name": "bid_app_ext",
+                                    "fields": [
+                                        {
+                                            "name": "exchange_id",
+                                            "type": ["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "exchange_seller_id",
+                                            "type": ["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "exchange_seller_app_id",
+                                            "type": ["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "iab_categories",
+                                            "type": ["null",{
+                                              "type": "array",
+                                              "items": "long"
+                                            }],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "publisher_id",
+                                            "type": ["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "seller_id",
+                                            "type": ["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "applist_ids",
+                                            "type": ["null",{
+                                              "type": "array",
+                                              "items": "long"
+                                            }],
+                                            "default": null
+                                        }
+                                    ]
+                                } 
+                            }
+                        ]
+                    }],
+                    "default": null
+                },
+                {
+                    "name": "device",
+                    "type": ["null",{
+                        "type": "record",
+                        "name": "device",
+                        "fields": [
+                            {
+                                "name": "lmt",
+                                "type": ["null", "long"],
+                                "default": null
+                            },
+                            {
+                                "name": "dnt",
+                                "type": ["null", "long"],
+                                "default": null
+                            },
+                            {
+                                "name": "ua",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "ip",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "ipv6",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "geo",
+                                "type": {
+                                    "type": "record",
+                                    "name": "geo",
+                                    "fields": [
+                                        {
+                                            "name": "lat",
+                                            "type": ["null","float"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "lon",
+                                            "type": ["null","float"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "country",
+                                            "type": ["null","string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "region",
+                                            "type": ["null","string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "regionfips104",
+                                            "type": ["null","string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "zip",
+                                            "type": ["null","string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "type",
+                                            "type": ["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "city",
+                                            "type": ["null","long","string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "ext",
+                                            "type": ["null",{
+                                                "type": "record",
+                                                "name": "bod_device_geo_ext",
+                                                "fields":[
+                                                    {
+                                                        "name": "normalized_city",
+                                                        "type": ["null","string"],
+                                                        "default": null
+                                                    },
+                                                    {
+                                                        "name": "dma",
+                                                        "type": ["null","long"],
+                                                        "default": null
+                                                    },
+                                                    {
+                                                        "name": "timezone",
+                                                        "type": ["null","string"],
+                                                        "default": null
+                                                    },
+                                                    {
+                                                        "name": "geo_radius_list_ids",
+                                                        "type": ["null", {
+                                                            "type": "array",
+                                                            "items": "long"
+                                                        }],
+                                                        "default": null
+                                                    }
+                                                ]
+                                            }],
+                                            "default": null
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                "name": "carrier",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "os",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "osv",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "devicetype",
+                                "type": ["null","long"],
+                                "default": null
+                            },
+                            {
+                                "name": "language",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "js",
+                                "type": ["null","long"],
+                                "default": null
+                            },
+                            {
+                                "name": "ifa",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "ext",
+                                "type": ["null",{
+                                    "type": "record",
+                                    "name": "bid_device_ext",
+                                    "fields": [
+                                        {
+                                            "name":"samsung_affinity",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"samsung_psid",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"samsung_tvid",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "samsung_tvids",
+                                            "type": ["null", {
+                                                "type": "array",
+                                                "items":"string"
+                                            }],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"samsung_hhid",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "samsung_hhids",
+                                            "type": ["null", {
+                                                "type": "array",
+                                                "items":"string"
+                                            }],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"samsung_product_id",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"samsung_device_year",
+                                            "type": ["null", "long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"samsung_firmware_code",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"samsung_model_code",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"samsung_ad_type",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"samsung_device_country",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"liveramp_hhid",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"liveramp_pid",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"devicetype",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"browser",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"timezone",
+                                            "type": ["null", "string", "long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"device_type_id",
+                                            "type":["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"device_id",
+                                            "type":["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"operating_system_id",
+                                            "type":["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"operating_system_variant_id",
+                                            "type":["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"browser_id",
+                                            "type":["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"browser_variant_id",
+                                            "type":["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"operating_system_device_combination_id",
+                                            "type":["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"browser_combination_id",
+                                            "type":["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"user_agent_hash",
+                                            "type":["null", "long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"netmask",
+                                            "type":["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"org_name",
+                                            "type":["null","string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"marketing_name",
+                                            "type":["null","string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"uid_type",
+                                            "type":["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"netspeed",
+                                            "type":["null","string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"truncated_ip",
+                                            "type":["null","boolean"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"tv_modelcode_is_whitelisted",
+                                            "type":["null","boolean"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"tv_modelcode",
+                                            "type":["null","string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"stv_year",
+                                            "type":["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"stv_chipset",
+                                            "type":["null","string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"ad_agent_version",
+                                            "type":["null","string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "tvidlist_ids",
+                                            "type": ["null", {
+                                                "type": "array",
+                                                "items": "long"
+                                            }],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "iplist_ids",
+                                            "type": ["null", {
+                                                "type": "array",
+                                                "items": "long"
+                                            }],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "global_iplist_ids",
+                                            "type": ["null", {
+                                                "type": "array",
+                                                "items": "long"
+                                            }],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"matched_merkle_ifa",
+                                            "type":["null","string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"matched_merkle_ifa_type",
+                                            "type":["null","long"],
+                                            "default": null
+                                        }
+                                    ]
+                                }],
+                                "default": null
+                            }
+                        ]
+                    }],
+                    "default": null
+                },
+                {
+                    "name": "user",
+                    "type": ["null",{
+                        "type": "record",
+                        "name": "user",
+                        "fields":[
+                            {
+                                "name": "id",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "buyeruid",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "data",
+                                "type": ["null",{
+                                    "type": "array",
+                                    "items":
+                                            {
+                                                "type": "record",
+                                                "name": "bid_data",
+                                                "fields": [
+                                                    {
+                                                        "name": "id",
+                                                        "type": ["null","string"],
+                                                        "default": null
+                                                    },
+                                                    {
+                                                        "name": "segment",
+                                                        "type": ["null",{
+                                                            "type": "array",
+                                                            "items": {
+                                                                "type": "record",
+                                                                "name": "bid_segment",
+                                                                "fields": [
+                                                                    {
+                                                                        "name": "id",
+                                                                        "type": ["null","string"],
+                                                                        "default": null
+                                                                    },
+                                                                    {
+                                                                        "name": "value",
+                                                                        "type": ["null","string"],
+                                                                        "default": null
+                                                                    }
+                                                                ]
+                                                            }
+                                                        }],
+                                                        "default": null
+                                                    },
+                                                    {
+                                                        "name": "ext",
+                                                        "type": ["null",{
+                                                            "type": "record",
+                                                            "name": "bid_data_ext",
+                                                            "fields": [
+
+                                                                {
+                                                                    "name": "frequency_caps",
+                                                                    "type": ["null",{
+                                                                        "type": "array",
+                                                                        "items":
+                                                                            {
+                                                                                "type": "record",
+                                                                                "name": "frequency_caps_ext",
+                                                                                "fields":[
+                                                                                    {"name":"frequency_cap_id", "type":["null", "long"], "default": null},
+                                                                                    {"name":"frequency_cap_namespace", "type":["null", "string"], "default": null},
+                                                                                    {"name":"frequency_cap_type", "type":["null", "string"], "default": null},
+                                                                                    {"name":"frequency_cap_value", "type":["null", "long"], "default": null},
+                                                                                    {"name":"frequency_cap_write_time", "type":["null", "long"], "default": null}
+                                                                                ]
+                                                                            } 
+                                                                    }],
+                                                                    "default": null
+                                                                }
+                                                            ]
+                                                        }],
+                                                        "default": null
+                                                    }
+
+                                                ]
+                                            }
+                                }],
+                                "default": null
+                            },
+                            {
+                                "name": "ext",
+                                "type": ["null", {
+                                    "type": "record",
+                                    "name": "bid_user_ext",
+                                    "fields": [
+                                        {"name": "lotame_ids","type": ["null", {"type": "array", "items": "long"}],"default": null},
+                                        {"name": "adobe_aam_ids","type": ["null", {"type": "array", "items": "long"}],"default": null},
+                                        {"name": "liveramp_1p_ids","type": ["null", {"type": "array", "items": "long"}],"default": null},
+                                        {"name": "liveramp_3p_ids","type": ["null", {"type": "array", "items": "long"}],"default": null},
+                                        {"name": "nielsen_ids","type": ["null", {"type": "array", "items": "long"}],"default": null},
+                                        {"name": "bluekai_ids","type": ["null", {"type": "array", "items": "long"}],"default": null},
+                                        {"name": "bluekai_3p_ids","type": ["null", {"type": "array", "items": "long"}],"default": null},
+                                        {"name": "bluekai_custom_ids","type": ["null", {"type": "array", "items": "long"}],"default": null},
+                                        {"name": "neustar_ids","type": ["null", {"type": "array", "items": "long"}],"default": null},
+                                        {"name": "krux_1p_ids","type": ["null", {"type": "array", "items": "long"}],"default": null},
+                                        {"name": "merkle_ids","type": ["null", {"type": "array", "items": "long"}],"default": null},
+                                        {"name": "unified_ids","type": ["null", {"type": "array", "items": "long"}],"default": null},
+                                        {
+                                            "name": "pending_bid_responses",
+                                            "type": ["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "consent",
+                                            "type": ["null","string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "gdpr",
+                                            "type": ["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "liveramp_pid",
+                                            "type": ["null","string"],
+                                            "default": null
+                                        }
+                                    ]
+                                }],
+                                "default": null
+                            }
+                        ]
+                    }],
+                    "default": null
+                },
+                {
+                    "name": "at",
+                    "type": ["null","long"],
+                    "default": null
+                },
+                {
+                    "name": "tmax",
+                    "type": ["null","long"],
+                    "default": null
+                },
+                {
+                    "name": "site",
+                    "type": ["null",{
+                        "type": "record",
+                        "name": "site",
+                        "fields": [
+                            {
+                                "name": "ext",
+                                "type": ["null", {
+                                    "type": "record",
+                                    "name": "site_ext",
+                                    "fields":[
+                                        {
+                                            "name": "doubleclick_verticals",
+                                            "type": ["null", {
+                                                "type": "array",
+                                                "items": "long"
+                                            }],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "exchange_id",
+                                            "type": ["null", "long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "exchange_seller_id",
+                                            "type": ["null", "long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "exchange_seller_site_id",
+                                            "type": ["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "iab_categories",
+                                            "type": ["null", {"type": "array","items": "long"}],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "publisher_id",
+                                            "type": ["null", {"type": "array","items": "long"}],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "ias_segments",
+                                            "type": ["null", {"type": "array","items": "long"}],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "sitelist_ids",
+                                            "type": ["null", {"type": "array","items": "long"}],
+                                            "default": null
+                                        }
+                                    ]
+                                }],
+                                "default": null
+                            },
+                            {
+                                "name": "id",
+                                "type": ["null", "string"],
+                                "default": null
+                            },
+                            {
+                                "name": "domain",
+                                "type": ["null", "string"],
+                                "default": null
+                            },
+                            {
+                                "name": "name",
+                                "type": ["null", "string"],
+                                "default": null
+                            },
+                            {
+                                "name": "cat",
+                                "type": ["null", {
+                                  "type": "array",
+                                  "items": "string"
+                                }],
+                                "default": null
+                            },
+                            {
+                                "name": "page",
+                                "type": ["null", "string"],
+                                "default": null
+                            },
+                            {
+                                "name": "ref",
+                                "type": ["null", "string"],
+                                "default": null
+                            },
+                            {
+                                "name": "keywords",
+                                "type": ["null", "string"],
+                                "default": null
+                            },
+                            {
+                                "name": "publisher",
+                                "type": ["null", {
+                                    "type": "record",
+                                    "name": "site_publisher",
+                                    "fields":[
+                                        {
+                                            "name": "id",
+                                            "type": "string"
+                                        },
+                                        {
+                                            "name": "domain",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        }
+                                    ]
+                                }],
+                                "default": null
+                            },
+                            {
+                                "name": "content",
+                                "type": ["null", {
+                                    "type": "record",
+                                    "name": "bid_content",
+                                    "fields":[
+                                        {
+                                            "name": "genre",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        }
+                                    ]
+                                }],
+                                "default": null
+                            }
+                        ]
+                    }],
+                    "default": null
+                },
+                {
+                    "name": "regs",
+                    "type": ["null",{
+                        "type": "record",
+                        "name": "regs",
+                        "fields": [
+                            {
+                                "name": "ext",
+                                "type": ["null", {
+                                    "type": "record",
+                                    "name": "bid_regs_ext",
+                                    "fields":[
+                                        {
+                                            "name": "us_privacy",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "gdpr",
+                                            "type": ["null","long"],
+                                            "default": null
+                                        }
+                                    ]
+                                }],
+                                "default": null
+                            },
+                            {
+                                "name": "coppa",
+                                "type": ["null", "long"],
+                                "default": null
+                            }
+                        ]
+                    }],
+                    "default": null
+                },
+                {
+                    "name": "source",
+                    "type": ["null",{
+                        "type": "record",
+                        "name": "source",
+                        "fields": [
+                            {
+                                "name": "pchain",
+                                "type": ["null", "string"],
+                                "default": null
+                            },
+                            {
+                                "name": "tid",
+                                "type": ["null", "string"],
+                                "default": null
+                            },
+                            {
+                                "name": "fd",
+                                "type": ["null", "long"],
+                                "default": null
+                            },
+                            {
+                                "name": "ext",
+                                "type": ["null",{
+                                    "type": "record",
+                                    "name": "source_ext",
+                                    "fields":[
+                                        {
+                                            "name": "schain",
+                                            "type": ["null",{
+                                                "type": "record",
+                                                "name": "schain",
+                                                "fields": [
+                                                    {
+                                                        "name": "complete",
+                                                        "type": ["null","long"],
+                                                        "default": null
+                                                    },
+                                                    {
+                                                        "name": "nodes",
+                                                        "type": ["null",{
+                                                            "type": "array",
+                                                            "items":{
+                                                                "type": "record",
+                                                                "name": "nodes",
+                                                                "fields":[
+                                                                    {
+                                                                        "name": "asi",
+                                                                        "type": ["null", "string"],
+                                                                        "default": null
+                                                                    },
+                                                                    {
+                                                                        "name": "sid",
+                                                                        "type": ["null", "string"],
+                                                                        "default": null
+                                                                    },
+                                                                    {
+                                                                        "name": "rid",
+                                                                        "type": ["null", "string"],
+                                                                        "default": null
+                                                                    },
+                                                                    {
+                                                                        "name": "name",
+                                                                        "type": ["null", "string"],
+                                                                        "default": null
+                                                                    },
+                                                                    {
+                                                                        "name": "domain",
+                                                                        "type": ["null", "string"],
+                                                                        "default": null
+                                                                    },
+                                                                    {
+                                                                        "name": "hp",
+                                                                        "type": ["null", "long"],
+                                                                        "default": null
+                                                                    }
+                                                                ]
+                                                            }                                                           
+                                                        }],
+                                                        "default": null
+                                                    },
+                                                    {
+                                                        "name": "ver",
+                                                        "type": "string"
+                                                    }
+                                                ]
+                                            }],
+                                            "default": null
+                                        }
+                                    ]
+                                }],
+                                "default": null
+                            }
+                        ]
+                    }],
+                    "default": null
+                },
+                {
+                    "name": "guaranteed",
+                    "type": ["null", "boolean"],
+                    "default": null
+                },
+                {
+                    "name": "ext",
+                    "type": ["null",{
+                        "type": "record",
+                        "name": "bid_req_ext",
+                        "fields": [
+                            {"name": "ads_txt_db_loaded","type": ["null","boolean"], "default":null},
+                            {"name": "ads_txt_strategy","type": ["null","long"], "default":null},
+                            {
+                                "name": "ads_txt_relationship",
+                                "type": "string"
+                            },
+                            {
+                                "name": "channel",
+                                "type": "string"
+                            },
+                            {
+                                "name": "upstream_id",
+                                "type": ["null", "string"],
+                                "default": null
+                            },
+                            {
+                                "name": "ssl",
+                                "type": ["null", "long"],
+                                "default": null
+                            },
+                            {"name": "s2s_nurl","type": ["null","long"], "default":null},
+                            {"name": "optout","type": ["null","boolean"], "default":null},
+                            {"name": "optout_reason","type": ["null","string"], "default":null},
+                            {"name": "optout_cross_check","type": ["null","string"], "default":null},
+                            {"name": "appnexus_member_id","type": ["null","long"], "default":null},
+                            {"name": "bid_feedback", "type": ["null", {
+                                "type": "record",
+                                "name": "bid_req_ext_feedback",
+                                "fields": [
+                                    {"name": "id", "type": ["null", "string"], "default": null},
+                                    {"name": "creative_status_code", "type": ["null", "long"], "default": null},
+                                    {"name": "price", "type": ["null", "double"], "default": null},
+                                    {"name": "minimum_bid_to_win", "type": ["null", "double"], "default": null},
+                                    {"name": "buyer_creative_id", "type": ["null", "string", "long"], "default": null},
+                                    {"name": "event_notification_token", "type": ["null",{
+                                      "type": "record",
+                                      "name": "event_notification_token",
+                                      "fields": [
+                                        {"name": "payload", "type": ["null", "string"], "default": null}
+                                      ]
+                                    }], "default": null}
+                                  ]
+                            }], "default": null}
+                        ]
+                    }],
+                    "default": null
+                },
+                {
+                    "name": "wseat",
+                    "type": ["null","string"],
+                    "default": null
+                }
+
+            ]
+        }],
+        "default": null
+    },
+    {
+        "name": "bid_active_bidder",
+        "type": ["null", "boolean"],
+        "default": null
+    },
+    {
+        "name": "bid_active_datacenter",
+        "type": ["null", "boolean"],
+        "default": null
+    },
+    {
+        "name": "bid_active_exchange",
+        "type": ["null", "boolean"],
+        "default": null
+    },
+    {
+        "name": "hostname",
+        "type": ["null","string"],
+        "default": null
+    },
+    {
+        "name": "thinktime",
+        "type": ["null", "long"],
+        "default": null
+    },
+    {
+        "name": "bid_response",
+        "type": ["null", {
+            "type": "record",
+            "name": "bid_response",
+            "fields":[
+                {
+                    "name": "id",
+                    "type": ["null","string"],
+                    "default": null
+                },
+                {
+                    "name": "bidid",
+                    "type": ["null","string"],
+                    "default": null
+                },
+                {
+                    "name": "cur",
+                    "type": ["null","string"],
+                    "default": null
+                },
+                {
+                    "name": "seatbid",
+                    "type": ["null", {
+                        "type": "array",
+                        "items": {
+                            "name": "seatbid_rec",
+                            "type": "record",
+                            "fields": [
+                                {
+                                    "name": "bid",
+                                    "type": {
+                                        "type": "array",
+                                        "items": {
+                                            "name": "seatbid_rec_bid",
+                                            "type": "record",
+                                            "fields":[
+                                                {"name": "id","type":["null", "string"],"default":null},
+                                                {"name": "impid","type":["null", "string"],"default":null},
+                                                {"name": "price","type":["null", "float", "long"],"default":null},
+                                                {"name": "adid","type":["null", "string"],"default":null},
+                                                {"name": "nurl","type":["null", "string"],"default":null},
+                                                {"name": "burl","type":["null", "string"],"default":null},
+                                                {"name": "adm","type":["null", "string"],"default":null},
+                                                {"name": "adomain","type":["null", {"type":"array","items":"string"}],"default":null},
+                                                {"name": "bundle","type":["null", "string"],"default":null},
+                                                {"name": "iurl","type":["null", "string"],"default":null},
+                                                {"name": "cid","type":["null", "string"],"default":null},
+                                                {"name": "crid","type":["null", "string"],"default":null},
+                                                {"name": "dealid","type":["null", "string"],"default":null},
+                                                {"name": "attr","type":["null", {"type":"array","items":"long"}],"default":null},
+                                                {
+                                                    "name": "ext",
+                                                    "type": ["null",{
+                                                        "type": "record",
+                                                        "name": "bid_ext",
+                                                        "fields": [
+                                                            {"name": "bidder_id","type":["null", "long"],"default":null},
+                                                            {"name": "seat_id","type":["null", "long"],"default":null},
+                                                            {"name": "dsp_id","type":["null", "long"],"default":null},
+                                                            {"name": "buyer_id","type":["null", "long"],"default":null},
+                                                            {"name": "advertiser_id","type":["null", "long"],"default":null},
+                                                            {"name": "flight_id","type":["null", "long"],"default":null},
+                                                            {"name": "campaign_id","type":["null", "long"],"default":null},
+                                                            {"name": "creative_id","type":["null", "long"],"default":null},
+                                                            {"name": "creative_group_lookup_id","type":["null", "long", "string"],"default":null},
+                                                            {"name": "tag_id","type":["null", "long"],"default":null},
+                                                            {"name": "product_id","type":["null", "long"],"default":null},
+                                                            {"name": "deal_id","type":["null","string"],"default":null},
+                                                            {"name": "passback","type":["null", "string"],"default":null},
+                                                            {"name": "win_price","type":["null", "long", "float"],"default":null},
+                                                            {"name": "appnexus","type":["null", {
+                                                                "type": "record",
+                                                                "name": "appnexus",
+                                                                "fields":[
+                                                                    {"name": "allowed_media_subtypes","type":["null", {
+                                                                        "type":"array", "items": "long"
+                                                                    }],"default":null}
+                                                                ]
+                                                            }],"default":null},
+                                                            {"name": "video_duration","type":["null", "long"],"default":null},
+                                                            {"name": "discrepancy_percent","type":["null", "float", "long"],"default":null},
+                                                            {"name": "exchange_currency","type":["null", "string"],"default":null},
+                                                            {"name": "exchange_currency_rate","type":["null", "float"],"default":null},
+                                                            {"name": "buyer_currency","type":["null", "string"],"default":null},
+                                                            {"name": "buyer_currency_rate","type":["null", "float"],"default":null},
+                                                            {"name": "buyer_fee_schedule_id","type":["null", "long"],"default":null},
+                                                            {"name": "bidder_bid_price","type":["null", "long", "float"],"default":null}
+                                                        ]
+                                                    }],
+                                                    "default": null
+                                                }                                            
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }],
+                    "default": null
+                },
+                {
+                    "name": "ext",
+                    "type": ["null",{
+                        "type": "record",
+                        "name": "bid_response_ext",
+                        "fields": [
+                            {"name":"ssl","type":["null", "long"],"default":null}
+                        ]
+                    }],
+                    "default": null
+                }
+            ]        
+        }],
+        "default": null
+    },
+    {
+        "name": "error",
+        "type": ["null","string"],
+        "default": null
+    },
+    {
+        "name": "error_info",
+        "type": ["null",{
+            "type": "record",
+            "name": "error_info",
+            "fields": [
+                {
+                    "name": "exchange_id",
+                    "type": ["null", "long"],
+                    "default": null
+                },
+                {
+                    "name": "iplist_id",
+                    "type": ["null", "long"],
+                    "default": null
+                },
+                {
+                    "name": "ip",
+                    "type": ["null", "string"],
+                    "default": null
+                },
+                {
+                    "name": "exchange_seller_id",
+                    "type": ["null", "long"],
+                    "default": null
+                },
+                {
+                    "name": "exchange_seller_app_id",
+                    "type": ["null", "long", "string"],
+                    "default": null
+                },
+                {
+                    "name": "exchange_seller_site_id",
+                    "type": ["null", "long", "string"],
+                    "default": null
+                }
+            ]
+        }],
+        "default": null
+    },
+    {
+        "name": "filtered_ssp_result",
+        "type": ["null", {
+            "name": "filtered_ssp_result_map",
+            "type": "map",
+            "values": {
+                "type": "array",
+                "items": "long"
+            }
+        }],
+        "default": null
+    },
+    {
+        "name": "filtered_app_compatible_result",
+        "type": ["null", {
+            "name": "filtered_app_compatible_result_map",
+            "type": "map",
+            "values": {
+                "type": "array",
+                "items": "long"
+            }
+        }],
+        "default": null
+    },
+    {
+        "name": "seller_request_cpm",
+        "type": ["null", "long"],
+        "default": null
+    },
+    {
+        "name": "seller_request_fee_cpm",
+        "type": ["null", "long"],
+        "default": null
+    },
+    {
+        "name": "seller_trader_fee_cpm",
+        "type": ["null", "long"],
+        "default": null
+    },
+    {
+        "name": "maxtime",
+        "type": ["null", "long"],
+        "default": null
+    }
+  ]
+}

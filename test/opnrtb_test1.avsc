@@ -1,0 +1,54 @@
+{
+  "namespace": "rtb.gateway.request",
+  "type": "record",
+  "name": "GatewayRequest",
+
+  "fields": [
+    {
+        "name": "event",
+        "type": "string"
+    },
+    {
+        "name": "sampling",
+        "type": ["null", "long", "string"],
+        "default": null
+    },
+    {
+        "name": "timestamp",
+        "type": ["null", "double", "long"],
+        "default": null
+    },
+    {
+        "name": "filtered_app_compatible_result",
+        "type": ["null", {
+            "name": "filtered_app_compatible_result_map",
+            "type": "map",
+            "values": {
+                "type": "array",
+                "items": "long"
+            }
+        }],
+        "default": null
+    },
+    {
+        "name": "seller_request_cpm",
+        "type": ["null", "long"],
+        "default": null
+    },
+    {
+        "name": "seller_request_fee_cpm",
+        "type": ["null", "long"],
+        "default": null
+    },
+    {
+        "name": "seller_trader_fee_cpm",
+        "type": ["null", "long"],
+        "default": null
+    },
+    {
+        "name": "maxtime",
+        "type": ["null", "long"],
+        "default": null
+    }
+  ]
+}
