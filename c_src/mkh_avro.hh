@@ -4,6 +4,7 @@
 #include "include/json.hpp"
 #include <algorithm>
 #include <typeinfo>
+#include "avro_exceptions.hh"
 using json = nlohmann::json;
 
 namespace mkh_avro {
@@ -241,7 +242,7 @@ int encode_record(std::vector<SchemaItem> schema, ErlNifEnv* env, ERL_NIF_TERM& 
             if(encodeCode == 0){
                 retv->insert(retv->end(), rv.begin(), rv.end());
             }else{
-                throw encodeCode;
+                throw AvroException("record encoding error", encodeCode);
             }
         }else if(it.defnull == 1){
             retv->push_back(0);
