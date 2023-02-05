@@ -59,7 +59,7 @@ struct SchemaItem{
                     obj_type = 1;
                 }else if(i.is_object() && i["type"] == "map"){
                     if(i["values"].is_object() && i["values"]["type"] == "array"){
-                        fieldTypes.push_back(i["values"]["type"]);
+                        fieldTypes.push_back(i["values"]["items"]);
                         obj_type = 4;
                     } else {
                         fieldTypes.push_back(i["values"]);
@@ -213,7 +213,7 @@ int encode(SchemaItem it, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t
                     eret = encode_array(*iter, env, term, ret);
                 } else if(it.obj_type == 4){ // map_of_array
                     std::cout << "E.map_of_arrays enc" << '\n' << '\r';
-                    eret = encode_map_of_arrays(atypes[0], env, term, ret);
+                    eret = encode_map_of_arrays(*iter, env, term, ret);
                 }else{
                     eret = encode_primitive(*iter, env, term, ret);
                 }
@@ -268,7 +268,11 @@ int encode_record(std::vector<SchemaItem> schema, ErlNifEnv* env, ERL_NIF_TERM& 
 }
 
 int encode_map_of_arrays(std::string atype, ErlNifEnv* env, ERL_NIF_TERM& term, std::vector<uint8_t>* ret){
-    return encode_map_types(1, atype, env, term, ret);
+    if(atype == "null"){
+        return 99999;
+    }else{
+        return encode_map_types(1, atype, env, term, ret);
+    }
 }
 
 int encode_map(std::string atype, ErlNifEnv* env, ERL_NIF_TERM& term, std::vector<uint8_t>* ret){
@@ -305,17 +309,21 @@ int encode_map_types(uint8_t mtype, std::string atype, ErlNifEnv* env, ERL_NIF_T
             encode_long_fast(env, len, ret);
             for(amap_iter = amap.begin(); amap_iter != amap.end(); amap_iter++){
                 // encode key
-                //std::cout << "EMAP3 key:" << amap_iter->first <<'\n' << '\r';
-                auto len2 = mkh_avro::encodeInt64(len, output);
+                // std::cout << "EMAP3 key:" << amap_iter->first <<'\n' << '\r';
+                auto len3 = amap_iter->first.size();
+                auto len2 = mkh_avro::encodeInt64(len3, output);
+                //std::cout << "EMAP3 lens:" << len2 << '--' << len3 <<'\n' << '\r';
                 ret->insert(ret->end(), output.data(), output.data() + len2);
-                ret->insert(ret->end(), amap_iter->first.data(), amap_iter->first.data() + len);
+                ret->insert(ret->end(), amap_iter->first.data(), amap_iter->first.data() + len3);
 
                 // encode value
                 //std::cout << "EMAP4 value:" <<'\n' << '\r';
                 if(mtype == 0){
                     encode_primitive(atype, env, amap_iter->second, ret);
                 } else if(mtype == 1){
+                    //std::cout << "Value array of:" << atype <<'\n' << '\r';
                     encode_array(atype, env, amap_iter->second, ret);
+                    //std::cout << "encode array ret:" << retar <<'\n' << '\r';
                 }
             }
             ret->push_back(0);

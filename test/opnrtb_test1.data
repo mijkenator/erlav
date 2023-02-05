@@ -22,3 +22,16 @@
     <<"maxtime">> => 4444
 }.
 
+#{
+    <<"event">> => <<"event4">>,
+    <<"sampling">> => <<"sampling3">>,
+    <<"timestamp">> => 111.222,
+    <<"seller_request_cpm">> => 1111,
+    <<"seller_request_fee_cpm">> => 2222,
+    <<"seller_trader_fee_cpm">> => 3333,
+    <<"maxtime">> => 4444,
+    <<"filtered_ssp_result">> => #{
+        <<"fsr_key1">> => [1111, 22222]
+    }
+}.
+

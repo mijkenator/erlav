@@ -13,7 +13,7 @@ ortb1_test() ->
 
     lists:foreach(fun(Term1) -> 
         Re2 = erlav_nif:do_encode(SchemaId, Term1),
-        M = maps:from_list(Decoder(Re2)),
+        M = to_map(Decoder(Re2)),
         compare_maps(Term1, M)
     end, Terms).
 
@@ -28,4 +28,8 @@ compare_maps(M1, M2) ->
         ?assertEqual(V1, V2)
     end, KL1),
     ok.
+
+to_map([{K,V}|_] = L) ->
+    maps:from_list([{K, to_map(V)} || {K, V} <- L]);
+to_map(V) -> V.
 

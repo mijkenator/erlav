@@ -19,6 +19,18 @@
         "default": null
     },
     {
+        "name": "filtered_ssp_result",
+        "type": ["null", {
+            "name": "filtered_ssp_result_map",
+            "type": "map",
+            "values": {
+                "type": "array",
+                "items": "long"
+            }
+        }],
+        "default": null
+    },
+    {
         "name": "filtered_app_compatible_result",
         "type": ["null", {
             "name": "filtered_app_compatible_result_map",
