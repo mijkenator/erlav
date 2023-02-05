@@ -3,9 +3,12 @@
 -include_lib("eunit/include/eunit.hrl").
     
 ortb1_test() ->
+    ?debugFmt("=============== openRTB test 1 ===================  ~n ~n", []),
     {ok, SchemaJSON1} = file:read_file("test/opnrtb_test1.avsc"),
     Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    ?debugFmt("=============== openRTB test 1 :1: ===================  ~n ~n", []),
     SchemaId = erlav_nif:create_encoder(<<"test/opnrtb_test1.avsc">>),
+    ?debugFmt("=============== openRTB test 1 :2: ===================  ~n ~n", []),
     {ok, Terms} = file:consult("test/opnrtb_test1.data"),
 
     lists:foreach(fun(Term1) -> 
@@ -21,6 +24,7 @@ compare_maps(M1, M2) ->
     lists:foreach(fun(Key) ->
         V1 = maps:get(Key, M1),
         V2 = maps:get(Key, M2),
+        ?debugFmt("Key ~p: V1:~p  V2:~p ~n", [Key, V1, V2]),
         ?assertEqual(V1, V2)
     end, KL1),
     ok.

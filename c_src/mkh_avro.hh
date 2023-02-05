@@ -20,6 +20,8 @@ int enif_get_bool(ErlNifEnv*, ERL_NIF_TERM, bool*);
 int encode_primitive(std::string, ErlNifEnv*, ERL_NIF_TERM, std::vector<uint8_t>*);
 int encode_array(std::string, ErlNifEnv*, ERL_NIF_TERM&, std::vector<uint8_t>*);
 int encode_map(std::string, ErlNifEnv*, ERL_NIF_TERM&, std::vector<uint8_t>*);
+int encode_map_of_arrays(std::string, ErlNifEnv*, ERL_NIF_TERM&, std::vector<uint8_t>*);
+int encode_map_types(uint8_t, std::string, ErlNifEnv*, ERL_NIF_TERM&, std::vector<uint8_t>*);
 
 struct SchemaItem{
     std::string fieldName;
@@ -27,7 +29,7 @@ struct SchemaItem{
     bool nullable = 0;
     bool defnull = 0;
     bool isunion = 0;
-    uint8_t obj_type = 0; // 0 - primitive, 1 - array, 2 - map, 3 - record
+    uint8_t obj_type = 0; // 0 - primitive, 1 - array, 2 - map, 3 - record, 4 - map of arrays
     std::vector<SchemaItem> record_schema;
 
     void set_null_default(){
@@ -55,6 +57,14 @@ struct SchemaItem{
                 } else if(i.is_object() && (i["type"] == "array")){
                     fieldTypes.push_back(i["items"]);
                     obj_type = 1;
+                }else if(i.is_object() && i["type"] == "map"){
+                    if(i["values"].is_object() && i["values"]["type"] == "array"){
+                        fieldTypes.push_back(i["values"]["type"]);
+                        obj_type = 4;
+                    } else {
+                        fieldTypes.push_back(i["values"]);
+                        obj_type = 2;
+                    }
                 } else {
                     fieldTypes.push_back(i);
                 }
@@ -185,6 +195,9 @@ int encode(SchemaItem it, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t
         } else if(it.obj_type == 3){
             std::cout << "E.Record enc" << '\n' << '\r';
             return encode_record(it.record_schema, env, term, ret);
+        } else if(it.obj_type == 4){
+            std::cout << "E.map_of_array enc" << '\n' << '\r';
+            return encode_map_of_arrays(atypes[0], env, term, ret);
         } else {
             //std::cout << "E.TYPE" << atypes[0] << '\n' << '\r';
             return encode_primitive(atypes[0], env, term, ret);
@@ -198,6 +211,9 @@ int encode(SchemaItem it, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t
                 int eret = 999;
                 if(it.obj_type == 1){ // array
                     eret = encode_array(*iter, env, term, ret);
+                } else if(it.obj_type == 4){ // map_of_array
+                    std::cout << "E.map_of_arrays enc" << '\n' << '\r';
+                    eret = encode_map_of_arrays(atypes[0], env, term, ret);
                 }else{
                     eret = encode_primitive(*iter, env, term, ret);
                 }
@@ -251,7 +267,15 @@ int encode_record(std::vector<SchemaItem> schema, ErlNifEnv* env, ERL_NIF_TERM& 
     return 0;
 }
 
+int encode_map_of_arrays(std::string atype, ErlNifEnv* env, ERL_NIF_TERM& term, std::vector<uint8_t>* ret){
+    return encode_map_types(1, atype, env, term, ret);
+}
+
 int encode_map(std::string atype, ErlNifEnv* env, ERL_NIF_TERM& term, std::vector<uint8_t>* ret){
+    return encode_map_types(0, atype, env, term, ret);
+}
+
+int encode_map_types(uint8_t mtype, std::string atype, ErlNifEnv* env, ERL_NIF_TERM& term, std::vector<uint8_t>* ret){
     ErlNifMapIterator iter;
     ERL_NIF_TERM key;
     ERL_NIF_TERM val;
@@ -288,15 +312,19 @@ int encode_map(std::string atype, ErlNifEnv* env, ERL_NIF_TERM& term, std::vecto
 
                 // encode value
                 //std::cout << "EMAP4 value:" <<'\n' << '\r';
-                encode_primitive(atype, env, amap_iter->second, ret);
+                if(mtype == 0){
+                    encode_primitive(atype, env, amap_iter->second, ret);
+                } else if(mtype == 1){
+                    encode_array(atype, env, amap_iter->second, ret);
+                }
             }
             ret->push_back(0);
             return 0;
         }
     }
-    return 668;
-}
+    return 669;
 
+}
 
 int encode_array_ofrec(std::vector<SchemaItem> schema, ErlNifEnv* env, ERL_NIF_TERM& term, std::vector<uint8_t>* ret){
     unsigned int len;
