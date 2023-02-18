@@ -1,0 +1,11 @@
+{"type": "record", "name":"Interop", "namespace": "erlav.test",
+  "fields": [
+      {"name": "recordField", "type": ["null", {"type": "record", "name": "trec", "fields":[
+          {"name": "rec1field", "type": "long"},
+          {"name": "rec3field", "type": "long"}
+      ]}],
+        "default": null
+      }
+  ]
+}
+
