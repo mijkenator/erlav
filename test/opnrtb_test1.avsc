@@ -19,6 +19,51 @@
         "default": null
     },
     {
+        "name": "error",
+        "type": ["null","string"],
+        "default": null
+    },
+    {
+        "name": "error_info",
+        "type": ["null",{
+            "type": "record",
+            "name": "error_info",
+            "fields": [
+                {
+                    "name": "exchange_id",
+                    "type": ["null", "long"],
+                    "default": null
+                },
+                {
+                    "name": "iplist_id",
+                    "type": ["null", "long"],
+                    "default": null
+                },
+                {
+                    "name": "ip",
+                    "type": ["null", "string"],
+                    "default": null
+                },
+                {
+                    "name": "exchange_seller_id",
+                    "type": ["null", "long"],
+                    "default": null
+                },
+                {
+                    "name": "exchange_seller_app_id",
+                    "type": ["null", "long", "string"],
+                    "default": null
+                },
+                {
+                    "name": "exchange_seller_site_id",
+                    "type": ["null", "long", "string"],
+                    "default": null
+                }
+            ]
+        }],
+        "default": null
+    },
+    {
         "name": "filtered_ssp_result",
         "type": ["null", {
             "name": "filtered_ssp_result_map",

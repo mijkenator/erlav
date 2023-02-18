@@ -65,6 +65,10 @@ struct SchemaItem{
                         fieldTypes.push_back(i["values"]);
                         obj_type = 2;
                     }
+                } else if(i.is_object() && i["type"] == "record"){
+                    set_recursive_types(i["fields"]);
+                    fieldTypes.push_back("record");
+                    obj_type = 3;
                 } else {
                     fieldTypes.push_back(i);
                 }
@@ -203,7 +207,7 @@ int encode(SchemaItem it, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t
             return encode_primitive(atypes[0], env, term, ret);
         }
     }else{
-        //std::cout << "E.UNION:" << alen << '\n' << '\r';
+        std::cout << "E.UNION:" << alen << '\n' << '\r';
         ret->insert(ret->begin(), 0); // reserve first for type index
         for (auto iter = atypes.begin(); iter != atypes.end(); ++iter) {
             int index = std::distance(atypes.begin(), iter);
@@ -211,6 +215,9 @@ int encode(SchemaItem it, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t
                 int eret = 999;
                 if(it.obj_type == 1){ // array
                     eret = encode_array(*iter, env, term, ret);
+                } else if(it.obj_type == 3){ // records
+                    std::cout << "E.Record enc" << index << '\n' << '\r';
+                    eret = encode_record(it.record_schema, env, term, ret);
                 } else if(it.obj_type == 4){ // map_of_array
                     std::cout << "E.map_of_arrays enc" << '\n' << '\r';
                     eret = encode_map_of_arrays(*iter, env, term, ret);

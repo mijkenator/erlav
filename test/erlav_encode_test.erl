@@ -198,6 +198,22 @@ record2_test() ->
     %?assertEqual(33.44, proplists:get_value(<<"rec7field">>, maps:get(<<"recordField">>, M))),
     ?assertEqual(11.22, proplists:get_value(<<"rec6field">>, maps:get(<<"recordField">>, M))).
 
+record3_test() ->
+    {ok, SchemaJSON1} = file:read_file("test/tschema_record3.avsc"),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    Term1 = #{
+              <<"recordField">> => #{
+                    <<"rec1field">> => 1,
+                    <<"rec3field">> => 2
+                }
+    },
+    
+    SchemaId = erlav_nif:create_encoder(<<"test/tschema_record3.avsc">>),
+    Re2 = erlav_nif:do_encode(SchemaId, Term1),
+    M = maps:from_list(Decoder(Re2)),
+    %file:write_file("/tmp/rfile.txt", io_lib:format("~p~n", [RTerm]),[append]),
+    ?assertEqual(1, proplists:get_value(<<"rec1field">>, maps:get(<<"recordField">>, M))),
+    ?assertEqual(2, proplists:get_value(<<"rec3field">>, maps:get(<<"recordField">>, M))).
 
 arrayofrec_test() ->
     {ok, SchemaJSON1} = file:read_file("test/tschema_array_ofrecs.avsc"),
