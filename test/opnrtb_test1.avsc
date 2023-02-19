@@ -19,6 +19,59 @@
         "default": null
     },
     {
+        "name": "bid_response",
+        "type": ["null", {
+            "type": "record",
+            "name": "bid_response",
+            "fields":[
+                {
+                    "name": "id",
+                    "type": ["null","string"],
+                    "default": null
+                },
+                {
+                    "name": "bidid",
+                    "type": ["null","string"],
+                    "default": null
+                },
+                {
+                    "name": "cur",
+                    "type": ["null","string"],
+                    "default": null
+                },
+                {
+                    "name": "seatbid",
+                    "type": ["null", {
+                        "type": "array",
+                        "items": {
+                            "name": "seatbid_rec",
+                            "type": "record",
+                            "fields": [
+                                {
+                                    "name": "bid",
+                                    "type": "long"
+                                }
+                            ]
+                        }
+                    }],
+                    "default": null
+                },
+                {
+                    "name": "ext",
+                    "type": ["null",{
+                        "type": "record",
+                        "name": "bid_response_ext",
+                        "fields": [
+                            {"name":"ssl","type":["null", "long"],"default":null}
+                        ]
+                    }],
+                    "default": null
+                }
+            ]        
+        }],
+        "default": null
+    },
+    {
         "name": "error",
         "type": ["null","string"],
         "default": null
