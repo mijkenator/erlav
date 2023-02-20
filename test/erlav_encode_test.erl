@@ -246,21 +246,24 @@ arrayofrec_null_test() ->
     Term1 = #{
               <<"arrayField">> => [
                                    #{
-                                        <<"rec1field">> => 1,
-                                        <<"rec2field">> => <<"koko">>,
-                                        <<"rec3field">> => 2,
-                                        <<"rec4field">> => 112233,
-                                        <<"rec5field">> => true,
-                                        <<"rec6field">> => 11.22,
-                                        <<"rec7field">> => 33.44
+                                        <<"rec1field">> => 1112244,
+                                        <<"rec3field">> => 244567
+                                    },
+                                   #{
+                                        <<"rec1field">> => 11122442,
+                                        <<"rec3field">> => 2445672
+                                    },
+                                   #{
+                                        <<"rec1field">> => 11122443,
+                                        <<"rec3field">> => 2445673
                                     }
                 ]
     },
     SchemaId = erlav_nif:create_encoder(<<"test/tschema_array_ofrecs_nullable.avsc">>),
     Re2 = erlav_nif:do_encode(SchemaId, Term1),
     M = maps:from_list(Decoder(Re2)),
-    [M1|_] = maps:get(<<"arrayField">>, M),
-    ?assertEqual(<<"koko">>,  proplists:get_value(<<"rec2field">>, M1)),
-    ?assertEqual(112233,  proplists:get_value(<<"rec4field">>, M1)),
-    ?assertEqual(true,  proplists:get_value(<<"rec5field">>, M1)),
-    ?assertEqual(11.22,  proplists:get_value(<<"rec6field">>, M1)).
+    [M1,_,M3|_] = maps:get(<<"arrayField">>, M),
+    ?assertEqual(1112244,  proplists:get_value(<<"rec1field">>, M1)),
+    ?assertEqual(244567,  proplists:get_value(<<"rec3field">>, M1)),
+    ?assertEqual(11122443,  proplists:get_value(<<"rec1field">>, M3)),
+    ?assertEqual(2445673,  proplists:get_value(<<"rec3field">>, M3)).

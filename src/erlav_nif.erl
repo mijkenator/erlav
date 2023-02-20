@@ -7,6 +7,7 @@
         array_tst/0, map_tst/0, record_tst/0,
         record3_tst/0,
         array_rec_tst/0,
+        array_rec_null_tst/0,
         map_arr/0
         ]).
 
@@ -433,3 +434,23 @@ map_arr() ->
     io:format("3.C++ decoded ret: ~p ~n", [T2]),
     ok.
     
+array_rec_null_tst() ->
+    {ok, SchemaJSON1} = file:read_file("test/tschema_array_ofrecs_nullable.avsc"),
+    Encoder  = avro:make_simple_encoder(SchemaJSON1, []),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    Term1 = #{
+              <<"arrayField">> => [
+                                   #{
+                                        <<"rec1field">> => 171,
+                                        <<"rec3field">> => 293777
+                                    }
+                ]
+    },
+    SchemaId = erlav_nif:create_encoder(<<"test/tschema_array_ofrecs_nullable.avsc">>),
+    io:format("1.Erl ret: ~p ~n", [ iolist_to_binary(Encoder(Term1)) ]),
+    Re2 = erlav_nif:do_encode(SchemaId, Term1),
+    io:format("2.C++ ret: ~p ~n", [Re2]),
+    T2 = Decoder(Re2),
+    io:format("3.C++ decoded ret: ~p ~n", [T2]),
+    ok.
+

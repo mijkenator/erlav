@@ -30,6 +30,7 @@ struct SchemaItem{
     bool defnull = 0;
     bool isunion = 0;
     uint8_t obj_type = 0; // 0 - primitive, 1 - array, 2 - map, 3 - record, 4 - map of arrays
+                          // 5 - array of recs
     std::vector<SchemaItem> record_schema;
 
     void set_null_default(){
@@ -55,8 +56,14 @@ struct SchemaItem{
                     nullable = 1;
                     fieldTypes.push_back(i);
                 } else if(i.is_object() && (i["type"] == "array")){
-                    fieldTypes.push_back(i["items"]);
-                    obj_type = 1;
+                    if(i["items"].is_object() && i["items"]["type"] == "record"){
+                        fieldTypes.push_back("record");
+                        set_recursive_types(i["items"]["fields"]);
+                        obj_type = 5;
+                    }else{
+                        fieldTypes.push_back(i["items"]);
+                        obj_type = 1;
+                    }
                 }else if(i.is_object() && i["type"] == "map"){
                     if(i["values"].is_object() && i["values"]["type"] == "array"){
                         fieldTypes.push_back(i["values"]["items"]);
@@ -221,6 +228,8 @@ int encode(SchemaItem it, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t
                 } else if(it.obj_type == 4){ // map_of_array
                     std::cout << "E.map_of_arrays enc" << '\n' << '\r';
                     eret = encode_map_of_arrays(*iter, env, term, ret);
+                } else if(it.obj_type == 5){ // array of rec
+                    eret = encode_array_ofrec(it.record_schema, env, term, ret);
                 }else{
                     eret = encode_primitive(*iter, env, term, ret);
                 }

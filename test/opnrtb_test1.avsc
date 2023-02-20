@@ -49,7 +49,10 @@
                             "fields": [
                                 {
                                     "name": "bid",
-                                    "type": "long"
+                                    "type": {
+                                        "type": "array",
+                                        "items": "long"
+                                    }
                                 }
                             ]
                         }
