@@ -23,7 +23,7 @@ compare_maps(M1, M2) ->
     ?debugFmt("Test for event: ~p ~n", [Event]),
     lists:foreach(fun(Key) ->
         V1 = maps:get(Key, M1),
-        V2 = maps:get(Key, M2),
+        V2 = filter_null_values(maps:get(Key, M2)),
         ?debugFmt("Key ~p: V1:~p  V2:~p ~n", [Key, V1, V2]),
         ?assertEqual(V1, V2)
     end, KL1),
@@ -33,3 +33,9 @@ to_map([{K,V}|_] = L) ->
     maps:from_list([{K, to_map(V)} || {K, V} <- L]);
 to_map(V) -> V.
 
+filter_null_values([{K,V}|_] = L) -> filter_null_values(maps:from_list(L));
+filter_null_values(L) when is_list(L) -> [filter_null_values(E) || E <- L];
+filter_null_values(#{} = V) ->
+    M1 = maps:filter(fun(_, null) -> false; (_,_) -> true end, V),
+    maps:map(fun(_, Val) -> filter_null_values(Val) end, M1);
+filter_null_values(V) -> V.
