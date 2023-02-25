@@ -51,7 +51,26 @@
                                     "name": "bid",
                                     "type": {
                                         "type": "array",
-                                        "items": "long"
+                                        "items": {
+                                            "name": "seatbid_rec_bid",
+                                            "type": "record",
+                                            "fields": [
+                                                {"name": "id","type":["null", "string"],"default":null},
+                                                {"name": "impid","type":["null", "string"],"default":null},
+                                                {"name": "price","type":["null", "float", "long"],"default":null},
+                                                {"name": "adid","type":["null", "string"],"default":null},
+                                                {"name": "nurl","type":["null", "string"],"default":null},
+                                                {"name": "burl","type":["null", "string"],"default":null},
+                                                {"name": "adm","type":["null", "string"],"default":null},
+                                                {"name": "adomain","type":["null", {"type":"array","items":"string"}],"default":null},
+                                                {"name": "bundle","type":["null", "string"],"default":null},
+                                                {"name": "iurl","type":["null", "string"],"default":null},
+                                                {"name": "cid","type":["null", "string"],"default":null},
+                                                {"name": "crid","type":["null", "string"],"default":null},
+                                                {"name": "dealid","type":["null", "string"],"default":null},
+                                                {"name": "attr","type":["null", {"type":"array","items":"long"}],"default":null}
+                                            ]
+                                        }
                                     }
                                 }
                             ]
