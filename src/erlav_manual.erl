@@ -1,6 +1,6 @@
 -module(erlav_manual).
 
--export([ man_tst/1 ]).
+-export([ man_tst/1, recofrec/0]).
 
 man_tst(1) ->
     Term1 = #{
@@ -54,16 +54,68 @@ man_tst(2) ->
                 ]
             }
     },
+    ctst(Term1);
+man_tst(3) ->
+    Term1 = #{
+            <<"event">> => <<"eeeee">>,
+            <<"bid_response">> => #{
+                <<"id">> => <<"bid_response_id">>,
+                <<"bidid">> => <<"bbbbb">>,
+                <<"cur">> => <<"ccccc">>,
+                <<"seatbid">> => [
+                    #{
+                        <<"bid">> => [
+                            #{
+                              <<"id">> => <<"seatbid_bid_id1">>
+%                              <<"ext">> => #{}
+                            }
+                        ]
+                    }
+                ]
+            }
+    },
     ctst(Term1).
 
 ctst(Term1) ->
     {ok, SchemaJSON1} = file:read_file("test/opnrtb_test1.avsc"),
     Encoder  = avro:make_simple_encoder(SchemaJSON1, []),
     Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
-    SchemaId = erlav_nif:create_encoder(<<"test/opnrtb_test1.avsc">>),
     io:format("1.Erl ret: ~p ~n", [ iolist_to_binary(Encoder(Term1)) ]),
+    SchemaId = erlav_nif:create_encoder(<<"test/opnrtb_test1.avsc">>),
     Re2 = erlav_nif:do_encode(SchemaId, Term1),
     io:format("2.C++ ret: ~p ~n", [Re2]),
     T2 = Decoder(Re2),
     io:format("3.C++ decoded ret: ~p ~n", [T2]),
     ok.
+
+recofrec() ->
+    {ok, SchemaJSON1} = file:read_file("test/rec_of_rec.avsc"),
+    Encoder  = avro:make_simple_encoder(SchemaJSON1, []),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    SchemaId = erlav_nif:create_encoder(<<"test/rec_of_rec.avsc">>),
+    Term1 = #{
+        <<"recordField">> => #{
+            <<"rec2field">> => 2
+         }
+    },
+    io:format("1.Erl ret: ~p ~n", [ iolist_to_binary(Encoder(Term1)) ]),
+    Re2 = erlav_nif:do_encode(SchemaId, Term1),
+    io:format("2.C++ ret: ~p ~n", [Re2]),
+    T2 = Decoder(Re2),
+    io:format("3.C++ decoded ret: ~p ~n", [T2]),
+    
+    Term2 = #{
+        <<"recordField">> => #{
+            <<"rec2field">> => 2,
+            <<"rec1field">> => #{
+                    <<"intrecf1">> => 1
+                }
+         }
+    },
+    io:format("1.Erl ret: ~p ~n", [ iolist_to_binary(Encoder(Term2)) ]),
+    Re22 = erlav_nif:do_encode(SchemaId, Term2),
+    io:format("2.C++ ret: ~p ~n", [Re22]),
+    T22 = Decoder(Re22),
+    io:format("3.C++ decoded ret: ~p ~n", [T22]),
+    ok.
+

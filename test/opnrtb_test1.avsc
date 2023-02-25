@@ -68,7 +68,48 @@
                                                 {"name": "cid","type":["null", "string"],"default":null},
                                                 {"name": "crid","type":["null", "string"],"default":null},
                                                 {"name": "dealid","type":["null", "string"],"default":null},
-                                                {"name": "attr","type":["null", {"type":"array","items":"long"}],"default":null}
+                                                {"name": "attr","type":["null", {"type":"array","items":"long"}],"default":null},
+                                                {
+                                                    "name": "ext",
+                                                    "type": ["null",{
+                                                        "type": "record",
+                                                        "name": "bid_ext",
+                                                        "fields": [
+                                                            {"name": "bidder_id","type":["null", "long"],"default":null},
+                                                            {"name": "seat_id","type":["null", "long"],"default":null},
+                                                            {"name": "dsp_id","type":["null", "long"],"default":null},
+                                                            {"name": "buyer_id","type":["null", "long"],"default":null},
+                                                            {"name": "advertiser_id","type":["null", "long"],"default":null},
+                                                            {"name": "flight_id","type":["null", "long"],"default":null},
+                                                            {"name": "campaign_id","type":["null", "long"],"default":null},
+                                                            {"name": "creative_id","type":["null", "long"],"default":null},
+                                                            {"name": "creative_group_lookup_id","type":["null", "long", "string"],"default":null},
+                                                            {"name": "tag_id","type":["null", "long"],"default":null},
+                                                            {"name": "product_id","type":["null", "long"],"default":null},
+                                                            {"name": "deal_id","type":["null","string"],"default":null},
+                                                            {"name": "passback","type":["null", "string"],"default":null},
+                                                            {"name": "win_price","type":["null", "long", "float"],"default":null},
+                                                            {"name": "appnexus","type":["null", {
+                                                                "type": "record",
+                                                                "name": "appnexus",
+                                                                "fields":[
+                                                                    {"name": "allowed_media_subtypes","type":["null", {
+                                                                        "type":"array", "items": "long"
+                                                                    }],"default":null}
+                                                                ]
+                                                            }],"default":null},
+                                                            {"name": "video_duration","type":["null", "long"],"default":null},
+                                                            {"name": "discrepancy_percent","type":["null", "float", "long"],"default":null},
+                                                            {"name": "exchange_currency","type":["null", "string"],"default":null},
+                                                            {"name": "exchange_currency_rate","type":["null", "float"],"default":null},
+                                                            {"name": "buyer_currency","type":["null", "string"],"default":null},
+                                                            {"name": "buyer_currency_rate","type":["null", "float"],"default":null},
+                                                            {"name": "buyer_fee_schedule_id","type":["null", "long"],"default":null},
+                                                            {"name": "bidder_bid_price","type":["null", "long", "float"],"default":null}
+                                                        ]
+                                                    }],
+                                                    "default": null
+                                                }
                                             ]
                                         }
                                     }
