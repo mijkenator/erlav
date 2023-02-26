@@ -172,6 +172,20 @@
     <<"event">> => <<"event10">>,
     <<"bid_request">> => #{
        <<"id">>  => <<"bidrid">>,
+       <<"site">> => #{
+           <<"ext">> => #{
+                <<"doubleclick_verticals">> => [9,8,7,9]
+           },
+           <<"cat">> => [<<"cat9">>, <<"cat1">>],
+           <<"publisher">> => #{ <<"id">> => <<"pubid">> }
+       },
+       <<"regs">> => #{
+            <<"coppa">> => 12,
+            <<"ext">> => #{
+                <<"us_privacy">> => <<"us_privacy">>,
+                <<"gdpr">> => 9999
+            }
+       },
        <<"source">> => #{
             <<"fd">> => 123,
             <<"ext">> => #{

@@ -31,6 +31,176 @@
                 },
 
                 {
+                    "name": "site",
+                    "type": ["null",{
+                        "type": "record",
+                        "name": "site",
+                        "fields": [
+                            {
+                                "name": "ext",
+                                "type": ["null", {
+                                    "type": "record",
+                                    "name": "site_ext",
+                                    "fields":[
+                                        {
+                                            "name": "doubleclick_verticals",
+                                            "type": ["null", {
+                                                "type": "array",
+                                                "items": "long"
+                                            }],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "exchange_id",
+                                            "type": ["null", "long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "exchange_seller_id",
+                                            "type": ["null", "long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "exchange_seller_site_id",
+                                            "type": ["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "iab_categories",
+                                            "type": ["null", {"type": "array","items": "long"}],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "publisher_id",
+                                            "type": ["null", {"type": "array","items": "long"}],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "ias_segments",
+                                            "type": ["null", {"type": "array","items": "long"}],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "sitelist_ids",
+                                            "type": ["null", {"type": "array","items": "long"}],
+                                            "default": null
+                                        }
+                                    ]
+                                }],
+                                "default": null
+                            },
+                            {
+                                "name": "id",
+                                "type": ["null", "string"],
+                                "default": null
+                            },
+                            {
+                                "name": "domain",
+                                "type": ["null", "string"],
+                                "default": null
+                            },
+                            {
+                                "name": "name",
+                                "type": ["null", "string"],
+                                "default": null
+                            },
+                            {
+                                "name": "cat",
+                                "type": ["null", {
+                                  "type": "array",
+                                  "items": "string"
+                                }],
+                                "default": null
+                            },
+                            {
+                                "name": "page",
+                                "type": ["null", "string"],
+                                "default": null
+                            },
+                            {
+                                "name": "ref",
+                                "type": ["null", "string"],
+                                "default": null
+                            },
+                            {
+                                "name": "keywords",
+                                "type": ["null", "string"],
+                                "default": null
+                            },
+                            {
+                                "name": "publisher",
+                                "type": ["null", {
+                                    "type": "record",
+                                    "name": "site_publisher",
+                                    "fields":[
+                                        {
+                                            "name": "id",
+                                            "type": "string"
+                                        },
+                                        {
+                                            "name": "domain",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        }
+                                    ]
+                                }],
+                                "default": null
+                            },
+                            {
+                                "name": "content",
+                                "type": ["null", {
+                                    "type": "record",
+                                    "name": "bid_content",
+                                    "fields":[
+                                        {
+                                            "name": "genre",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        }
+                                    ]
+                                }],
+                                "default": null
+                            }
+                        ]
+                    }],
+                    "default": null
+                },
+                {
+                    "name": "regs",
+                    "type": ["null",{
+                        "type": "record",
+                        "name": "regs",
+                        "fields": [
+                            {
+                                "name": "ext",
+                                "type": ["null", {
+                                    "type": "record",
+                                    "name": "bid_regs_ext",
+                                    "fields":[
+                                        {
+                                            "name": "us_privacy",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "gdpr",
+                                            "type": ["null","long"],
+                                            "default": null
+                                        }
+                                    ]
+                                }],
+                                "default": null
+                            },
+                            {
+                                "name": "coppa",
+                                "type": ["null", "long"],
+                                "default": null
+                            }
+                        ]
+                    }],
+                    "default": null
+                },
+                {
                     "name": "source",
                     "type": ["null",{
                         "type": "record",
