@@ -19,6 +19,86 @@
         "default": null
     },
     {
+        "name": "bid_request",
+        "type": ["null",{
+            "type": "record",
+            "name": "bid_request",
+            "fields":[
+                {
+                    "name": "id",
+                    "type": ["null","string","long"],
+                    "default": null
+                },
+
+                {
+                    "name": "guaranteed",
+                    "type": ["null", "boolean"],
+                    "default": null
+                },
+                {
+                    "name": "ext",
+                    "type": ["null",{
+                        "type": "record",
+                        "name": "bid_req_ext",
+                        "fields": [
+                            {"name": "ads_txt_db_loaded","type": ["null","boolean"], "default":null},
+                            {"name": "ads_txt_strategy","type": ["null","long"], "default":null},
+                            {
+                                "name": "ads_txt_relationship",
+                                "type": "string"
+                            },
+                            {
+                                "name": "channel",
+                                "type": "string"
+                            },
+                            {
+                                "name": "upstream_id",
+                                "type": ["null", "string"],
+                                "default": null
+                            },
+                            {
+                                "name": "ssl",
+                                "type": ["null", "long"],
+                                "default": null
+                            },
+                            {"name": "s2s_nurl","type": ["null","long"], "default":null},
+                            {"name": "optout","type": ["null","boolean"], "default":null},
+                            {"name": "optout_reason","type": ["null","string"], "default":null},
+                            {"name": "optout_cross_check","type": ["null","string"], "default":null},
+                            {"name": "appnexus_member_id","type": ["null","long"], "default":null},
+                            {"name": "bid_feedback", "type": ["null", {
+                                "type": "record",
+                                "name": "bid_req_ext_feedback",
+                                "fields": [
+                                    {"name": "id", "type": ["null", "string"], "default": null},
+                                    {"name": "creative_status_code", "type": ["null", "long"], "default": null},
+                                    {"name": "price", "type": ["null", "double"], "default": null},
+                                    {"name": "minimum_bid_to_win", "type": ["null", "double"], "default": null},
+                                    {"name": "buyer_creative_id", "type": ["null", "string", "long"], "default": null},
+                                    {"name": "event_notification_token", "type": ["null",{
+                                      "type": "record",
+                                      "name": "event_notification_token",
+                                      "fields": [
+                                        {"name": "payload", "type": ["null", "string"], "default": null}
+                                      ]
+                                    }], "default": null}
+                                  ]
+                            }], "default": null}
+                        ]
+                    }],
+                    "default": null
+                },
+                {
+                    "name": "wseat",
+                    "type": ["null","string"],
+                    "default": null
+                }
+
+
+            ]}],
+        "default": null
+    },
+    {
         "name": "bid_response",
         "type": ["null", {
             "type": "record",
