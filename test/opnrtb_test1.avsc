@@ -31,6 +31,103 @@
                 },
 
                 {
+                    "name": "source",
+                    "type": ["null",{
+                        "type": "record",
+                        "name": "source",
+                        "fields": [
+                            {
+                                "name": "pchain",
+                                "type": ["null", "string"],
+                                "default": null
+                            },
+                            {
+                                "name": "tid",
+                                "type": ["null", "string"],
+                                "default": null
+                            },
+                            {
+                                "name": "fd",
+                                "type": ["null", "long"],
+                                "default": null
+                            },
+                            {
+                                "name": "ext",
+                                "type": ["null",{
+                                    "type": "record",
+                                    "name": "source_ext",
+                                    "fields":[
+                                        {
+                                            "name": "schain",
+                                            "type": ["null",{
+                                                "type": "record",
+                                                "name": "schain",
+                                                "fields": [
+                                                    {
+                                                        "name": "complete",
+                                                        "type": ["null","long"],
+                                                        "default": null
+                                                    },
+                                                    {
+                                                        "name": "nodes",
+                                                        "type": ["null",{
+                                                            "type": "array",
+                                                            "items":{
+                                                                "type": "record",
+                                                                "name": "nodes",
+                                                                "fields":[
+                                                                    {
+                                                                        "name": "asi",
+                                                                        "type": ["null", "string"],
+                                                                        "default": null
+                                                                    },
+                                                                    {
+                                                                        "name": "sid",
+                                                                        "type": ["null", "string"],
+                                                                        "default": null
+                                                                    },
+                                                                    {
+                                                                        "name": "rid",
+                                                                        "type": ["null", "string"],
+                                                                        "default": null
+                                                                    },
+                                                                    {
+                                                                        "name": "name",
+                                                                        "type": ["null", "string"],
+                                                                        "default": null
+                                                                    },
+                                                                    {
+                                                                        "name": "domain",
+                                                                        "type": ["null", "string"],
+                                                                        "default": null
+                                                                    },
+                                                                    {
+                                                                        "name": "hp",
+                                                                        "type": ["null", "long"],
+                                                                        "default": null
+                                                                    }
+                                                                ]
+                                                            }
+                                                        }],
+                                                        "default": null
+                                                    },
+                                                    {
+                                                        "name": "ver",
+                                                        "type": "string"
+                                                    }
+                                                ]
+                                            }],
+                                            "default": null
+                                        }
+                                    ]
+                                }],
+                                "default": null
+                            }
+                        ]
+                    }],
+                    "default": null
+                },
+                {
                     "name": "guaranteed",
                     "type": ["null", "boolean"],
                     "default": null

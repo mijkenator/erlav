@@ -172,6 +172,23 @@
     <<"event">> => <<"event10">>,
     <<"bid_request">> => #{
        <<"id">>  => <<"bidrid">>,
+       <<"source">> => #{
+            <<"fd">> => 123,
+            <<"ext">> => #{
+                <<"schain">> => #{
+                    <<"complete">> => 1,
+                    <<"nodes">> => [
+                        #{
+                            <<"domain">> => <<"domain1">>
+                        },
+                        #{
+                            <<"domain">> => <<"domain2">>
+                        }
+                    ],
+                    <<"ver">> => <<"ver">>
+                }
+            }
+       },
        <<"ext">> => #{
             <<"ads_txt_relationship">> => <<"ads_txt_relationship">>,
             <<"channel">> => <<"channel">>,
