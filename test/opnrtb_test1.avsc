@@ -31,6 +31,151 @@
                 },
 
                 {
+                    "name": "user",
+                    "type": ["null",{
+                        "type": "record",
+                        "name": "user",
+                        "fields":[
+                            {
+                                "name": "id",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "buyeruid",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "data",
+                                "type": ["null",{
+                                    "type": "array",
+                                    "items":
+                                            {
+                                                "type": "record",
+                                                "name": "bid_data",
+                                                "fields": [
+                                                    {
+                                                        "name": "id",
+                                                        "type": ["null","string"],
+                                                        "default": null
+                                                    },
+                                                    {
+                                                        "name": "segment",
+                                                        "type": ["null",{
+                                                            "type": "array",
+                                                            "items": {
+                                                                "type": "record",
+                                                                "name": "bid_segment",
+                                                                "fields": [
+                                                                    {
+                                                                        "name": "id",
+                                                                        "type": ["null","string"],
+                                                                        "default": null
+                                                                    },
+                                                                    {
+                                                                        "name": "value",
+                                                                        "type": ["null","string"],
+                                                                        "default": null
+                                                                    }
+                                                                ]
+                                                            }
+                                                        }],
+                                                        "default": null
+                                                    },
+                                                    {
+                                                        "name": "ext",
+                                                        "type": ["null",{
+                                                            "type": "record",
+                                                            "name": "bid_data_ext",
+                                                            "fields": [
+
+                                                                {
+                                                                    "name": "frequency_caps",
+                                                                    "type": ["null",{
+                                                                        "type": "array",
+                                                                        "items":
+                                                                            {
+                                                                                "type": "record",
+                                                                                "name": "frequency_caps_ext",
+                                                                                "fields":[
+                                                                                    {"name":"frequency_cap_id", "type":["null", "long"], "default": null},
+                                                                                    {"name":"frequency_cap_namespace", "type":["null", "string"], "default": null},
+                                                                                    {"name":"frequency_cap_type", "type":["null", "string"], "default": null},
+                                                                                    {"name":"frequency_cap_value", "type":["null", "long"], "default": null},
+                                                                                    {"name":"frequency_cap_write_time", "type":["null", "long"], "default": null}
+                                                                                ]
+                                                                            } 
+                                                                    }],
+                                                                    "default": null
+                                                                }
+                                                            ]
+                                                        }],
+                                                        "default": null
+                                                    }
+
+                                                ]
+                                            }
+                                }],
+                                "default": null
+                            },
+                            {
+                                "name": "ext",
+                                "type": ["null", {
+                                    "type": "record",
+                                    "name": "bid_user_ext",
+                                    "fields": [
+                                        {"name": "lotame_ids","type": ["null", {"type": "array", "items": "long"}],"default": null},
+                                        {"name": "adobe_aam_ids","type": ["null", {"type": "array", "items": "long"}],"default": null},
+                                        {"name": "liveramp_1p_ids","type": ["null", {"type": "array", "items": "long"}],"default": null},
+                                        {"name": "liveramp_3p_ids","type": ["null", {"type": "array", "items": "long"}],"default": null},
+                                        {"name": "nielsen_ids","type": ["null", {"type": "array", "items": "long"}],"default": null},
+                                        {"name": "bluekai_ids","type": ["null", {"type": "array", "items": "long"}],"default": null},
+                                        {"name": "bluekai_3p_ids","type": ["null", {"type": "array", "items": "long"}],"default": null},
+                                        {"name": "bluekai_custom_ids","type": ["null", {"type": "array", "items": "long"}],"default": null},
+                                        {"name": "neustar_ids","type": ["null", {"type": "array", "items": "long"}],"default": null},
+                                        {"name": "krux_1p_ids","type": ["null", {"type": "array", "items": "long"}],"default": null},
+                                        {"name": "merkle_ids","type": ["null", {"type": "array", "items": "long"}],"default": null},
+                                        {"name": "unified_ids","type": ["null", {"type": "array", "items": "long"}],"default": null},
+                                        {
+                                            "name": "pending_bid_responses",
+                                            "type": ["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "consent",
+                                            "type": ["null","string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "gdpr",
+                                            "type": ["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "liveramp_pid",
+                                            "type": ["null","string"],
+                                            "default": null
+                                        }
+                                    ]
+                                }],
+                                "default": null
+                            }
+                        ]
+                    }],
+                    "default": null
+                },
+                {
+                    "name": "at",
+                    "type": ["null","long"],
+                    "default": null
+                },
+                {
+                    "name": "tmax",
+                    "type": ["null","long"],
+                    "default": null
+                },
+                {
                     "name": "site",
                     "type": ["null",{
                         "type": "record",

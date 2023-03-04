@@ -216,3 +216,32 @@
     }
 }.
 
+#{
+    <<"event">> => <<"event11">>,
+    <<"bid_request">> => #{
+       <<"id">>  => <<"bidrid">>,
+       <<"user">> => #{
+            <<"id">> => <<"userid">>,
+            <<"data">> => [
+                #{
+                    <<"id">> => <<"dataid1">>,
+                    <<"segment">> => [
+                        #{<<"id">> => <<"id1">>, <<"value">> => <<"value1">>},
+                        #{<<"id">> => <<"id2">>, <<"value">> => <<"value2">>}
+                    ],
+                    <<"ext">> => #{
+                        <<"frequency_caps">> => [
+                            #{
+                                <<"frequency_cap_id">> => 111,
+                                <<"frequency_cap_namespace">> => <<"fcn">>,
+                                <<"frequency_cap_type">> => <<"fct">>,
+                                <<"frequency_cap_value">> => 222,
+                                <<"frequency_cap_write_time">> => 111122
+                            }
+                        ]
+                    }
+                }
+            ]
+       }
+    }
+}.
