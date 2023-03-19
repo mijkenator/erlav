@@ -29,6 +29,393 @@
                     "type": ["null","string","long"],
                     "default": null
                 },
+                {
+                    "name": "device",
+                    "type": ["null",{
+                        "type": "record",
+                        "name": "device",
+                        "fields": [
+                            {
+                                "name": "lmt",
+                                "type": ["null", "long"],
+                                "default": null
+                            },
+                            {
+                                "name": "dnt",
+                                "type": ["null", "long"],
+                                "default": null
+                            },
+                            {
+                                "name": "ua",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "ip",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "ipv6",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "geo",
+                                "type": {
+                                    "type": "record",
+                                    "name": "geo",
+                                    "fields": [
+                                        {
+                                            "name": "lat",
+                                            "type": ["null","double"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "lon",
+                                            "type": ["null","double"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "country",
+                                            "type": ["null","string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "region",
+                                            "type": ["null","string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "regionfips104",
+                                            "type": ["null","string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "zip",
+                                            "type": ["null","string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "type",
+                                            "type": ["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "city",
+                                            "type": ["null","long","string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "ext",
+                                            "type": ["null",{
+                                                "type": "record",
+                                                "name": "bod_device_geo_ext",
+                                                "fields":[
+                                                    {
+                                                        "name": "normalized_city",
+                                                        "type": ["null","string"],
+                                                        "default": null
+                                                    },
+                                                    {
+                                                        "name": "dma",
+                                                        "type": ["null","long"],
+                                                        "default": null
+                                                    },
+                                                    {
+                                                        "name": "timezone",
+                                                        "type": ["null","string"],
+                                                        "default": null
+                                                    },
+                                                    {
+                                                        "name": "geo_radius_list_ids",
+                                                        "type": ["null", {
+                                                            "type": "array",
+                                                            "items": "long"
+                                                        }],
+                                                        "default": null
+                                                    }
+                                                ]
+                                            }],
+                                            "default": null
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                "name": "carrier",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "os",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "osv",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "devicetype",
+                                "type": ["null","long"],
+                                "default": null
+                            },
+                            {
+                                "name": "language",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "js",
+                                "type": ["null","long"],
+                                "default": null
+                            },
+                            {
+                                "name": "ifa",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "ext",
+                                "type": ["null",{
+                                    "type": "record",
+                                    "name": "bid_device_ext",
+                                    "fields": [
+                                        {
+                                            "name":"samsung_affinity",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"samsung_psid",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"samsung_tvid",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "samsung_tvids",
+                                            "type": ["null", {
+                                                "type": "array",
+                                                "items":"string"
+                                            }],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"samsung_hhid",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "samsung_hhids",
+                                            "type": ["null", {
+                                                "type": "array",
+                                                "items":"string"
+                                            }],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"samsung_product_id",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"samsung_device_year",
+                                            "type": ["null", "long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"samsung_firmware_code",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"samsung_model_code",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"samsung_ad_type",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"samsung_device_country",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"liveramp_hhid",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"liveramp_pid",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"devicetype",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"browser",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"timezone",
+                                            "type": ["null", "string", "long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"device_type_id",
+                                            "type":["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"device_id",
+                                            "type":["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"operating_system_id",
+                                            "type":["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"operating_system_variant_id",
+                                            "type":["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"browser_id",
+                                            "type":["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"browser_variant_id",
+                                            "type":["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"operating_system_device_combination_id",
+                                            "type":["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"browser_combination_id",
+                                            "type":["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"user_agent_hash",
+                                            "type":["null", "long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"netmask",
+                                            "type":["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"org_name",
+                                            "type":["null","string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"marketing_name",
+                                            "type":["null","string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"uid_type",
+                                            "type":["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"netspeed",
+                                            "type":["null","string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"truncated_ip",
+                                            "type":["null","boolean"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"tv_modelcode_is_whitelisted",
+                                            "type":["null","boolean"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"tv_modelcode",
+                                            "type":["null","string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"stv_year",
+                                            "type":["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"stv_chipset",
+                                            "type":["null","string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"ad_agent_version",
+                                            "type":["null","string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "tvidlist_ids",
+                                            "type": ["null", {
+                                                "type": "array",
+                                                "items": "long"
+                                            }],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "iplist_ids",
+                                            "type": ["null", {
+                                                "type": "array",
+                                                "items": "long"
+                                            }],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "global_iplist_ids",
+                                            "type": ["null", {
+                                                "type": "array",
+                                                "items": "long"
+                                            }],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"matched_merkle_ifa",
+                                            "type":["null","string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name":"matched_merkle_ifa_type",
+                                            "type":["null","long"],
+                                            "default": null
+                                        }
+                                    ]
+                                }],
+                                "default": null
+                            }
+                        ]
+                    }],
+                    "default": null
+                },
 
                 {
                     "name": "user",
