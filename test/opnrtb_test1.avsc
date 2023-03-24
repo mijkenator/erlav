@@ -29,6 +29,169 @@
                     "type": ["null","string","long"],
                     "default": null
                 },
+
+
+                {
+                    "name": "app",
+                    "type": ["null",{
+                        "type": "record",
+                        "name": "app",
+                        "fields":[
+                            {
+                                "name": "id",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "privacypolicy",
+                                "type": ["null","long"],
+                                "default": null
+                            },
+                            {
+                                "name": "name",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "domain",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "cat",
+                                "type": ["null", {
+                                  "type": "array",
+                                  "items": "string"
+                                }],
+                                "default": null
+                            },
+                            {
+                                "name": "sectioncat",
+                                "type": ["null", {
+                                  "type": "array",
+                                  "items": "string"
+                                }],
+                                "default": null
+                            },
+                            {
+                                "name": "pagecat",
+                                "type": ["null", {
+                                  "type": "array",
+                                  "items": "string"
+                                }],
+                                "default": null
+                            },
+                            {
+                                "name": "ver",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "bundle",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "paid",
+                                "type": ["null","long"],
+                                "default": null
+                            },
+                            {
+                                "name": "publisher",
+                                "type": ["null",{
+                                    "type": "record",
+                                    "name": "publisher",
+                                    "fields": [
+                                        {
+                                            "name": "id",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "domain",
+                                            "type": ["null", "string"],
+                                            "default": null
+                                        }
+                                    ]
+                                }],
+                                "default": null 
+                            },
+                            {
+                                "name": "content",
+                                "type": ["null",{
+                                    "type": "record",
+                                    "name": "content",
+                                    "fields": [
+                                        {
+                                            "name": "genre",
+                                            "type": ["null","string"],
+                                            "default": null
+                                        }
+                                    ]
+                                }],
+                                "default": null 
+                            },
+                            {
+                                "name": "storeurl",
+                                "type": ["null","string"],
+                                "default": null
+                            },
+                            {
+                                "name": "ext",
+                                "type": {
+                                    "type": "record",
+                                    "name": "bid_app_ext",
+                                    "fields": [
+                                        {
+                                            "name": "exchange_id",
+                                            "type": ["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "exchange_seller_id",
+                                            "type": ["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "exchange_seller_app_id",
+                                            "type": ["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "iab_categories",
+                                            "type": ["null",{
+                                              "type": "array",
+                                              "items": "long"
+                                            }],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "publisher_id",
+                                            "type": ["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "seller_id",
+                                            "type": ["null","long"],
+                                            "default": null
+                                        },
+                                        {
+                                            "name": "applist_ids",
+                                            "type": ["null",{
+                                              "type": "array",
+                                              "items": "long"
+                                            }],
+                                            "default": null
+                                        }
+                                    ]
+                                } 
+                            }
+                        ]
+                    }],
+                    "default": null
+                },
+
+
                 {
                     "name": "device",
                     "type": ["null",{
