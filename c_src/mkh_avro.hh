@@ -186,13 +186,13 @@ std::vector<SchemaItem> read_schema_json(json j){
 }
 
 int encode(SchemaItem it, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t>* ret){
-    std::cout << "ENCODE start." << '\n' << '\r';
+    //std::cout << "ENCODE start." << '\n' << '\r';
     std::vector<std::string> atypes = it.fieldTypes; 
     auto alen = atypes.size();
-    std::cout << "ENCODE alen:" << alen << '\n' << '\r';
-    for (std::string ats: atypes)
-        std::cout << ats << ' ';
-    std::cout << '\n' << '\r';
+    //std::cout << "ENCODE alen:" << alen << '\n' << '\r';
+    //for (std::string ats: atypes)
+    //    std::cout << ats << ' ';
+    //std::cout << '\n' << '\r';
     if(alen == 1){
         if(it.obj_type == 1){
             //std::cout << "E.ARRAY" << '\n' << '\r';
@@ -204,17 +204,17 @@ int encode(SchemaItem it, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t
         } else if(it.obj_type == 2){
             return encode_map(atypes[0], env, term, ret);
         } else if(it.obj_type == 3){
-            std::cout << "E.Record enc" << '\n' << '\r';
+            //std::cout << "E.Record enc" << '\n' << '\r';
             return encode_record(it.record_schema, env, term, ret);
         } else if(it.obj_type == 4){
-            std::cout << "E.map_of_array enc" << '\n' << '\r';
+            //std::cout << "E.map_of_array enc" << '\n' << '\r';
             return encode_map_of_arrays(atypes[0], env, term, ret);
         } else {
             //std::cout << "E.TYPE" << atypes[0] << '\n' << '\r';
             return encode_primitive(atypes[0], env, term, ret);
         }
     }else{
-        std::cout << "E.UNION:" << alen << '\n' << '\r';
+        //std::cout << "E.UNION:" << alen << '\n' << '\r';
         ret->insert(ret->begin(), 0); // reserve first for type index
         for (auto iter = atypes.begin(); iter != atypes.end(); ++iter) {
             int index = std::distance(atypes.begin(), iter);
@@ -223,10 +223,10 @@ int encode(SchemaItem it, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t
                 if(it.obj_type == 1){ // array
                     eret = encode_array(*iter, env, term, ret);
                 } else if(it.obj_type == 3){ // records
-                    std::cout << "E.Record enc" << index << '\n' << '\r';
+                    //std::cout << "E.Record enc" << index << '\n' << '\r';
                     eret = encode_record(it.record_schema, env, term, ret);
                 } else if(it.obj_type == 4){ // map_of_array
-                    std::cout << "E.map_of_arrays enc" << '\n' << '\r';
+                    //std::cout << "E.map_of_arrays enc" << '\n' << '\r';
                     eret = encode_map_of_arrays(*iter, env, term, ret);
                 } else if(it.obj_type == 5){ // array of rec
                     eret = encode_array_ofrec(it.record_schema, env, term, ret);
@@ -244,7 +244,7 @@ int encode(SchemaItem it, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t
         if(it.defnull == 1){
             return 0;
         }else{
-            std::cout << it.fieldName << "  " << it.defnull << '\n' << '\r';
+            //std::cout << it.fieldName << "  " << it.defnull << '\n' << '\r';
         }
         return 666;
     }
@@ -258,10 +258,10 @@ int encode_record(std::vector<SchemaItem> schema, ErlNifEnv* env, ERL_NIF_TERM& 
     std::vector<uint8_t> rv;
     rv.reserve(1000);
 
-    std::cout << "ERECORD1" << '\n' << '\r';
+    //std::cout << "ERECORD1" << '\n' << '\r';
 
     for( auto it: schema ){
-        std::cout << "ERECORD2:" << it.fieldName << '\n' << '\r';
+        //std::cout << "ERECORD2:" << it.fieldName << '\n' << '\r';
         len = it.fieldName.size();
         enif_alloc_binary(len, &bin);
         const auto *p = reinterpret_cast<const uint8_t *>(it.fieldName.c_str());

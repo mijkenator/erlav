@@ -1,0 +1,174 @@
+#{
+    <<"event">> => <<"event15">>,
+    <<"sampling">> => <<"sampling3">>,
+    <<"timestamp">> => 111.222,
+    <<"seller_request_cpm">> => 1111,
+    <<"seller_request_fee_cpm">> => 2222,
+    <<"seller_trader_fee_cpm">> => 3333,
+    <<"maxtime">> => 4444,
+    <<"filtered_app_compatible_result">> => #{
+        <<"facr_key2">> => [777777, 888],
+        <<"facr_key1">> => [55555, 66666]
+    },
+    <<"filtered_ssp_result">> => #{
+        <<"fsr_key2">> => [3333, 44444],
+        <<"fsr_key1">> => [1111, 22222]
+    },
+    <<"error">> => <<"errorDescription">>,
+    <<"error_info">> => #{
+        <<"exchange_id">> => 1,
+        <<"iplist_id">> => 2,
+        <<"ip">> => <<"127.0.0.1">>,
+        <<"exchange_seller_id">> => 4,
+        <<"exchange_seller_app_id">> => 5,
+        <<"exchange_seller_site_id">> => 6
+    },
+    <<"bid_response">> => #{
+        <<"id">> => <<"bid_response_id">>,
+        <<"bidid">> => <<"bidid">>,
+        <<"cur">> => <<"cur">>,
+        <<"seatbid">> => [
+            #{
+                <<"bid">> => [
+                    #{
+                        <<"id">> => <<"seatbid_bid_id1">>,
+                        <<"impid">> => <<"seatbid_bid_impid1">>,
+                        <<"price">> => 111,
+                        <<"adid">> => <<"adid">>,
+                        <<"nurl">> => <<"nurl">>,
+                        <<"burl">> => <<"burl">>,
+                        <<"adm">> => <<"adm">>,
+                        <<"adomain">> => [<<"adom2">>, <<"adom1">>],
+                        <<"bundle">> => <<"bundle">>,
+                        <<"iurl">> => <<"iurl">>,
+                        <<"cid">> => <<"cid">>,
+                        <<"crid">> => <<"crid">>,
+                        <<"dealid">> => <<"dealid">>,
+                        <<"attr">> => [111,222,333],
+                        <<"ext">> => #{
+                            <<"bidder_id">> => 777,
+                            <<"appnexus">> => #{
+                                <<"allowed_media_subtypes">> => [787, 989, 121]
+                            }
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    <<"bid_request">> => #{
+       <<"id">>  => <<"bidrid">>,
+       <<"imp">> => [
+           #{
+                <<"id">> => <<"bid_imp_id1">>,
+                <<"banner">> => #{<<"w">> => 111},
+                <<"video">> => #{
+                    <<"w">> => 111,
+                    <<"h">> => 222,
+                    <<"mimes">> => [<<"mime1">>, <<"mime2">>]
+                },
+                <<"native">> => #{
+                    <<"request">> => #{
+                        <<"ver">> => <<"ver">>
+                    }
+                }
+           }
+       ],
+       <<"app">> => #{
+            <<"id">> => <<"appid">>,
+            <<"cat">> => [<<"cat1">>, <<"cat2">>],
+            <<"ext">> => #{
+                <<"applist_ids">> => [1,2,3]
+            }
+       },
+       <<"device">> => #{
+            <<"dnt">> => 11,
+            <<"lmt">> => 22,
+            <<"ua">> => <<"ua">>,
+            <<"ip">> => <<"127.0.0.1">>,
+            <<"geo">> => #{
+                <<"lat">> => 11.22,
+                <<"lon">> => 33.44,
+                <<"zip">> => <<"08691">>,
+                <<"city">> => <<"city">>,
+                <<"type">> => 1,
+                <<"ext">> => #{
+                    <<"dma">> => 77,
+                    <<"geo_radius_list_ids">> => [1,2,3,4,5]
+                }
+            },
+            <<"devicetype">> => 1,
+            <<"ifa">> => <<"ifa">>,
+            <<"ext">> => #{
+                <<"samsung_tvids">> => [<<"stv1">>, <<"stv2">>, <<"stv3">>],
+                <<"samsung_hhids">> => [<<"htv1">>, <<"htv2">>, <<"htv3">>],
+                <<"iplist_ids">> => [9,8,7]
+            }
+        },
+       <<"user">> => #{
+            <<"id">> => <<"userid">>,
+            <<"data">> => [
+                #{
+                    <<"id">> => <<"dataid1">>,
+                    <<"segment">> => [
+                        #{<<"id">> => <<"id1">>, <<"value">> => <<"value1">>},
+                        #{<<"id">> => <<"id2">>, <<"value">> => <<"value2">>}
+                    ],
+                    <<"ext">> => #{
+                        <<"frequency_caps">> => [
+                            #{
+                                <<"frequency_cap_id">> => 111,
+                                <<"frequency_cap_namespace">> => <<"fcn">>,
+                                <<"frequency_cap_type">> => <<"fct">>,
+                                <<"frequency_cap_value">> => 222,
+                                <<"frequency_cap_write_time">> => 111122
+                            }
+                        ]
+                    }
+                }
+            ]
+       },
+       <<"site">> => #{
+           <<"ext">> => #{
+                <<"doubleclick_verticals">> => [9,8,7,9]
+           },
+           <<"cat">> => [<<"cat9">>, <<"cat1">>],
+           <<"publisher">> => #{ <<"id">> => <<"pubid">> }
+       },
+       <<"regs">> => #{
+            <<"coppa">> => 12,
+            <<"ext">> => #{
+                <<"us_privacy">> => <<"us_privacy">>,
+                <<"gdpr">> => 9999
+            }
+       },
+       <<"source">> => #{
+            <<"fd">> => 123,
+            <<"ext">> => #{
+                <<"schain">> => #{
+                    <<"complete">> => 1,
+                    <<"nodes">> => [
+                        #{
+                            <<"domain">> => <<"domain1">>
+                        },
+                        #{
+                            <<"domain">> => <<"domain2">>
+                        }
+                    ],
+                    <<"ver">> => <<"ver">>
+                }
+            }
+       },
+       <<"ext">> => #{
+            <<"ads_txt_relationship">> => <<"ads_txt_relationship">>,
+            <<"channel">> => <<"channel">>,
+            <<"bid_feedback">> => #{
+                <<"id">> => <<"bfid">>,
+                <<"event_notification_token">> => #{
+                    <<"payload">> => <<"payload">>
+                }
+            }
+       }
+    }
+}.
+

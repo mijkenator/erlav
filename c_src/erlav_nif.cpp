@@ -177,7 +177,7 @@ ERL_NIF_TERM testencode(ErlNifEnv* env, ERL_NIF_TERM input){
     auto schema = mkh_avro::read_schema("priv/tschema3.avsc");
     
     for( auto it: schema ){
-        std::cout << it.fieldName << '\n' << '\r';
+        //std::cout << it.fieldName << '\n' << '\r';
         len = it.fieldName.size();
         enif_alloc_binary(len, &bin);
         const auto *p = reinterpret_cast<const uint8_t *>(it.fieldName.c_str());
@@ -185,11 +185,11 @@ ERL_NIF_TERM testencode(ErlNifEnv* env, ERL_NIF_TERM input){
         key = enif_make_binary(env, &bin);
 
         if(enif_get_map_value(env, input, key, &val)){
-            std::cout << "Getting value ...." << '\n' << '\r';
+            //std::cout << "Getting value ...." << '\n' << '\r';
             rv.clear();
             int encodeCode = mkh_avro::encode(it, env, val, &rv);
             if(encodeCode == 0){
-                std::cout << '\t' << ".... OK " << '\n' << '\r';
+                //std::cout << '\t' << ".... OK " << '\n' << '\r';
                 retv.insert(retv.end(), rv.begin(), rv.end());
             }else{
                 throw encodeCode;
