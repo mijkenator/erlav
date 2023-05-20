@@ -81,7 +81,7 @@ erlav_perf_string(Num, StrLen) ->
     _Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
     SchemaId = erlav_nif:create_encoder(<<"test/string.avsc">>),
 
-    Strings = [ base64:encode(crypto:strong_rand_bytes(StrLen)) || _ <- lists:seq(1, Num)],
+    [St1 | _] = Strings = [ base64:encode(crypto:strong_rand_bytes(StrLen)) || _ <- lists:seq(1, Num)],
 
     io:format("Started ..... ~n", []),
 
@@ -99,6 +99,12 @@ erlav_perf_string(Num, StrLen) ->
     end, Strings),
     Total2 = erlang:system_time(microsecond) - T2,
     io:format("Erlav encoding time: ~p microseconds ~n", [T2]),
+    
+    TestMap = #{ <<"stringField">> => St1 },
+    RetAvro1 = erlav_nif:do_encode(SchemaId, TestMap),
+    RetAvro2 = iolist_to_binary(Encoder(TestMap)),
+    IsSame = RetAvro1 =:= RetAvro2,
+    io:format("Same ret: ~p ~n ~p ~n ~p ~n", [IsSame, RetAvro2, RetAvro1]),
 
     {Total1/Num, Total2/Num}.
 
@@ -171,5 +177,20 @@ erlav_perf_strings(Num, StrLen, Type) ->
     end, Strings),
     Total2 = erlang:system_time(microsecond) - T2,
     io:format("Erlav encoding time: ~p microseconds ~n", [T2]),
+
+    [ [ St1, St2, St3, St4, St5, St6 ] | _ ] = Strings,
+    TestMap = #{ 
+        <<"stringField1">> => St1,
+        <<"stringField2">> => St2,
+        <<"stringField3">> => St3,
+        <<"stringField4">> => St4,
+        <<"stringField5">> => St5,
+        <<"stringField6">> => St6
+    },
+    RetAvro1 = erlav_nif:do_encode(SchemaId, TestMap),
+    RetAvro2 = iolist_to_binary(Encoder(TestMap)),
+    IsSame = RetAvro1 =:= RetAvro2,
+    io:format("Same ret: ~p ~n ~p ~n ~p ~n", [IsSame, RetAvro2, RetAvro1]),
+
 
     {Total1/Num, Total2/Num}.
