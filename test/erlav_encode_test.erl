@@ -267,3 +267,22 @@ arrayofrec_null_test() ->
     ?assertEqual(244567,  proplists:get_value(<<"rec3field">>, M1)),
     ?assertEqual(11122443,  proplists:get_value(<<"rec1field">>, M3)),
     ?assertEqual(2445673,  proplists:get_value(<<"rec3field">>, M3)).
+
+multistring_test() ->
+    {ok, SchemaJSON} = file:read_file("test/perfstr_null.avsc"),
+    Encoder = avro:make_simple_encoder(SchemaJSON, []),
+    Term = #{
+        <<"stringField1">> => <<"111asdadasdasdasd3453534dfgdgd123456789">>,
+        <<"stringField2">> => <<"222asdadasdasdasd3453534dfgdgd123456789">>,
+        <<"stringField3">> => <<"333asdadasdasdasd3453534dfgdgd123456789">>,
+        <<"stringField4">> => <<"444asdadasdasdasd3453534dfgdgd123456789">>,
+        <<"stringField5">> => <<"555asdadasdasdasd3453534dfgdgd123456789">>,
+        <<"stringField6">> => <<"666asdadasdasdasd3453534dfgdgd123456789">>
+    },
+    R1 = iolist_to_binary(Encoder(Term)),
+    ?debugFmt("=============== MSTRING erlang =================== ~n ~p ~n", [R1]),
+    SchemaId = erlav_nif:create_encoder(<<"test/perfstr_null.avsc">>),
+    Ret = erlav_nif:do_encode(SchemaId, Term),
+    ?debugFmt("=============== MSTRING c++ =================== ~n ~p ~n", [Ret]),
+    ?assertEqual(R1, Ret).
+
