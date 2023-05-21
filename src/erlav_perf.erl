@@ -190,6 +190,7 @@ erlav_perf_strings(Num, StrLen, Type) ->
     RetAvro1 = erlav_nif:do_encode(SchemaId, TestMap),
     RetAvro2 = iolist_to_binary(Encoder(TestMap)),
     IsSame = RetAvro1 =:= RetAvro2,
+    io:format("Test Term: ~p ~n", [TestMap]),
     io:format("Same ret: ~p ~n ~p ~n ~p ~n", [IsSame, RetAvro2, RetAvro1]),
 
 

@@ -268,7 +268,7 @@ arrayofrec_null_test() ->
     ?assertEqual(11122443,  proplists:get_value(<<"rec1field">>, M3)),
     ?assertEqual(2445673,  proplists:get_value(<<"rec3field">>, M3)).
 
-multistring_test() ->
+multistring_null_test() ->
     {ok, SchemaJSON} = file:read_file("test/perfstr_null.avsc"),
     Encoder = avro:make_simple_encoder(SchemaJSON, []),
     Term = #{
@@ -284,5 +284,41 @@ multistring_test() ->
     SchemaId = erlav_nif:create_encoder(<<"test/perfstr_null.avsc">>),
     Ret = erlav_nif:do_encode(SchemaId, Term),
     ?debugFmt("=============== MSTRING c++ =================== ~n ~p ~n", [Ret]),
+    ?assertEqual(R1, Ret).
+
+multistring_test() ->
+    {ok, SchemaJSON} = file:read_file("test/perfstr.avsc"),
+    Encoder = avro:make_simple_encoder(SchemaJSON, []),
+    Term = #{
+        <<"stringField1">> => <<"111asdadasdasdasd3453534dfgdgd123456789">>,
+        <<"stringField2">> => <<"222asdadasdasdasd3453534dfgdgd123456789">>,
+        <<"stringField3">> => <<"333asdadasdasdasd3453534dfgdgd123456789">>,
+        <<"stringField4">> => <<"444asdadasdasdasd3453534dfgdgd123456789">>,
+        <<"stringField5">> => <<"555asdadasdasdasd3453534dfgdgd123456789">>,
+        <<"stringField6">> => <<"666asdadasdasdasd3453534dfgdgd123456789">>
+    },
+    R1 = iolist_to_binary(Encoder(Term)),
+    ?debugFmt("=============== MSTRING erlang =================== ~n ~p ~n", [R1]),
+    SchemaId = erlav_nif:create_encoder(<<"test/perfstr.avsc">>),
+    Ret = erlav_nif:do_encode(SchemaId, Term),
+    ?debugFmt("=============== MSTRING c++ =================== ~n ~p ~n", [Ret]),
+    ?assertEqual(R1, Ret).
+
+multistring_b64_test() ->
+    Term = #{
+         <<"stringField1">> => <<"Ym05k/DOEysNuDAmuE9qSF6B6scJ4N+dfnvKDmv+89qE/6KK7FPLtklm2srs3LrmFHU=">>,
+         <<"stringField2">> => <<"rTY5OUZ1eWC0IsX07JkOJKd49sMGfpcwohuCKKzMu5CAj8V+mUlySmYFpIqn1rj88FA=">>,
+         <<"stringField3">> => <<"GiQ5QE24HoWETjYHSMwX0ek3uM6OBLpTCCRj91VXE+n8jyLGeFk1eSkLFy9iMyNlG6U=">>,
+         <<"stringField4">> => <<"Hgtvph4GDVfsOFBhfQI8FkpJx0/essrDSUcbJI2Z+iXlClpkl62u1UntWcxN1U1BnNQ=">>,
+         <<"stringField5">> => <<"6OS4YNuKObjnNYG8jRbSZ9x53W1pUYQU5mqLFBe2+qOmZgCmrjebR3L+FRGJekXZC2I=">>,
+         <<"stringField6">> => <<"zu3X50DdE8Stpzh0HuPwEFerVqhM0EHrpEW7L7YhzmMNJ2/P6uTN7oEDmATHk+qnIQE=">>
+    },
+    {ok, SchemaJSON} = file:read_file("test/perfstr.avsc"),
+    Encoder = avro:make_simple_encoder(SchemaJSON, []),
+    R1 = iolist_to_binary(Encoder(Term)),
+    ?debugFmt("=============== MSTRING gen erlang =================== ~n ~p ~n", [R1]),
+    SchemaId = erlav_nif:create_encoder(<<"test/perfstr.avsc">>),
+    Ret = erlav_nif:do_encode(SchemaId, Term),
+    ?debugFmt("=============== MSTRING gen c++ =================== ~n ~p ~n", [Ret]),
     ?assertEqual(R1, Ret).
 
