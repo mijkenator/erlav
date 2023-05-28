@@ -3,9 +3,12 @@
 -export([ 
     erlav_perf_tst/1, 
     erlav_perf_tst2/1, 
+    erlav_perf_tst2/3, 
     erlav_perf_string/2, 
-    erlav_perf_integer/1,
-    erlav_perf_strings/3
+    erlav_perf_integer/2,
+    erlav_perf_strings/3,
+    all_tests/3,
+    all_tests/0
 ]).
 
 erlav_perf_tst(Num) ->
@@ -35,6 +38,7 @@ erlav_perf_tst(Num) ->
 
     {Total1/Num, Total2/Num}.
 
+erlav_perf_tst2(Num, _, _) -> erlav_perf_tst2(Num).
 erlav_perf_tst2(Num) ->
     {ok, SchemaJSON1} = file:read_file("test/opnrtb_test1.avsc"),
     Encoder  = avro:make_simple_encoder(SchemaJSON1, []),
@@ -60,7 +64,7 @@ erlav_perf_tst2(Num) ->
     Total2 = erlang:system_time(microsecond) - T2,
     io:format("Erlav encoding time: ~p microseconds ~n", [T2]),
 
-    {Total1/Num, Total2/Num}.
+    {true, Total1/Num, Total2/Num}.
 
 randomize(Map) when is_map(Map) ->
     maps:filtermap(fun
@@ -106,29 +110,47 @@ erlav_perf_string(Num, StrLen) ->
     IsSame = RetAvro1 =:= RetAvro2,
     io:format("Same ret: ~p ~n ~p ~n ~p ~n", [IsSame, RetAvro2, RetAvro1]),
 
-    {Total1/Num, Total2/Num}.
+    {IsSame, Total1/Num, Total2/Num}.
 
-erlav_perf_integer(Num) ->
-    {ok, SchemaJSON1} = file:read_file("test/integer.avsc"),
+erlav_perf_integer(Num, Type) ->
+    Schema = case Type of
+        null -> "test/integer.avsc";
+        _ -> "test/integer_null.avsc"
+    end,
+    {ok, SchemaJSON1} = file:read_file(Schema),
     Encoder  = avro:make_simple_encoder(SchemaJSON1, []),
     _Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
-    SchemaId = erlav_nif:create_encoder(<<"test/integer.avsc">>),
+    SchemaId = erlav_nif:create_encoder(list_to_binary(Schema)),
 
-    Ints = [ rand:uniform(9999999) || _ <- lists:seq(1, Num)],
+    Ints = [ [rand:uniform(9999999) || _ <- lists:seq(1,6) ] || _ <- lists:seq(1, Num)],
 
     io:format("Started ..... ~n", []),
 
     T1 = erlang:system_time(microsecond),
-    lists:foreach(fun(S) ->
-        iolist_to_binary(Encoder(#{ <<"intField">> => S }))
+    lists:foreach(fun([I1, I2, I3, I4, I5, I6]) ->
+        iolist_to_binary(Encoder(#{ 
+            <<"intField1">> => I1, 
+            <<"intField2">> => I2, 
+            <<"intField3">> => I3, 
+            <<"intField4">> => I4, 
+            <<"intField5">> => I5, 
+            <<"intField6">> => I6
+        }))
     end, Ints),
     Total1 = erlang:system_time(microsecond) - T1,
     io:format("Erlavro encoding time: ~p microseconds ~n", [T1]),
 
     T2 = erlang:system_time(microsecond),
 
-    lists:foreach(fun(S) ->
-        erlav_nif:do_encode(SchemaId, #{ <<"intField">> => S })
+    lists:foreach(fun([I1, I2, I3, I4, I5, I6]) ->
+        erlav_nif:do_encode(SchemaId, #{ 
+            <<"intField1">> => I1, 
+            <<"intField2">> => I2, 
+            <<"intField3">> => I3, 
+            <<"intField4">> => I4, 
+            <<"intField5">> => I5, 
+            <<"intField6">> => I6
+        })
     end, Ints),
     Total2 = erlang:system_time(microsecond) - T2,
     io:format("Erlav encoding time: ~p microseconds ~n", [T2]),
@@ -143,7 +165,7 @@ erlav_perf_strings(Num, StrLen, Type) ->
     {ok, SchemaJSON1} = file:read_file(Schema),
     Encoder  = avro:make_simple_encoder(SchemaJSON1, []),
     _Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
-    SchemaId = erlav_nif:create_encoder(Schema),
+    SchemaId = erlav_nif:create_encoder(list_to_binary(Schema)),
 
     Strings = [ [base64:encode(crypto:strong_rand_bytes(StrLen)) || _ <- lists:seq(1, 6)] || _ <- lists:seq(1, Num)],
 
@@ -191,7 +213,20 @@ erlav_perf_strings(Num, StrLen, Type) ->
     RetAvro2 = iolist_to_binary(Encoder(TestMap)),
     IsSame = RetAvro1 =:= RetAvro2,
     io:format("Test Term: ~p ~n", [TestMap]),
-    io:format("Same ret: ~p ~n ~p ~n ~p ~n", [IsSame, RetAvro2, RetAvro1]),
+    io:format("Same ret: ~p ~n ~p ~n ~p ~n", [RetAvro2, RetAvro1, IsSame]),
+
+    {IsSame, Total1/Num, Total2/Num}.
 
 
-    {Total1/Num, Total2/Num}.
+% maps perf test
+% array of int perf test
+% array of strings perf test
+% all perf test run
+all_tests() -> all_tests(10000, 50, null).
+
+all_tests(NumIterations, StrLen, IsNullable) ->
+    Funs = [erlav_perf_tst2],
+    lists:foreach(fun(FName) -> 
+        {IsSame, ErlTime, CppTime} = apply(erlav_perf, FName, [NumIterations, StrLen, IsNullable]),
+        io:format("~p, equal: ~p, erltime: ~p, cpptime: ~p ~n~n", [FName, IsSame, ErlTime, CppTime])
+    end, Funs).

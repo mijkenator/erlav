@@ -1,6 +1,11 @@
 {"type": "record", "name":"Interop", "namespace": "org.apache.avro",
   "fields": [
-      {"name": "intField", "type": "long"}
+      {"name": "intField1", "type": "long"},
+      {"name": "intField2", "type": "long"},
+      {"name": "intField3", "type": "long"},
+      {"name": "intField4", "type": "long"},
+      {"name": "intField5", "type": "long"},
+      {"name": "intField6", "type": "long"}
   ]
 }
 

@@ -1,0 +1,11 @@
+{"type": "record", "name":"Interop", "namespace": "org.apache.avro",
+  "fields": [
+      {"name": "intField1", "type": ["null", "long"], "default": null},
+      {"name": "intField2", "type": ["null", "long"], "default": null},
+      {"name": "intField3", "type": ["null", "long"], "default": null},
+      {"name": "intField4", "type": ["null", "long"], "default": null},
+      {"name": "intField5", "type": ["null", "long"], "default": null},
+      {"name": "intField6", "type": ["null", "long"], "default": null}
+  ]
+}
+
