@@ -151,6 +151,80 @@ map_test() ->
     ?assertEqual(TRet4, #{<<"mapField">> => [{<<"aaa">>,3},{<<"bbb">>,2},{<<"ccc">>,1}]}),
     ok.
 
+map_null_test() ->
+    {ok, SchemaJSON1} = file:read_file("test/map_int_null.avsc"),
+    Encoder1 = avro:make_simple_encoder(SchemaJSON1, []),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    Term1 = #{
+              <<"mapField">> => 
+              #{
+                <<"k1">> => 1,
+                <<"k2">> => 2
+                }
+    },
+    SchemaId = erlav_nif:create_encoder(<<"test/map_int_null.avsc">>),
+    Re2 = erlav_nif:do_encode(SchemaId, Term1),
+    RTerm = maps:from_list(Decoder(Re2)),
+    ?assertEqual(RTerm, #{<<"mapField">> => [{<<"k1">>,1},{<<"k2">>,2}]}),
+    %file:write_file("/tmp/rfile.txt", io_lib:format("~p~n", [RTerm]),[append]),
+    Term2 = #{
+              <<"mapField">> => 
+              #{
+                <<"aaa">> => 1,
+                <<"bbb">> => 2,
+                <<"ccc">> => 3
+                }
+    },
+    Term3 = #{
+              <<"mapField">> => 
+              #{
+                <<"aaa">> => 1,
+                <<"ccc">> => 2,
+                <<"bbb">> => 3
+                }
+    },
+    Term4 = #{
+              <<"mapField">> => 
+              #{
+                <<"ccc">> => 1,
+                <<"bbb">> => 2,
+                <<"aaa">> => 3
+                }
+    },
+    Ret2 = erlav_nif:do_encode(SchemaId, Term2),
+    Ret3 = erlav_nif:do_encode(SchemaId, Term3),
+    Ret4 = erlav_nif:do_encode(SchemaId, Term4),
+    TRet2 = maps:from_list(Decoder(Ret2)),
+    TRet3 = maps:from_list(Decoder(Ret3)),
+    TRet4 = maps:from_list(Decoder(Ret4)),
+    %file:write_file("/tmp/rfile.txt", io_lib:format("~p~n", [TRet2]),[append]),
+    %file:write_file("/tmp/rfile.txt", io_lib:format("~p~n", [TRet3]),[append]),
+    %file:write_file("/tmp/rfile.txt", io_lib:format("~p~n", [TRet4]),[append]),
+    ?assertEqual(TRet2, #{<<"mapField">> => [{<<"aaa">>,1},{<<"bbb">>,2},{<<"ccc">>,3}]}),
+    ?assertEqual(TRet3, #{<<"mapField">> => [{<<"aaa">>,1},{<<"bbb">>,3},{<<"ccc">>,2}]}),
+    ?assertEqual(TRet4, #{<<"mapField">> => [{<<"aaa">>,3},{<<"bbb">>,2},{<<"ccc">>,1}]}),
+    ok.
+
+null_map_test() ->
+    {ok, SchemaJSON1} = file:read_file("test/map_int_null.avsc"),
+    Encoder1 = avro:make_simple_encoder(SchemaJSON1, []),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    Term1 = #{
+              <<"mapField">> => 
+              #{
+                <<"k1">> => 1,
+                <<"k2">> => 2
+                }
+    },
+    SchemaId = erlav_nif:create_encoder(<<"test/map_int_null.avsc">>),
+    Re2 = erlav_nif:do_encode(SchemaId, Term1),
+    RTerm = maps:from_list(Decoder(Re2)),
+    io:format("======================================================== ~n"),
+    io:format("~p ~n", [RTerm]),
+    io:format("======================================================== ~n"),
+    ?assertEqual(RTerm, #{<<"mapField">> => [{<<"k1">>,1},{<<"k2">>,2}]}),
+    ok.
+
 record_test() ->
     {ok, SchemaJSON1} = file:read_file("test/tschema_record.avsc"),
     %Encoder1 = avro:make_simple_encoder(SchemaJSON1, []),

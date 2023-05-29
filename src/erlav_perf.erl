@@ -227,7 +227,7 @@ map_perf_tst1(NumIterations, _StrLen, IsNullable) ->
     end,
     {ok, SchemaJSON1} = file:read_file(Schema),
     Encoder  = avro:make_simple_encoder(SchemaJSON1, []),
-    _Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
     SchemaId = erlav_nif:create_encoder(list_to_binary(Schema)),
     
     Ints = [ [rand:uniform(9999999) || _ <- lists:seq(1,100) ] || _ <- lists:seq(1, NumIterations)],
@@ -260,10 +260,15 @@ map_perf_tst1(NumIterations, _StrLen, IsNullable) ->
     TestMap = #{ 
         <<"mapField">> => Map1
     },
+    io:format("Test Term: ~p ~n", [TestMap]),
     RetAvro1 = erlav_nif:do_encode(SchemaId, TestMap),
     RetAvro2 = iolist_to_binary(Encoder(TestMap)),
-    IsSame = RetAvro1 =:= RetAvro2,
-    io:format("Test Term: ~p ~n", [TestMap]),
+    IsSame = case RetAvro1 of
+        <<>> -> false;
+        _ ->
+            RetMap = tst_utils:to_map(Decoder(RetAvro1)),
+            tst_utils:compare_maps(TestMap, RetMap)
+    end,
     io:format("Same ret: ~p ~n ~p ~n ~p ~n", [RetAvro2, RetAvro1, IsSame]),
 
     {IsSame, Total1/NumIterations, Total2/NumIterations}.
@@ -271,7 +276,7 @@ map_perf_tst1(NumIterations, _StrLen, IsNullable) ->
 % array of int perf test
 % array of strings perf test
 % all perf test run
-all_tests() -> all_tests(10000, 50, null).
+all_tests() -> all_tests(10000, 50, nonull).
 
 all_tests(NumIterations, StrLen, IsNullable) ->
     Funs = [erlav_perf_tst2, map_perf_tst1],

@@ -29,11 +29,11 @@ compare_maps(M1, M2) ->
     end, KL1),
     ok.
 
-to_map([{K,V}|_] = L) ->
+to_map([{_,_}|_] = L) ->
     maps:from_list([{K, to_map(V)} || {K, V} <- L]);
 to_map(V) -> V.
 
-filter_null_values([{K,V}|_] = L) -> filter_null_values(maps:from_list(L));
+filter_null_values([{_,_}|_] = L) -> filter_null_values(maps:from_list(L));
 filter_null_values(L) when is_list(L) -> [filter_null_values(E) || E <- L];
 filter_null_values(#{} = V) ->
     M1 = maps:filter(fun(_, null) -> false; (_,_) -> true end, V),
