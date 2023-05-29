@@ -7,6 +7,7 @@
     erlav_perf_string/2, 
     erlav_perf_integer/2,
     erlav_perf_strings/3,
+    map_perf_tst1/3,
     all_tests/3,
     all_tests/0
 ]).
@@ -219,13 +220,61 @@ erlav_perf_strings(Num, StrLen, Type) ->
 
 
 % maps perf test
+map_perf_tst1(NumIterations, _StrLen, IsNullable) ->
+    Schema = case IsNullable of
+        null -> "test/map_int_null.avsc";
+        _    -> "test/tschema_map.avsc"
+    end,
+    {ok, SchemaJSON1} = file:read_file(Schema),
+    Encoder  = avro:make_simple_encoder(SchemaJSON1, []),
+    _Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    SchemaId = erlav_nif:create_encoder(list_to_binary(Schema)),
+    
+    Ints = [ [rand:uniform(9999999) || _ <- lists:seq(1,100) ] || _ <- lists:seq(1, NumIterations)],
+    Strings = [ [base64:encode(crypto:strong_rand_bytes(20)) || _ <- lists:seq(1, 100)] || _ <- lists:seq(1, NumIterations)],
+    Maps = [ maps:from_list(lists:zip(Keys, Vals)) || {Keys, Vals} <- lists:zip(Strings, Ints)],
+    [ Map1 | _ ] = Maps,
+
+
+    io:format("Started .....~p ~n", [Map1]),
+
+    T1 = erlang:system_time(microsecond),
+    lists:foreach(fun(M1) ->
+        iolist_to_binary(Encoder(#{ 
+            <<"mapField">> => M1
+        }))
+    end, Maps),
+    Total1 = erlang:system_time(microsecond) - T1,
+    io:format("Erlavro encoding time: ~p microseconds ~n", [T1]),
+
+    T2 = erlang:system_time(microsecond),
+
+    lists:foreach(fun(M1) ->
+        erlav_nif:do_encode(SchemaId, #{ 
+            <<"mapField">> => M1
+        })
+    end, Maps),
+    Total2 = erlang:system_time(microsecond) - T2,
+    io:format("Erlav encoding time: ~p microseconds ~n", [T2]),
+
+    TestMap = #{ 
+        <<"mapField">> => Map1
+    },
+    RetAvro1 = erlav_nif:do_encode(SchemaId, TestMap),
+    RetAvro2 = iolist_to_binary(Encoder(TestMap)),
+    IsSame = RetAvro1 =:= RetAvro2,
+    io:format("Test Term: ~p ~n", [TestMap]),
+    io:format("Same ret: ~p ~n ~p ~n ~p ~n", [RetAvro2, RetAvro1, IsSame]),
+
+    {IsSame, Total1/NumIterations, Total2/NumIterations}.
+
 % array of int perf test
 % array of strings perf test
 % all perf test run
 all_tests() -> all_tests(10000, 50, null).
 
 all_tests(NumIterations, StrLen, IsNullable) ->
-    Funs = [erlav_perf_tst2],
+    Funs = [erlav_perf_tst2, map_perf_tst1],
     lists:foreach(fun(FName) -> 
         {IsSame, ErlTime, CppTime} = apply(erlav_perf, FName, [NumIterations, StrLen, IsNullable]),
         io:format("~p, equal: ~p, erltime: ~p, cpptime: ~p ~n~n", [FName, IsSame, ErlTime, CppTime])
