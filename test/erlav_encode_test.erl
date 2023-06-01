@@ -314,6 +314,76 @@ arrayofrec_test() ->
     ?assertEqual(true,  proplists:get_value(<<"rec5field">>, M1)),
     ?assertEqual(11.22,  proplists:get_value(<<"rec6field">>, M1)).
 
+arrayofmaps_test() ->
+    {ok, SchemaJSON1} = file:read_file("test/array_map.avsc"),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    Term1 = #{
+              <<"arrayField">> => [
+                                   #{
+                                        <<"rec1field">> => <<"lalalal">>,
+                                        <<"rec2field">> => <<"koko">>
+                                    }
+                ]
+    },
+    SchemaId = erlav_nif:create_encoder(<<"test/array_map.avsc">>),
+    Re2 = erlav_nif:do_encode(SchemaId, Term1),
+    M = maps:from_list(Decoder(Re2)),
+    [M1|_] = maps:get(<<"arrayField">>, M),
+    ?assertEqual(<<"koko">>,  proplists:get_value(<<"rec2field">>, M1)),
+    ?assertEqual(<<"lalalal">>,  proplists:get_value(<<"rec1field">>, M1)).
+
+arrayofarrays_test() ->
+    {ok, SchemaJSON1} = file:read_file("test/array_array.avsc"),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    Term1 = #{
+              <<"arrayField">> => [
+                    [1,2,3], [4,5], [6], [7,8,9,10]
+                ]
+    },
+    SchemaId = erlav_nif:create_encoder(<<"test/array_array.avsc">>),
+    Re2 = erlav_nif:do_encode(SchemaId, Term1),
+    M = maps:from_list(Decoder(Re2)),
+    [A1, A2, A3, A4] = maps:get(<<"arrayField">>, M),
+    ?assertEqual([1,2,3], A1),
+    ?assertEqual([4,5], A2),
+    ?assertEqual([6], A3),
+    ?assertEqual([7,8,9,10], A4).
+
+arrayofarrays_null_test() ->
+    {ok, SchemaJSON1} = file:read_file("test/array_null_array.avsc"),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    Term1 = #{
+              <<"arrayField">> => [
+                    [1,2,3], [4,5], [6], [7,8,9,10]
+                ]
+    },
+    SchemaId = erlav_nif:create_encoder(<<"test/array_null_array.avsc">>),
+    Re2 = erlav_nif:do_encode(SchemaId, Term1),
+    M = maps:from_list(Decoder(Re2)),
+    [A1, A2, A3, A4] = maps:get(<<"arrayField">>, M),
+    ?assertEqual([1,2,3], A1),
+    ?assertEqual([4,5], A2),
+    ?assertEqual([6], A3),
+    ?assertEqual([7,8,9,10], A4).
+
+array_null_ofmaps_test() ->
+    {ok, SchemaJSON1} = file:read_file("test/array_map_null.avsc"),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    Term1 = #{
+              <<"arrayField">> => [
+                                   #{
+                                        <<"rec1field">> => <<"lalalal">>,
+                                        <<"rec2field">> => <<"koko">>
+                                    }
+                ]
+    },
+    SchemaId = erlav_nif:create_encoder(<<"test/array_map_null.avsc">>),
+    Re2 = erlav_nif:do_encode(SchemaId, Term1),
+    M = maps:from_list(Decoder(Re2)),
+    [M1|_] = maps:get(<<"arrayField">>, M),
+    ?assertEqual(<<"koko">>,  proplists:get_value(<<"rec2field">>, M1)),
+    ?assertEqual(<<"lalalal">>,  proplists:get_value(<<"rec1field">>, M1)).
+
 arrayofrec_null_test() ->
     {ok, SchemaJSON1} = file:read_file("test/tschema_array_ofrecs_nullable.avsc"),
     Decoder  = avro:make_simple_decoder(SchemaJSON1, []),

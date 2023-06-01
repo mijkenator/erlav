@@ -22,6 +22,8 @@ int encode_array(std::string, ErlNifEnv*, ERL_NIF_TERM&, std::vector<uint8_t>*);
 int encode_map(std::string, ErlNifEnv*, ERL_NIF_TERM&, std::vector<uint8_t>*);
 int encode_map_of_arrays(std::string, ErlNifEnv*, ERL_NIF_TERM&, std::vector<uint8_t>*);
 int encode_map_types(uint8_t, std::string, ErlNifEnv*, ERL_NIF_TERM&, std::vector<uint8_t>*);
+int encode_array_of_simplemaps(std::string, ErlNifEnv*, ERL_NIF_TERM&, std::vector<uint8_t>*);
+int encode_array_of_simplearrays(std::string, ErlNifEnv*, ERL_NIF_TERM&, std::vector<uint8_t>*);
 
 struct SchemaItem{
     std::string fieldName;
@@ -30,7 +32,7 @@ struct SchemaItem{
     bool defnull = 0;
     bool isunion = 0;
     uint8_t obj_type = 0; // 0 - primitive, 1 - array, 2 - map, 3 - record, 4 - map of arrays
-                          // 5 - array of recs
+                          // 5 - array of recs // 6 - array of maps
     std::vector<SchemaItem> record_schema;
 
     void set_null_default(){
@@ -60,6 +62,12 @@ struct SchemaItem{
                         fieldTypes.push_back("record");
                         set_recursive_types(i["items"]["fields"]);
                         obj_type = 5;
+                    }else if(i["items"].is_object() && i["items"]["type"] == "map"){
+                        fieldTypes.push_back(i["items"]["values"]);
+                        obj_type = 6;
+                    }else if(i["items"].is_object() && i["items"]["type"] == "array"){
+                        fieldTypes.push_back(i["items"]["values"]);
+                        obj_type = 7;
                     }else{
                         fieldTypes.push_back(i["items"]);
                         obj_type = 1;
@@ -87,6 +95,12 @@ struct SchemaItem{
                     if(ftypes["items"]["type"] == "record"){
                         fieldTypes.push_back("record");
                         set_recursive_types(ftypes["items"]["fields"]);
+                    }else if(ftypes["items"]["type"] == "map"){
+                        fieldTypes.push_back(ftypes["items"]["values"]);
+                        obj_type = 6;
+                    }else if(ftypes["items"]["type"] == "array"){
+                        fieldTypes.push_back(ftypes["items"]["items"]);
+                        obj_type = 7;
                     }
                 }else{
                     fieldTypes.push_back(ftypes["items"]);
@@ -209,6 +223,12 @@ int encode(SchemaItem it, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t
         } else if(it.obj_type == 4){
             //std::cout << "E.map_of_array enc" << '\n' << '\r';
             return encode_map_of_arrays(atypes[0], env, term, ret);
+        } else if(it.obj_type == 6){
+            //std::cout << "E.array of_simple_maps enc" << '\n' << '\r';
+            return encode_array_of_simplemaps(atypes[0], env, term, ret);
+        } else if(it.obj_type == 7){
+            //std::cout << "E.array of_simple_arrays enc" << '\n' << '\r';
+            return encode_array_of_simplearrays(atypes[0], env, term, ret);
         } else {
             //std::cout << "E.TYPE" << atypes[0] << '\n' << '\r';
             return encode_primitive(atypes[0], env, term, ret);
@@ -222,6 +242,8 @@ int encode(SchemaItem it, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t
                 int eret = 999;
                 if(it.obj_type == 1){ // array
                     eret = encode_array(*iter, env, term, ret);
+                } else if(it.obj_type == 2){ // map
+                    eret = encode_map(*iter, env, term, ret);
                 } else if(it.obj_type == 3){ // records
                     //std::cout << "E.Record enc" << index << '\n' << '\r';
                     eret = encode_record(it.record_schema, env, term, ret);
@@ -230,6 +252,10 @@ int encode(SchemaItem it, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t
                     eret = encode_map_of_arrays(*iter, env, term, ret);
                 } else if(it.obj_type == 5){ // array of rec
                     eret = encode_array_ofrec(it.record_schema, env, term, ret);
+                } else if(it.obj_type == 6){ // array of maps
+                    eret = encode_array_of_simplemaps(*iter, env, term, ret);
+                } else if(it.obj_type == 7){ // array of arrays
+                    eret = encode_array_of_simplearrays(*iter, env, term, ret);
                 }else{
                     eret = encode_primitive(*iter, env, term, ret);
                 }
@@ -372,26 +398,74 @@ int encode_array_ofrec(std::vector<SchemaItem> schema, ErlNifEnv* env, ERL_NIF_T
 
 int encode_array(std::string atype, ErlNifEnv* env, ERL_NIF_TERM& term, std::vector<uint8_t>* ret){
     unsigned int len;
-    std::vector<uint8_t> eret;
+    //std::vector<uint8_t> eret;
     //int64_t tmpint;
     //std::cout << "E.ARRAY:" << atype << '\n' << '\r';
 
     if(enif_is_list(env, term)){
         enif_get_list_length(env, term, &len);
         if(len > 0){
+            encode_long_fast(env, len, ret);
             for(uint32_t i=0; i < len; i++){
                 ERL_NIF_TERM elem;
                 if(enif_get_list_cell(env, term, &elem, &term)){
-                    encode_primitive(atype, env, elem, &eret);
+                    //encode_primitive(atype, env, elem, &eret);
+                    encode_primitive(atype, env, elem, ret);
                 }
             }
-            encode_long_fast(env, len, ret);
-            ret->insert(ret->end(), eret.data(), eret.data() + eret.size());
+            //encode_long_fast(env, len, ret);
+            //ret->insert(ret->end(), eret.data(), eret.data() + eret.size());
             ret->push_back(0);
         }
         return 0;
     }
     return 667;
+}
+
+int encode_array_of_simplemaps(std::string atype, ErlNifEnv* env, ERL_NIF_TERM& term, std::vector<uint8_t>* ret){
+    unsigned int len;
+    //std::vector<uint8_t> eret;
+    //int64_t tmpint;
+    //std::cout << "E.ARRAY OF SIMPLE MAPS:" << atype << '\n' << '\r';
+
+    if(enif_is_list(env, term)){
+        enif_get_list_length(env, term, &len);
+        if(len > 0){
+            encode_long_fast(env, len, ret);
+            for(uint32_t i=0; i < len; i++){
+                ERL_NIF_TERM elem;
+                if(enif_get_list_cell(env, term, &elem, &term)){
+                    //encode_map_types(0, atype, env, elem, &eret);
+                    encode_map_types(0, atype, env, elem, ret);
+                }
+            }
+            //encode_long_fast(env, len, ret);
+            //ret->insert(ret->end(), eret.data(), eret.data() + eret.size());
+            ret->push_back(0);
+        }
+        return 0;
+    }
+    return 668;
+}
+
+int encode_array_of_simplearrays(std::string atype, ErlNifEnv* env, ERL_NIF_TERM& term, std::vector<uint8_t>* ret){
+    unsigned int len;
+
+    if(enif_is_list(env, term)){
+        enif_get_list_length(env, term, &len);
+        if(len > 0){
+            encode_long_fast(env, len, ret);
+            for(uint32_t i=0; i < len; i++){
+                ERL_NIF_TERM elem;
+                if(enif_get_list_cell(env, term, &elem, &term)){
+                    encode_array(atype, env, elem, ret);
+                }
+            }
+            ret->push_back(0);
+        }
+        return 0;
+    }
+    return 670;
 }
 
 int encode_primitive(std::string atype, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t>* ret){
