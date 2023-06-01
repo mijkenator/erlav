@@ -66,7 +66,7 @@ struct SchemaItem{
                         fieldTypes.push_back(i["items"]["values"]);
                         obj_type = 6;
                     }else if(i["items"].is_object() && i["items"]["type"] == "array"){
-                        fieldTypes.push_back(i["items"]["values"]);
+                        fieldTypes.push_back(i["items"]["items"]);
                         obj_type = 7;
                     }else{
                         fieldTypes.push_back(i["items"]);
