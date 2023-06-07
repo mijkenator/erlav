@@ -74,7 +74,46 @@ man_tst(3) ->
                 ]
             }
     },
-    ctst(Term1).
+    ctst(Term1);
+man_tst(4) ->
+    Sid1 = erlav_nif:create_encoder(<<"test/array_null_array.avsc">>),
+    Sid2 = erlav_nif:create_encoder(<<"test/array_null_arraymaps.avsc">>),
+    io:format("Sid1: ~p , Sid2: ~p ~n", [Sid1, Sid2]),
+    {ok, SchemaJSON1} = file:read_file("test/array_null_arraymaps.avsc"),
+    Encoder  = avro:make_simple_encoder(SchemaJSON1, []),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    Term = #{
+             <<"arrayField">> => [
+                                  [#{<<"m1key">> => <<"m1value">>}, #{<<"m2key">> => <<"m2value">>}]
+                ]
+            },
+
+    io:format("1.Erl ret: ~p ~n", [ iolist_to_binary(Encoder(Term)) ]),
+    Re2 = erlav_nif:do_encode(Sid2, Term),
+    io:format("2.C++ ret: ~p ~n", [Re2]),
+    T2 = Decoder(Re2),
+    io:format("3.C++ decoded ret: ~p ~n", [T2]),
+    ok;
+man_tst(5) ->
+    io:format("~n ------------------------------------ ~n", []),
+    Sid2 = erlav_nif:create_encoder(<<"test/array_arraymaps.avsc">>),
+    io:format("~n ------------------------------------ ~n", []),
+    io:format("Sid: ~p ~n", [Sid2]),
+    {ok, SchemaJSON1} = file:read_file("test/array_arraymaps.avsc"),
+    Encoder  = avro:make_simple_encoder(SchemaJSON1, []),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    Term = #{
+             <<"arrayField">> => [
+                                  [#{<<"m1key">> => <<"m1value">>}, #{<<"m2key">> => <<"m2value">>}]
+                ]
+            },
+
+    io:format("1.Erl ret: ~p ~n", [ iolist_to_binary(Encoder(Term)) ]),
+    Re2 = erlav_nif:do_encode(Sid2, Term),
+    io:format("2.C++ ret: ~p ~n", [Re2]),
+    T2 = Decoder(Re2),
+    io:format("3.C++ decoded ret: ~p ~n", [T2]),
+    ok.
 
 ctst(Term1) ->
     {ok, SchemaJSON1} = file:read_file("test/opnrtb_test1.avsc"),
