@@ -291,7 +291,11 @@ int encode(SchemaItem it, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t
             if(*iter != "null"){
                 int eret = 999;
                 if(it.obj_type == 1){ // array
-                    eret = encode_array(*iter, env, term, ret);
+                    if(*iter == "array"){
+                        eret =  encode_array(it.record_schema[0], env, term, ret);
+                    }else{
+                        eret = encode_array(*iter, env, term, ret);
+                    }
                 } else if(it.obj_type == 2){ // map
                     eret = encode_map(*iter, env, term, ret);
                 } else if(it.obj_type == 3){ // records
