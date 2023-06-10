@@ -113,6 +113,29 @@ man_tst(5) ->
     io:format("2.C++ ret: ~p ~n", [Re2]),
     T2 = Decoder(Re2),
     io:format("3.C++ decoded ret: ~p ~n", [T2]),
+    ok;
+man_tst(6) ->
+    io:format("~n ------------------------------------ ~n", []),
+    Sid2 = erlav_nif:create_encoder(<<"test/array_null_recursive_array.avsc">>),
+    io:format("~n ------------------------------------ ~n", []),
+    io:format("Sid: ~p ~n", [Sid2]),
+    {ok, SchemaJSON1} = file:read_file("test/array_null_recursive_array.avsc"),
+    Encoder  = avro:make_simple_encoder(SchemaJSON1, []),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    Term = #{
+             <<"arrayField">> => [
+                                  [
+                                    [#{<<"m1key">> => <<"m1value">>}, #{<<"m2key">> => <<"m2value">>}],
+                                    [#{<<"m21key">> => <<"m21value">>}, #{<<"m22key">> => <<"m22value">>}]
+                                  ]
+                ]
+            },
+
+    io:format("1.Erl ret: ~p ~n", [ iolist_to_binary(Encoder(Term)) ]),
+    Re2 = erlav_nif:do_encode(Sid2, Term),
+    io:format("2.C++ ret: ~p ~n", [Re2]),
+    T2 = Decoder(Re2),
+    io:format("3.C++ decoded ret: ~p ~n", [T2]),
     ok.
 
 ctst(Term1) ->

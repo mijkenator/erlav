@@ -49,18 +49,18 @@ struct SchemaItem{
         }
     }
     void set_recursive_types(std::string name, json ftype){
-        std::cout << "SRT2:" << " name: " << name << '\n' << '\r';
-        SchemaItem si(name, ftype);
+        std::cout << "SRT2:" << " name: " << name << " ___ " << ftype << '\n' << '\r';
+        SchemaItem si = SchemaItem(name, ftype);
         si.set_null_default();
         record_schema.push_back(si);
     }
     void set_recursive_types(std::string name, std::string ftype){
-        SchemaItem si(name, ftype);
+        SchemaItem si = SchemaItem(name, ftype);
         record_schema.push_back(si);
     }
     void set_recursive_types(json ftypes){
         for(auto it: ftypes){
-            SchemaItem si(it["name"], it["type"]);
+            SchemaItem si = SchemaItem(it["name"], it["type"]);
             if(it.contains("default")){
                 if(it["default"].is_null()){
                     si.set_null_default();
@@ -68,6 +68,9 @@ struct SchemaItem{
             }
             record_schema.push_back(si);
         }
+    }
+    void set_ot(uint8_t ot){
+        obj_type = ot;
     }
     SchemaItem(std::string name, json ftypes){
         fieldName = name;
@@ -81,8 +84,8 @@ struct SchemaItem{
                 } else if(i.is_object() && (i["type"] == "array")){
                     if(i["items"].is_object() && i["items"]["type"] == "record"){
                         fieldTypes.push_back("record");
-                        set_recursive_types(i["items"]["fields"]);
                         obj_type = 5;
+                        set_recursive_types(i["items"]["fields"]);
                     }else if(i["items"].is_object() && i["items"]["type"] == "map"){
                         fieldTypes.push_back(i["items"]["values"]);
                         obj_type = 6;
@@ -93,12 +96,14 @@ struct SchemaItem{
                             std::cout << "SchemaItem: array of simple arrays" << '\n' << '\r';
                             fieldTypes.push_back(i["items"]["items"]);
                             obj_type = 7;
+                            set_ot(7);
                         }else{
                             // experimnet how to have array of complex arrays
                             std::cout << "SchemaItem: array of complex arrays2" << '\n' << '\r';
                             fieldTypes.push_back("array");
-                            set_recursive_types(1, "array", i);
                             obj_type = 1;
+                            set_ot(1);
+                            set_recursive_types(1, "array", i);
                         }
                     }else{
                         fieldTypes.push_back(i["items"]);
@@ -143,8 +148,9 @@ struct SchemaItem{
                             // experimnet how to have array of complex arrays
                             std::cout << "SchemaItem: array of complex arrays1" << '\n' << '\r';
                             fieldTypes.push_back("array");
-                            set_recursive_types(1, "array", ftypes);
                             obj_type = 1;
+                            set_ot(1);
+                            set_recursive_types(1, "array", ftypes);
                         }
                     }
                 }else{
@@ -155,8 +161,8 @@ struct SchemaItem{
                 obj_type = 2;
             }else if(ftypes["type"] == "record"){
                 set_recursive_types(ftypes["fields"]);
-                fieldTypes.push_back("record");
                 obj_type = 3;
+                fieldTypes.push_back("record");
             }
         }else if(ftypes.is_string()){
             fieldName = name;
@@ -251,7 +257,7 @@ int encode(SchemaItem it, ErlNifEnv* env, ERL_NIF_TERM term, std::vector<uint8_t
     auto alen = atypes.size();
     std::cout << "ENCODE alen:" << alen << '\n' << '\r';
     for (std::string ats: atypes)
-        std::cout << ats << ' ';
+        std::cout << ":: " << ats << ' ';
     std::cout << '\n' << '\r';
     if(alen == 1){
         if(it.obj_type == 1){
@@ -453,9 +459,13 @@ int encode_array_ofrec(std::vector<SchemaItem> schema, ErlNifEnv* env, ERL_NIF_T
 int encode_array(SchemaItem si, ErlNifEnv* env, ERL_NIF_TERM& term, std::vector<uint8_t>* ret){
     unsigned int len;
     unsigned int rslen;
-    std::cout << "E.ARRAY recursive:" << si.fieldName << '\n' << '\r';
+    std::cout << "E.ARRAY recursive:" << si.fieldName << " ::obj_type: " << si.obj_type << '\n' << '\r';
     rslen = si.record_schema.size();
-    std::cout << "E.ARRAY internal types length:" << rslen << '\n' << '\r';
+    std::cout << "E.ARRAY internal types length:" << rslen <<'\n' << '\r';
+    if(1 == rslen){
+        std::cout << "1RSLNE: " << si.record_schema[0].fieldName << " _ " << si.record_schema[0].fieldTypes[0] << '\n' << '\r';
+        std::cout << "2RSLNE: " << si.record_schema[0].obj_type << '\n' << '\r';
+    }
     
     
     if(enif_is_list(env, term)){
