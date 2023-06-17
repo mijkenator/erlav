@@ -8,10 +8,12 @@
         record3_tst/0,
         array_rec_tst/0,
         array_rec_null_tst/0,
-        map_arr/0
+        map_arr/0,
+        erlav_init/1,
+        erlav_encode/2
         ]).
 
--nifs([add/2, encode/2, create_encoder/1, do_encode/2]).
+-nifs([add/2, encode/2, create_encoder/1, do_encode/2, erlav_init/1, erlav_encode/2]).
 
 -on_load(init/0).
 
@@ -38,6 +40,9 @@ add(_A, _B) ->
 
 encode(_A, _B) ->
     not_loaded(?LINE).
+
+erlav_encode(_A, _B) ->
+    not_loaded(?LINE).
     
 do_encode(_A, _B) ->
     not_loaded(?LINE).
@@ -46,6 +51,9 @@ not_loaded(Line) ->
     erlang:nif_error({not_loaded, [{module, ?MODULE}, {line, Line}]}).
 
 create_encoder(_A) ->
+    not_loaded(?LINE).
+
+erlav_init(_A) ->
     not_loaded(?LINE).
 
 etest() ->

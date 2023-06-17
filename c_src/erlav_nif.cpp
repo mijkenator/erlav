@@ -4,6 +4,7 @@
 #include <vector>
 #include <stdint.h>
 #include "mkh_avro.hh"
+#include "mkh_avro2.hh"
 #include <string>
 #include "include/json.hpp"
 #include <fstream>
@@ -23,6 +24,9 @@ int enif_get_bool(ErlNifEnv*, ERL_NIF_TERM, bool*);
 
 std::map<int, std::vector<mkh_avro::SchemaItem > > encoders_map;
 std::map<std::string, int> schema_map;
+
+std::map<int, mkh_avro2::SchemaItem*  > erlav_encoders_map;
+std::map<std::string, int> erlav_schema_map;
 
 int add (int a, int b)
 {
@@ -71,6 +75,32 @@ ERL_NIF_TERM create_encoder_nif(ErlNifEnv* env, int argc,
     return enif_make_int(env, ret);
 }
 
+ERL_NIF_TERM erlav_init_nif(ErlNifEnv* env, int argc, 
+    const ERL_NIF_TERM argv[])
+{
+    ErlNifBinary sbin;
+    std::string key;
+    int ret;
+            
+    
+    if (!enif_inspect_binary(env, argv[0], &sbin)) {
+        return enif_make_int(env, 0);
+    }
+    key.assign((const char*)sbin.data, sbin.size);
+
+    if(erlav_schema_map.find(key) != erlav_schema_map.end()){
+        ret = erlav_schema_map[key];
+        return enif_make_int(env, ret);
+    }else{
+        ret = erlav_schema_map.size() + 1;
+        erlav_schema_map[key] = ret;
+        auto schema = mkh_avro2::read_schema(key);
+        erlav_encoders_map[ret] = schema;
+    }
+
+    return enif_make_int(env, ret);
+}
+
 
 ERL_NIF_TERM do_encode_nif(ErlNifEnv* env, int argc, 
     const ERL_NIF_TERM argv[])
@@ -82,6 +112,18 @@ ERL_NIF_TERM do_encode_nif(ErlNifEnv* env, int argc,
     }
     
     return do_encode_int(env, enc_ref, &argv[1]);
+}
+
+ERL_NIF_TERM erlav_encode_nif(ErlNifEnv* env, int argc, 
+    const ERL_NIF_TERM argv[])
+{
+    int enc_ref = 0;
+    
+    if (!enif_get_int(env, argv[0], &enc_ref)) {
+        return enif_make_badarg(env);
+    }
+    
+    return mkh_avro2::encode(env, erlav_encoders_map[enc_ref], &argv[1]);
 }
 
 ERL_NIF_TERM do_encode_int(ErlNifEnv* env, int schema_id, const ERL_NIF_TERM* input){
@@ -380,7 +422,9 @@ ErlNifFunc nif_funcs[] =
     {"add", 2, add_nif},
     {"encode", 2, encode_nif},
     {"create_encoder", 1, create_encoder_nif},
-    {"do_encode", 2, do_encode_nif}
+    {"do_encode", 2, do_encode_nif},
+    {"erlav_init", 1, erlav_init_nif},
+    {"erlav_encode", 2, erlav_encode_nif}
 };
 
 ERL_NIF_INIT(erlav_nif, nif_funcs, nullptr, 
