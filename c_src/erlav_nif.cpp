@@ -118,10 +118,12 @@ ERL_NIF_TERM erlav_encode_nif(ErlNifEnv* env, int argc,
     const ERL_NIF_TERM argv[])
 {
     int enc_ref = 0;
+    std::cout << "NIF1\n\r";
     
     if (!enif_get_int(env, argv[0], &enc_ref)) {
         return enif_make_badarg(env);
     }
+    std::cout << "NIF2\n\r";
     
     return mkh_avro2::encode(env, erlav_encoders_map[enc_ref], &argv[1]);
 }

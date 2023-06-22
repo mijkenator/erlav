@@ -144,9 +144,25 @@ man_tst(6) ->
 man_tst(7) ->
     io:format("~n ------------------------------------ ~n", []),
     %Sid = erlav_nif:erlav_init(<<"test/array_null_recursive_array.avsc">>),
-    Sid = erlav_nif:erlav_init(<<"test/opnrtb_test1.avsc">>),
-    %Sid = erlav_nif:erlav_init(<<"priv/tschema2.avsc">>),
+    %Sid = erlav_nif:erlav_init(<<"test/opnrtb_test1.avsc">>),
+    Sid = erlav_nif:erlav_init(<<"priv/tschema2.avsc">>),
+    Sid2 = erlav_nif:create_encoder(<<"priv/tschema2.avsc">>),
     io:format("Sid: ~p ~n", [Sid]),
+    Term = #{
+        <<"intField">> => 1,
+        <<"longField">> => 2,
+        <<"floatField">> => 1.1,
+        <<"doubleField">> => 2.2,
+        <<"stringField">> => <<"lalal">>,
+        <<"boolField">> => false 
+    },
+    io:format("Encoding: ~n", []),
+    Ret = erlav_nif:erlav_encode(Sid, Term),
+    io:format("ERLAV2 ret: ~p ~n", [Ret]),
+    Re2 = erlav_nif:do_encode(Sid2, Term),
+    io:format("ERLAV1 ret: ~p ~n", [Re2]),
+    Eq = Re2 =:= Ret,
+    io:format("Same return: ~p ~n", [Eq]),
     ok.
 
 ctst(Term1) ->
