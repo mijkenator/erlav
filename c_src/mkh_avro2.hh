@@ -133,6 +133,7 @@ ERL_NIF_TERM encode(ErlNifEnv*, SchemaItem*, const ERL_NIF_TERM*);
 int encodevalue(SchemaItem*, ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*);
 int encodescalar(int, ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*); 
 int encodeunion(SchemaItem*, ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*); 
+int encodearray(SchemaItem*, ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*);
 int encode_int(ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*);
 int encode_long(ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*);
 int encode_long_fast(ErlNifEnv*, int64_t, std::vector<uint8_t>*);
@@ -141,6 +142,7 @@ int encode_double(ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*);
 int encode_string(ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*);
 int encode_boolean(ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*);
 int enif_get_bool(ErlNifEnv*, ERL_NIF_TERM*, bool*);
+size_t encodeInt32(int32_t, std::array<uint8_t, 5> &output) noexcept;
 
 ERL_NIF_TERM encode(ErlNifEnv* env, SchemaItem* si, const ERL_NIF_TERM* input){
     ERL_NIF_TERM binary;
@@ -195,6 +197,8 @@ int encodevalue(SchemaItem* si, ErlNifEnv* env, ERL_NIF_TERM* val, std::vector<u
             return encodescalar(si->scalar_type, env, val, ret);
         case 1:
             return encodeunion(si, env, val, ret);
+        case 2:
+            return encodearray(si, env, val, ret);
         default:
             std::cout << "ENCODE VALUE!!!\n\r";
 
@@ -202,15 +206,39 @@ int encodevalue(SchemaItem* si, ErlNifEnv* env, ERL_NIF_TERM* val, std::vector<u
     return 0;
 }
 
+int encodearray(SchemaItem* si, ErlNifEnv* env, ERL_NIF_TERM* val, std::vector<uint8_t>* ret){ 
+    std::cout << "ENCODE ARRAY!!!\n\r";
+    retunt 0;
+}
+
 int encodeunion(SchemaItem* si, ErlNifEnv* env, ERL_NIF_TERM* val, std::vector<uint8_t>* ret){ 
-    std::cout << "ENCODE UNION!!!\n\r";
+    std::array<uint8_t, 5> output;
+    //assume null in union always first item
     if(si->childItems.size() == 1){
+        std::cout << "ENCODE SIMPLE UNION!!!: " << si->is_nullable <<  "\n\r";
+        ret->push_back(1 + si->is_nullable); 
         return encodevalue(si->childItems[0], env, val, ret);
     }else{
-
+        std::cout << "ENCODE UNION!!!\n\r";
+        ret->push_back(0); // reserve first for type index
+        auto union_index = ret->size() - 1;
+        for (auto iter = si->childItems.begin(); iter != si->childItems.end(); ++iter) {
+            int index = std::distance(si->childItems.begin(), iter);
+            auto ret_code = encodevalue(*iter, env, val, ret);
+            if(ret_code == 0){
+                encodeInt32(index + si->is_nullable, output);
+                ret->at(union_index) = output[0];
+                return ret_code;
+            }
+        }
+        if(si->is_nullable == 1){
+            return 0;
+        }
+        return 7;
     }
     return 0;
 }
+
 int encodescalar(int scalar_type, ErlNifEnv* env, ERL_NIF_TERM* val, std::vector<uint8_t>* ret){ 
     switch(scalar_type){
         case 0:
