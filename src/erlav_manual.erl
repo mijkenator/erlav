@@ -163,6 +163,39 @@ man_tst(7) ->
     io:format("ERLAV1 ret: ~p ~n", [Re2]),
     Eq = Re2 =:= Ret,
     io:format("Same return: ~p ~n", [Eq]),
+    ok;
+man_tst(8) ->
+    io:format("~n ------------------------------------ ~n", []),
+    Sid = erlav_nif:erlav_init(<<"test/array_array_array.avsc">>),
+    {ok, SchemaJSON1} = file:read_file("test/array_array_array.avsc"),
+    Encoder  = avro:make_simple_encoder(SchemaJSON1, []),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    Term1 = #{
+        <<"arrayField">> => [ [[1,2],[3,4],[5,6]], [[7,8], [999,1099]], [ [1199,1299] ]  ]
+    },
+    Ret = erlav_nif:erlav_encode(Sid, Term1),
+    io:format("1.ERLAV2 ret: ~p ~n", [Ret]),
+    io:format("2.Erl ret: ~p ~n", [ iolist_to_binary(Encoder(Term1)) ]),
+    T2 = Decoder(Ret),
+    io:format("3.C++ decoded ret: ~p ~n", [T2]),
+    ok;
+man_tst(9) ->
+    io:format("~n ------------------------------------ ~n", []),
+    Sid = erlav_nif:erlav_init(<<"test/tschema_record3.avsc">>),
+    {ok, SchemaJSON1} = file:read_file("test/tschema_record3.avsc"),
+    Encoder  = avro:make_simple_encoder(SchemaJSON1, []),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    Term1 = #{
+        <<"recordField">> => #{
+            <<"rec1field">> => 1,
+            <<"rec3field">> => 2
+        }
+    },
+    Ret = erlav_nif:erlav_encode(Sid, Term1),
+    io:format("1.ERLAV2 ret: ~p ~n", [Ret]),
+    io:format("2.Erl ret: ~p ~n", [ iolist_to_binary(Encoder(Term1)) ]),
+    T2 = Decoder(Ret),
+    io:format("3.C++ decoded ret: ~p ~n", [T2]),
     ok.
 
 ctst(Term1) ->

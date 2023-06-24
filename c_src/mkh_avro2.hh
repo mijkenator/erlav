@@ -134,6 +134,8 @@ int encodevalue(SchemaItem*, ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*);
 int encodescalar(int, ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*); 
 int encodeunion(SchemaItem*, ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*); 
 int encodearray(SchemaItem*, ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*);
+int encoderecord(SchemaItem* si, ErlNifEnv*, const ERL_NIF_TERM*, std::vector<uint8_t>*);
+int encodemap(SchemaItem* si, ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*);
 int encode_int(ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*);
 int encode_long(ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*);
 int encode_long_fast(ErlNifEnv*, int64_t, std::vector<uint8_t>*);
@@ -146,11 +148,7 @@ size_t encodeInt32(int32_t, std::array<uint8_t, 5> &output) noexcept;
 
 ERL_NIF_TERM encode(ErlNifEnv* env, SchemaItem* si, const ERL_NIF_TERM* input){
     ERL_NIF_TERM binary;
-    ERL_NIF_TERM key;
-    ERL_NIF_TERM val;
-    ErlNifBinary bin;
     ErlNifBinary retbin;
-    int len;
     std::vector<uint8_t> retv;
 
     retv.reserve(10000);
@@ -162,25 +160,7 @@ ERL_NIF_TERM encode(ErlNifEnv* env, SchemaItem* si, const ERL_NIF_TERM* input){
     
     std::cout << "ENC1 \n\r";
 
-    for( auto it: si->childItems ){
-        len = it->obj_name.size();
-        std::cout << "E erlav encode field: " << it->obj_name <<'\n' << '\r';
-        enif_alloc_binary(len, &bin);
-        const auto *p = reinterpret_cast<const uint8_t *>(it->obj_name.c_str());
-        memcpy(bin.data, p, len);
-        key = enif_make_binary(env, &bin);
-
-        if(enif_get_map_value(env, *input, key, &val)){
-            int encodeCode = encodevalue(it, env, &val, &retv);
-            if(encodeCode != 0){
-                throw encodeCode;
-            }
-        }else if(it->is_nullable == 1){
-            std::cout << "No value for field: " << key << '\n' << '\r';
-            retv.push_back(0);
-        }
-
-    }
+    encoderecord(si, env, input, &retv);
 
     auto retlen = retv.size();
     enif_alloc_binary(retlen, &retbin);
@@ -199,6 +179,10 @@ int encodevalue(SchemaItem* si, ErlNifEnv* env, ERL_NIF_TERM* val, std::vector<u
             return encodeunion(si, env, val, ret);
         case 2:
             return encodearray(si, env, val, ret);
+        case 3:
+            return encoderecord(si, env, val, ret);
+        case 4:
+            return encodemap(si, env, val, ret);
         default:
             std::cout << "ENCODE VALUE!!!\n\r";
 
@@ -206,9 +190,70 @@ int encodevalue(SchemaItem* si, ErlNifEnv* env, ERL_NIF_TERM* val, std::vector<u
     return 0;
 }
 
+int encodemap(SchemaItem* si, ErlNifEnv* env, ERL_NIF_TERM* input, std::vector<uint8_t>* ret){ 
+    std::cout << "ENCODE MAP \n\r";
+
+    return 0;
+}
+
+int encoderecord(SchemaItem* si, ErlNifEnv* env, const ERL_NIF_TERM* input, std::vector<uint8_t>* ret){ 
+    int len;
+    ERL_NIF_TERM key;
+    ERL_NIF_TERM val;
+    ErlNifBinary bin;
+    
+    std::cout << "ENCODE RECORD \n\r";
+    
+    if(!enif_is_map(env, *input)){
+    	return 9;
+    }
+    
+    for( auto it: si->childItems ){
+        len = it->obj_name.size();
+        enif_alloc_binary(len, &bin);
+        const auto *p = reinterpret_cast<const uint8_t *>(it->obj_name.c_str());
+        memcpy(bin.data, p, len);
+        key = enif_make_binary(env, &bin);
+
+        if(enif_get_map_value(env, *input, key, &val)){
+            int encodeCode = encodevalue(it, env, &val, ret);
+            if(encodeCode != 0){
+                throw encodeCode;
+            }
+        }else if(it->is_nullable == 1){
+            ret->push_back(0);
+        }
+
+    }
+    return 0;
+}   
+
 int encodearray(SchemaItem* si, ErlNifEnv* env, ERL_NIF_TERM* val, std::vector<uint8_t>* ret){ 
+    unsigned int len;
+    ERL_NIF_TERM elem;
     std::cout << "ENCODE ARRAY!!!\n\r";
-    retunt 0;
+    if(enif_is_list(env, *val)){
+        enif_get_list_length(env, *val, &len);
+        encode_long_fast(env, len, ret);
+        if(si->obj_field != "complex"){
+            auto st = get_scalar_type(si->obj_field);
+            for(uint32_t i=0; i < len; i++){
+                if(enif_get_list_cell(env, *val, &elem, val)){
+                    encodescalar(st, env, &elem, ret);
+                }
+            }
+        } else {
+            // complex array - no support for union types yet
+            for(uint32_t i=0; i < len; i++){
+                if(enif_get_list_cell(env, *val, &elem, val)){
+                    encodevalue(si->childItems[0], env, &elem, ret);
+                }
+            }
+        }
+        ret->push_back(0);
+        return 0;
+    }
+    return 8;
 }
 
 int encodeunion(SchemaItem* si, ErlNifEnv* env, ERL_NIF_TERM* val, std::vector<uint8_t>* ret){ 
