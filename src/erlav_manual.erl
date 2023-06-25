@@ -196,6 +196,24 @@ man_tst(9) ->
     io:format("2.Erl ret: ~p ~n", [ iolist_to_binary(Encoder(Term1)) ]),
     T2 = Decoder(Ret),
     io:format("3.C++ decoded ret: ~p ~n", [T2]),
+    ok;
+man_tst(10) ->
+    io:format("~n ------------------------------------ ~n", []),
+    Sid = erlav_nif:erlav_init(<<"test/map_arr.avsc">>),
+    {ok, SchemaJSON1} = file:read_file("test/map_arr.avsc"),
+    Encoder  = avro:make_simple_encoder(SchemaJSON1, []),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    Term1 = #{
+        <<"key">> => #{
+            <<"m1field">> => [1,2,3,4,5,6,7,8,9,10],
+            <<"m3field">> => [999,888,777,333,666]
+        }
+    },
+    Ret = erlav_nif:erlav_encode(Sid, Term1),
+    io:format("1.ERLAV2 ret: ~p ~n", [Ret]),
+    io:format("2.Erl ret: ~p ~n", [ iolist_to_binary(Encoder(Term1)) ]),
+    T2 = Decoder(Ret),
+    io:format("3.C++ decoded ret: ~p ~n", [T2]),
     ok.
 
 ctst(Term1) ->

@@ -191,9 +191,59 @@ int encodevalue(SchemaItem* si, ErlNifEnv* env, ERL_NIF_TERM* val, std::vector<u
 }
 
 int encodemap(SchemaItem* si, ErlNifEnv* env, ERL_NIF_TERM* input, std::vector<uint8_t>* ret){ 
+    ErlNifMapIterator iter;
+    ERL_NIF_TERM key;
+    ERL_NIF_TERM val;
+    ErlNifBinary sbin;
+    unsigned int len;
+    std::string mapkey;
+    std::map<std::string, ERL_NIF_TERM> amap;
+    std::map<std::string, ERL_NIF_TERM>::iterator amap_iter;
+
     std::cout << "ENCODE MAP \n\r";
 
-    return 0;
+    if(enif_is_map(env, *input)){
+        if(enif_map_iterator_create(env, *input, &iter, ERL_NIF_MAP_ITERATOR_HEAD)) {
+            do{
+                if(!enif_map_iterator_get_pair(env, &iter, &key, &val)) {
+                    continue;
+                }
+                if (!enif_inspect_binary(env, key, &sbin)) {
+                    continue;
+                }
+                mapkey.assign((const char*)sbin.data, sbin.size);
+                amap.insert(std::pair<std::string, ERL_NIF_TERM>(mapkey, val));
+            } while(enif_map_iterator_next(env, &iter));
+
+            len = amap.size();
+            encode_long_fast(env, len, ret);
+            
+            if(si->obj_field != "complex"){ // map of scalar types
+                auto st = get_scalar_type(si->obj_field);
+                for(amap_iter = amap.begin(); amap_iter != amap.end(); amap_iter++){
+                    // insert key-lenght && key data
+                    auto len3 = amap_iter->first.size();
+                    encode_long_fast(env, len3, ret);
+                    ret->insert(ret->end(), amap_iter->first.data(), amap_iter->first.data() + len3);
+                    // encode value
+                    encodescalar(st, env, &amap_iter->second, ret);
+                }
+            } else { // map of complex types
+                for(amap_iter = amap.begin(); amap_iter != amap.end(); amap_iter++){
+                    // insert key-lenght && key data
+                    auto len3 = amap_iter->first.size();
+                    encode_long_fast(env, len3, ret);
+                    ret->insert(ret->end(), amap_iter->first.data(), amap_iter->first.data() + len3);
+                    // encode value
+                    encodevalue(si->childItems[0], env, &amap_iter->second, ret);
+                }
+            }
+            ret->push_back(0);
+            return 0;
+        }
+    }
+
+    return 10;
 }
 
 int encoderecord(SchemaItem* si, ErlNifEnv* env, const ERL_NIF_TERM* input, std::vector<uint8_t>* ret){ 
