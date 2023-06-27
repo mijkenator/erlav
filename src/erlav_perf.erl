@@ -21,6 +21,7 @@ erlav_perf_tst(Num) ->
     Encoder  = avro:make_simple_encoder(SchemaJSON1, []),
     _Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
     SchemaId = erlav_nif:create_encoder(<<"test/opnrtb_test1.avsc">>),
+    SchemaId1 = erlav_nif:erlav_init(<<"test/opnrtb_test1.avsc">>),
     L = lists:seq(1, Num),
     {ok, [Term1]} = file:consult("test/opnrtb_perf.data"),
 
@@ -34,14 +35,20 @@ erlav_perf_tst(Num) ->
     io:format("Erlavro encoding time: ~p microseconds ~n", [T1]),
 
     T2 = erlang:system_time(microsecond),
-
     lists:foreach(fun(_) ->
         erlav_nif:do_encode(SchemaId, Term1)
     end, L),
     Total2 = erlang:system_time(microsecond) - T2,
     io:format("Erlav encoding time: ~p microseconds ~n", [T2]),
 
-    {Total1/Num, Total2/Num}.
+    T3 = erlang:system_time(microsecond),
+    lists:foreach(fun(_) ->
+        erlav_nif:erlav_encode(SchemaId1, Term1)
+    end, L),
+    Total3 = erlang:system_time(microsecond) - T3,
+    io:format("Erlav2 encoding time: ~p microseconds ~n", [T3]),
+
+    {Total1/Num, Total2/Num, Total3/Num}.
 
 erlav_perf_tst2(Num, _, _) -> erlav_perf_tst2(Num).
 erlav_perf_tst2(Num) ->
@@ -49,6 +56,7 @@ erlav_perf_tst2(Num) ->
     Encoder  = avro:make_simple_encoder(SchemaJSON1, []),
     _Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
     SchemaId = erlav_nif:create_encoder(<<"test/opnrtb_test1.avsc">>),
+    SchemaId1 = erlav_nif:erlav_init(<<"test/opnrtb_test1.avsc">>),
     {ok, [Term1]} = file:consult("test/opnrtb_perf.data"),
     Terms = [ randomize(Term1) || _ <- lists:seq(1, Num)],
 
@@ -62,14 +70,20 @@ erlav_perf_tst2(Num) ->
     io:format("Erlavro encoding time: ~p microseconds ~n", [T1]),
 
     T2 = erlang:system_time(microsecond),
-
     lists:foreach(fun(Term1r) ->
         erlav_nif:do_encode(SchemaId, Term1r)
                   end, Terms),
     Total2 = erlang:system_time(microsecond) - T2,
     io:format("Erlav encoding time: ~p microseconds ~n", [T2]),
 
-    {true, Total1/Num, Total2/Num}.
+    T3 = erlang:system_time(microsecond),
+    lists:foreach(fun(Term1r) ->
+        erlav_nif:erlav_encode(SchemaId1, Term1r)
+                  end, Terms),
+    Total3 = erlang:system_time(microsecond) - T3,
+    io:format("Erlav2 encoding time: ~p microseconds ~n", [T3]),
+    
+    {true, Total1/Num, Total2/Num, Total3/Num}.
 
 randomize(Map) when is_map(Map) ->
     maps:filtermap(fun
@@ -89,6 +103,7 @@ erlav_perf_string(Num, StrLen) ->
     Encoder  = avro:make_simple_encoder(SchemaJSON1, []),
     _Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
     SchemaId = erlav_nif:create_encoder(<<"test/string.avsc">>),
+    SchemaId1 = erlav_nif:erlav_init(<<"test/string.avsc">>),
 
     [St1 | _] = Strings = [ base64:encode(crypto:strong_rand_bytes(StrLen)) || _ <- lists:seq(1, Num)],
 
@@ -102,12 +117,18 @@ erlav_perf_string(Num, StrLen) ->
     io:format("Erlavro encoding time: ~p microseconds ~n", [T1]),
 
     T2 = erlang:system_time(microsecond),
-
     lists:foreach(fun(S) ->
         erlav_nif:do_encode(SchemaId, #{ <<"stringField">> => S })
     end, Strings),
     Total2 = erlang:system_time(microsecond) - T2,
     io:format("Erlav encoding time: ~p microseconds ~n", [T2]),
+    
+    T3 = erlang:system_time(microsecond),
+    lists:foreach(fun(S) ->
+        erlav_nif:erlav_encode(SchemaId1, #{ <<"stringField">> => S })
+    end, Strings),
+    Total3 = erlang:system_time(microsecond) - T3,
+    io:format("Erlav2 encoding time: ~p microseconds ~n", [T3]),
     
     TestMap = #{ <<"stringField">> => St1 },
     RetAvro1 = erlav_nif:do_encode(SchemaId, TestMap),
@@ -115,7 +136,7 @@ erlav_perf_string(Num, StrLen) ->
     IsSame = RetAvro1 =:= RetAvro2,
     io:format("Same ret: ~p ~n ~p ~n ~p ~n", [IsSame, RetAvro2, RetAvro1]),
 
-    {IsSame, Total1/Num, Total2/Num}.
+    {IsSame, Total1/Num, Total2/Num, Total3/Num}.
 
 erlav_perf_integer(Num, Type) ->
     Schema = case Type of
@@ -126,6 +147,7 @@ erlav_perf_integer(Num, Type) ->
     Encoder  = avro:make_simple_encoder(SchemaJSON1, []),
     _Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
     SchemaId = erlav_nif:create_encoder(list_to_binary(Schema)),
+    SchemaId1 = erlav_nif:erlav_init(list_to_binary(Schema)),
 
     Ints = [ [rand:uniform(9999999) || _ <- lists:seq(1,6) ] || _ <- lists:seq(1, Num)],
 
@@ -146,7 +168,6 @@ erlav_perf_integer(Num, Type) ->
     io:format("Erlavro encoding time: ~p microseconds ~n", [T1]),
 
     T2 = erlang:system_time(microsecond),
-
     lists:foreach(fun([I1, I2, I3, I4, I5, I6]) ->
         erlav_nif:do_encode(SchemaId, #{ 
             <<"intField1">> => I1, 
@@ -159,8 +180,22 @@ erlav_perf_integer(Num, Type) ->
     end, Ints),
     Total2 = erlang:system_time(microsecond) - T2,
     io:format("Erlav encoding time: ~p microseconds ~n", [T2]),
+    
+    T3 = erlang:system_time(microsecond),
+    lists:foreach(fun([I1, I2, I3, I4, I5, I6]) ->
+        erlav_nif:erlav_encode(SchemaId1, #{ 
+            <<"intField1">> => I1, 
+            <<"intField2">> => I2, 
+            <<"intField3">> => I3, 
+            <<"intField4">> => I4, 
+            <<"intField5">> => I5, 
+            <<"intField6">> => I6
+        })
+    end, Ints),
+    Total3 = erlang:system_time(microsecond) - T3,
+    io:format("Erlav encoding time: ~p microseconds ~n", [T3]),
 
-    {Total1/Num, Total2/Num}.
+    {Total1/Num, Total2/Num, Total3/Num}.
 
 erlav_perf_strings(Num, StrLen, Type) ->
     Schema = case Type of
@@ -171,6 +206,7 @@ erlav_perf_strings(Num, StrLen, Type) ->
     Encoder  = avro:make_simple_encoder(SchemaJSON1, []),
     _Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
     SchemaId = erlav_nif:create_encoder(list_to_binary(Schema)),
+    SchemaId1 = erlav_nif:erlav_init(list_to_binary(Schema)),
 
     Strings = [ [base64:encode(crypto:strong_rand_bytes(StrLen)) || _ <- lists:seq(1, 6)] || _ <- lists:seq(1, Num)],
 
@@ -191,7 +227,6 @@ erlav_perf_strings(Num, StrLen, Type) ->
     io:format("Erlavro encoding time: ~p microseconds ~n", [T1]),
 
     T2 = erlang:system_time(microsecond),
-
     lists:foreach(fun([S1,S2,S3,S4,S5,S6]) ->
         erlav_nif:do_encode(SchemaId, #{ 
             <<"stringField1">> => S1,
@@ -204,6 +239,20 @@ erlav_perf_strings(Num, StrLen, Type) ->
     end, Strings),
     Total2 = erlang:system_time(microsecond) - T2,
     io:format("Erlav encoding time: ~p microseconds ~n", [T2]),
+    
+    T3 = erlang:system_time(microsecond),
+    lists:foreach(fun([S1,S2,S3,S4,S5,S6]) ->
+        erlav_nif:erlav_encode(SchemaId1, #{ 
+            <<"stringField1">> => S1,
+            <<"stringField2">> => S2,
+            <<"stringField3">> => S3,
+            <<"stringField4">> => S4,
+            <<"stringField5">> => S5,
+            <<"stringField6">> => S6
+        })
+    end, Strings),
+    Total3 = erlang:system_time(microsecond) - T3,
+    io:format("Erlav encoding time: ~p microseconds ~n", [T3]),
 
     [ [ St1, St2, St3, St4, St5, St6 ] | _ ] = Strings,
     TestMap = #{ 
@@ -220,7 +269,7 @@ erlav_perf_strings(Num, StrLen, Type) ->
     io:format("Test Term: ~p ~n", [TestMap]),
     io:format("Same ret: ~p ~n ~p ~n ~p ~n", [RetAvro2, RetAvro1, IsSame]),
 
-    {IsSame, Total1/Num, Total2/Num}.
+    {IsSame, Total1/Num, Total2/Num, Total3/Num}.
 
 
 % map of ints perf test
@@ -233,6 +282,7 @@ map_perf_tst1(NumIterations, _StrLen, IsNullable) ->
     Encoder  = avro:make_simple_encoder(SchemaJSON1, []),
     Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
     SchemaId = erlav_nif:create_encoder(list_to_binary(Schema)),
+    SchemaId1 = erlav_nif:erlav_init(list_to_binary(Schema)),
     
     Ints = [ [rand:uniform(9999999) || _ <- lists:seq(1,100) ] || _ <- lists:seq(1, NumIterations)],
     Strings = [ [base64:encode(crypto:strong_rand_bytes(20)) || _ <- lists:seq(1, 100)] || _ <- lists:seq(1, NumIterations)],
@@ -252,7 +302,6 @@ map_perf_tst1(NumIterations, _StrLen, IsNullable) ->
     io:format("Erlavro encoding time: ~p microseconds ~n", [T1]),
 
     T2 = erlang:system_time(microsecond),
-
     lists:foreach(fun(M1) ->
         erlav_nif:do_encode(SchemaId, #{ 
             <<"mapField">> => M1
@@ -260,6 +309,15 @@ map_perf_tst1(NumIterations, _StrLen, IsNullable) ->
     end, Maps),
     Total2 = erlang:system_time(microsecond) - T2,
     io:format("Erlav encoding time: ~p microseconds ~n", [T2]),
+
+    T3 = erlang:system_time(microsecond),
+    lists:foreach(fun(M1) ->
+        erlav_nif:erlav_encode(SchemaId1, #{ 
+            <<"mapField">> => M1
+        })
+    end, Maps),
+    Total3 = erlang:system_time(microsecond) - T3,
+    io:format("Erlav encoding time: ~p microseconds ~n", [T3]),
 
     TestMap = #{ 
         <<"mapField">> => Map1
@@ -275,7 +333,7 @@ map_perf_tst1(NumIterations, _StrLen, IsNullable) ->
     end,
     io:format("Same ret: ~p ~n ~p ~n ~p ~n", [RetAvro2, RetAvro1, IsSame]),
 
-    {IsSame, Total1/NumIterations, Total2/NumIterations}.
+    {IsSame, Total1/NumIterations, Total2/NumIterations, Total3/NumIterations}.
 
 % map of strings perf test
 map_perf_tst2(NumIterations, _StrLen, IsNullable) ->
@@ -287,6 +345,7 @@ map_perf_tst2(NumIterations, _StrLen, IsNullable) ->
     Encoder  = avro:make_simple_encoder(SchemaJSON1, []),
     Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
     SchemaId = erlav_nif:create_encoder(list_to_binary(Schema)),
+    SchemaId1 = erlav_nif:erlav_init(list_to_binary(Schema)),
     
     StringKeys = [ [base64:encode(crypto:strong_rand_bytes(20)) || _ <- lists:seq(1, 100)] || _ <- lists:seq(1, NumIterations)],
     StringVals = [ [base64:encode(crypto:strong_rand_bytes(100)) || _ <- lists:seq(1, 100)] || _ <- lists:seq(1, NumIterations)],
@@ -306,7 +365,6 @@ map_perf_tst2(NumIterations, _StrLen, IsNullable) ->
     io:format("Erlavro encoding time: ~p microseconds ~n", [T1]),
 
     T2 = erlang:system_time(microsecond),
-
     lists:foreach(fun(M1) ->
         erlav_nif:do_encode(SchemaId, #{ 
             <<"mapField">> => M1
@@ -314,6 +372,15 @@ map_perf_tst2(NumIterations, _StrLen, IsNullable) ->
     end, Maps),
     Total2 = erlang:system_time(microsecond) - T2,
     io:format("Erlav encoding time: ~p microseconds ~n", [T2]),
+
+    T3 = erlang:system_time(microsecond),
+    lists:foreach(fun(M1) ->
+        erlav_nif:erlav_encode(SchemaId1, #{ 
+            <<"mapField">> => M1
+        })
+    end, Maps),
+    Total3 = erlang:system_time(microsecond) - T3,
+    io:format("Erlav encoding time: ~p microseconds ~n", [T3]),
 
     TestMap = #{ 
         <<"mapField">> => Map1
@@ -329,7 +396,7 @@ map_perf_tst2(NumIterations, _StrLen, IsNullable) ->
     end,
     io:format("Same ret: ~p ~n ~p ~n ~p ~n", [RetAvro2, RetAvro1, IsSame]),
 
-    {IsSame, Total1/NumIterations, Total2/NumIterations}.
+    {IsSame, Total1/NumIterations, Total2/NumIterations, Total3/NumIterations}.
 
 % array of int perf test
 array_int_perf_tst(NumIterations, _StrLen, IsNullable) ->
@@ -341,6 +408,7 @@ array_int_perf_tst(NumIterations, _StrLen, IsNullable) ->
     Encoder  = avro:make_simple_encoder(SchemaJSON1, []),
     Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
     SchemaId = erlav_nif:create_encoder(list_to_binary(Schema)),
+    SchemaId1 = erlav_nif:erlav_init(list_to_binary(Schema)),
     
     Arrays = [ [rand:uniform(9999999) || _ <- lists:seq(1,100) ] || _ <- lists:seq(1, NumIterations)],
     [ Arr1 | _ ] = Arrays,
@@ -358,7 +426,6 @@ array_int_perf_tst(NumIterations, _StrLen, IsNullable) ->
     io:format("Erlavro encoding time: ~p microseconds ~n", [T1]),
 
     T2 = erlang:system_time(microsecond),
-
     lists:foreach(fun(M1) ->
         erlav_nif:do_encode(SchemaId, #{ 
             <<"arrayField">> => M1
@@ -366,6 +433,15 @@ array_int_perf_tst(NumIterations, _StrLen, IsNullable) ->
     end, Arrays),
     Total2 = erlang:system_time(microsecond) - T2,
     io:format("Erlav encoding time: ~p microseconds ~n", [T2]),
+
+    T3 = erlang:system_time(microsecond),
+    lists:foreach(fun(M1) ->
+        erlav_nif:erlav_encode(SchemaId1, #{ 
+            <<"arrayField">> => M1
+        })
+    end, Arrays),
+    Total3 = erlang:system_time(microsecond) - T3,
+    io:format("Erlav encoding time: ~p microseconds ~n", [T3]),
 
     TestMap = #{ 
         <<"arrayField">> => Arr1
@@ -381,7 +457,7 @@ array_int_perf_tst(NumIterations, _StrLen, IsNullable) ->
     end,
     io:format("Same ret: ~p ~n ~p ~n ~p ~n", [RetAvro2, RetAvro1, IsSame]),
 
-    {IsSame, Total1/NumIterations, Total2/NumIterations}.
+    {IsSame, Total1/NumIterations, Total2/NumIterations, Total3/NumIterations}.
 
 % array of strings perf test
 array_str_perf_tst(NumIterations, _StrLen, IsNullable) ->
@@ -393,6 +469,7 @@ array_str_perf_tst(NumIterations, _StrLen, IsNullable) ->
     Encoder  = avro:make_simple_encoder(SchemaJSON1, []),
     Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
     SchemaId = erlav_nif:create_encoder(list_to_binary(Schema)),
+    SchemaId1 = erlav_nif:erlav_init(list_to_binary(Schema)),
     
     Arrays = [ [ base64:encode(crypto:strong_rand_bytes(100)) || _ <- lists:seq(1,100) ] || _ <- lists:seq(1, NumIterations)],
     [ Arr1 | _ ] = Arrays,
@@ -409,7 +486,6 @@ array_str_perf_tst(NumIterations, _StrLen, IsNullable) ->
     io:format("Erlavro encoding time: ~p microseconds ~n", [T1]),
 
     T2 = erlang:system_time(microsecond),
-
     lists:foreach(fun(M1) ->
         erlav_nif:do_encode(SchemaId, #{ 
             <<"arrayField">> => M1
@@ -417,6 +493,15 @@ array_str_perf_tst(NumIterations, _StrLen, IsNullable) ->
     end, Arrays),
     Total2 = erlang:system_time(microsecond) - T2,
     io:format("Erlav encoding time: ~p microseconds ~n", [T2]),
+
+    T3 = erlang:system_time(microsecond),
+    lists:foreach(fun(M1) ->
+        erlav_nif:erlav_encode(SchemaId1, #{ 
+            <<"arrayField">> => M1
+        })
+    end, Arrays),
+    Total3 = erlang:system_time(microsecond) - T3,
+    io:format("Erlav encoding time: ~p microseconds ~n", [T3]),
 
     TestMap = #{ 
         <<"arrayField">> => Arr1
@@ -432,7 +517,7 @@ array_str_perf_tst(NumIterations, _StrLen, IsNullable) ->
     end,
     io:format("Same ret: ~p ~n ~p ~n ~p ~n", [RetAvro2, RetAvro1, IsSame]),
 
-    {IsSame, Total1/NumIterations, Total2/NumIterations}.
+    {IsSame, Total1/NumIterations, Total2/NumIterations, Total3/NumIterations}.
 
 % array of maps perf test
 array_map_perf_tst(NumIterations, _StrLen, IsNullable) ->
@@ -444,6 +529,7 @@ array_map_perf_tst(NumIterations, _StrLen, IsNullable) ->
     Encoder  = avro:make_simple_encoder(SchemaJSON1, []),
     Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
     SchemaId = erlav_nif:create_encoder(list_to_binary(Schema)),
+    SchemaId1 = erlav_nif:erlav_init(list_to_binary(Schema)),
     
     MakeMap = fun() ->
       Keys = [base64:encode(crypto:strong_rand_bytes(20)) || _ <- lists:seq(1, 20)],
@@ -467,7 +553,6 @@ array_map_perf_tst(NumIterations, _StrLen, IsNullable) ->
     io:format("Erlavro encoding time: ~p microseconds ~n", [T1]),
 
     T2 = erlang:system_time(microsecond),
-
     lists:foreach(fun(M1) ->
         erlav_nif:do_encode(SchemaId, #{ 
             <<"arrayField">> => M1
@@ -475,6 +560,15 @@ array_map_perf_tst(NumIterations, _StrLen, IsNullable) ->
     end, Arrays),
     Total2 = erlang:system_time(microsecond) - T2,
     io:format("Erlav encoding time: ~p microseconds ~n", [T2]),
+
+    T3 = erlang:system_time(microsecond),
+    lists:foreach(fun(M1) ->
+        erlav_nif:erlav_encode(SchemaId1, #{ 
+            <<"arrayField">> => M1
+        })
+    end, Arrays),
+    Total3 = erlang:system_time(microsecond) - T3,
+    io:format("Erlav encoding time: ~p microseconds ~n", [T3]),
 
     TestMap = #{ 
         <<"arrayField">> => Arr1
@@ -490,7 +584,7 @@ array_map_perf_tst(NumIterations, _StrLen, IsNullable) ->
     end,
     io:format("Same ret: ~p ~n ~p ~n ~p ~n", [RetAvro2, RetAvro1, IsSame]),
 
-    {IsSame, Total1/NumIterations, Total2/NumIterations}.
+    {IsSame, Total1/NumIterations, Total2/NumIterations, Total3/NumIterations}.
 % array of arrays
 % map for arrays
 
@@ -500,11 +594,11 @@ all_tests() -> all_tests(10000, 50, null).
 all_tests(NumIterations, StrLen, IsNullable) ->
     Funs = [erlav_perf_tst2, map_perf_tst1, map_perf_tst2, array_int_perf_tst, array_str_perf_tst, array_map_perf_tst],
     Report = lists:map(fun(FName) -> 
-        {IsSame, ErlTime, CppTime} = apply(erlav_perf, FName, [NumIterations, StrLen, IsNullable]),
-        io:format("~p, equal: ~p, erltime: ~p, cpptime: ~p ~n~n", [FName, IsSame, ErlTime, CppTime]),
-        {IsSame, ErlTime, CppTime}
+        {IsSame, ErlTime, CppTime, CppTime2} = apply(erlav_perf, FName, [NumIterations, StrLen, IsNullable]),
+        io:format("~p, equal: ~p, erltime: ~p, cpptime: ~p , cpptime2: ~p ~n~n", [FName, IsSame, ErlTime, CppTime, CppTime2]),
+        {IsSame, ErlTime, CppTime, CppTime2}
     end, Funs),
     Ret = lists:zip(Funs, Report),
-    lists:foreach(fun({Test, {IsSameR, ErlTimeR, CppTimeR}}) ->
-        io:format("~p, equal: ~p, erltime: ~p, cpptime: ~p ~n~n", [Test, IsSameR, ErlTimeR, CppTimeR])
+    lists:foreach(fun({Test, {IsSameR, ErlTimeR, CppTimeR, CppTime2R}}) ->
+        io:format("~p, equal: ~p, erltime: ~p, cpptime: ~p, cpptime2: ~p  ~n~n", [Test, IsSameR, ErlTimeR, CppTimeR, CppTime2R])
     end, Ret).

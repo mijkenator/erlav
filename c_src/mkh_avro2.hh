@@ -68,10 +68,8 @@ typedef struct SchemaItem {
         if(utypes.is_array()){
             for (auto it : utypes){
                 if(it.is_string() && "null" == it){
-                    std::cout << "Nullable!!!" << '\n' << '\r';
                     is_nullable = 1;
                 }else if(it.is_string()){ 
-                    std::cout << "simple type!!! -> " << it <<'\n' << '\r';
                     obj_field = it;
                     intsi = new SchemaItem("union_member", it, 0);
                     retv.push_back(intsi);
@@ -92,11 +90,9 @@ typedef struct SchemaItem {
     SchemaItem(std::string name, json jtypes, int ot){
         obj_name = name;
         obj_type = ot;
-        std::cout << "SI constructor 3args" << '\n' << '\r';
         if(jtypes.is_string()){
             // scalar types
             set_undefined_obj_type(0);
-            std::cout << "\t" << "SI constructor simlpe type " << jtypes << '\n' << '\r';
             obj_field = jtypes;
             scalar_type = get_scalar_type(jtypes);
         }else{
@@ -105,11 +101,9 @@ typedef struct SchemaItem {
     }
     SchemaItem(std::string name, json jtypes){
         obj_name = name;
-        std::cout << "SI constructor 2args" << '\n' << '\r';
         if(jtypes.is_string()){
             // scalar types
             set_undefined_obj_type(0);
-            std::cout << "\t" << "SI constructor simlpe type " << jtypes << '\n' << '\r';
             obj_field = jtypes;
             if("map" == jtypes){
                 obj_type = 4;
@@ -153,12 +147,10 @@ ERL_NIF_TERM encode(ErlNifEnv* env, SchemaItem* si, const ERL_NIF_TERM* input){
 
     retv.reserve(10000);
 
-    std::cout << "ENC0\n\r";
     if(!enif_is_map(env, *input)){
     	return enif_make_badarg(env);
     }
     
-    std::cout << "ENC1 \n\r";
 
     encoderecord(si, env, input, &retv);
 
@@ -173,7 +165,6 @@ ERL_NIF_TERM encode(ErlNifEnv* env, SchemaItem* si, const ERL_NIF_TERM* input){
 int encodevalue(SchemaItem* si, ErlNifEnv* env, ERL_NIF_TERM* val, std::vector<uint8_t>* ret){ 
     switch(si->obj_type){
         case 0:
-            std::cout << "ENCODE scalar VALUE!!!" << si->scalar_type << "\n\r";
             return encodescalar(si->scalar_type, env, val, ret);
         case 1:
             return encodeunion(si, env, val, ret);
@@ -200,7 +191,6 @@ int encodemap(SchemaItem* si, ErlNifEnv* env, ERL_NIF_TERM* input, std::vector<u
     std::map<std::string, ERL_NIF_TERM> amap;
     std::map<std::string, ERL_NIF_TERM>::iterator amap_iter;
 
-    std::cout << "ENCODE MAP \n\r";
 
     if(enif_is_map(env, *input)){
         if(enif_map_iterator_create(env, *input, &iter, ERL_NIF_MAP_ITERATOR_HEAD)) {
@@ -252,7 +242,6 @@ int encoderecord(SchemaItem* si, ErlNifEnv* env, const ERL_NIF_TERM* input, std:
     ERL_NIF_TERM val;
     ErlNifBinary bin;
     
-    std::cout << "ENCODE RECORD \n\r";
     
     if(!enif_is_map(env, *input)){
     	return 9;
@@ -281,7 +270,6 @@ int encoderecord(SchemaItem* si, ErlNifEnv* env, const ERL_NIF_TERM* input, std:
 int encodearray(SchemaItem* si, ErlNifEnv* env, ERL_NIF_TERM* val, std::vector<uint8_t>* ret){ 
     unsigned int len;
     ERL_NIF_TERM elem;
-    std::cout << "ENCODE ARRAY!!!\n\r";
     if(enif_is_list(env, *val)){
         enif_get_list_length(env, *val, &len);
         encode_long_fast(env, len, ret);
@@ -310,11 +298,9 @@ int encodeunion(SchemaItem* si, ErlNifEnv* env, ERL_NIF_TERM* val, std::vector<u
     std::array<uint8_t, 5> output;
     //assume null in union always first item
     if(si->childItems.size() == 1){
-        std::cout << "ENCODE SIMPLE UNION!!!: " << si->is_nullable <<  "\n\r";
         ret->push_back(1 + si->is_nullable); 
         return encodevalue(si->childItems[0], env, val, ret);
     }else{
-        std::cout << "ENCODE UNION!!!\n\r";
         ret->push_back(0); // reserve first for type index
         auto union_index = ret->size() - 1;
         for (auto iter = si->childItems.begin(); iter != si->childItems.end(); ++iter) {

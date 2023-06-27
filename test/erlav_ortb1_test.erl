@@ -7,12 +7,12 @@ ortb1_test() ->
     {ok, SchemaJSON1} = file:read_file("test/opnrtb_test1.avsc"),
     Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
     ?debugFmt("=============== openRTB test 1 :1: ===================  ~n ~n", []),
-    SchemaId = erlav_nif:create_encoder(<<"test/opnrtb_test1.avsc">>),
+    SchemaId = erlav_nif:erlav_init(<<"test/opnrtb_test1.avsc">>),
     ?debugFmt("=============== openRTB test 1 :2: ===================  ~n ~n", []),
     {ok, Terms} = file:consult("test/opnrtb_test1.data"),
 
     lists:foreach(fun(Term1) -> 
-        Re2 = erlav_nif:do_encode(SchemaId, Term1),
+        Re2 = erlav_nif:erlav_encode(SchemaId, Term1),
         M = to_map(Decoder(Re2)),
         compare_maps(Term1, M)
     end, Terms).

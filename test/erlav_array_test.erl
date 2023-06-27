@@ -18,8 +18,8 @@ arrayofrec_test() ->
                                     }
                 ]
     },
-    SchemaId = erlav_nif:create_encoder(<<"test/tschema_array_ofrecs.avsc">>),
-    Re2 = erlav_nif:do_encode(SchemaId, Term1),
+    SchemaId = erlav_nif:erlav_init(<<"test/tschema_array_ofrecs.avsc">>),
+    Re2 = erlav_nif:erlav_encode(SchemaId, Term1),
     M = maps:from_list(Decoder(Re2)),
     [M1|_] = maps:get(<<"arrayField">>, M),
     ?assertEqual(<<"koko">>,  proplists:get_value(<<"rec2field">>, M1)),
@@ -38,8 +38,8 @@ arrayofmaps_test() ->
                                     }
                 ]
     },
-    SchemaId = erlav_nif:create_encoder(<<"test/array_map.avsc">>),
-    Re2 = erlav_nif:do_encode(SchemaId, Term1),
+    SchemaId = erlav_nif:erlav_init(<<"test/array_map.avsc">>),
+    Re2 = erlav_nif:erlav_encode(SchemaId, Term1),
     M = maps:from_list(Decoder(Re2)),
     [M1|_] = maps:get(<<"arrayField">>, M),
     ?assertEqual(<<"koko">>,  proplists:get_value(<<"rec2field">>, M1)),
@@ -53,8 +53,8 @@ arrayofarrays_test() ->
                     [1,2,3], [4,5], [6], [7,8,9,10]
                 ]
     },
-    SchemaId = erlav_nif:create_encoder(<<"test/array_array.avsc">>),
-    Re2 = erlav_nif:do_encode(SchemaId, Term1),
+    SchemaId = erlav_nif:erlav_init(<<"test/array_array.avsc">>),
+    Re2 = erlav_nif:erlav_encode(SchemaId, Term1),
     M = maps:from_list(Decoder(Re2)),
     [A1, A2, A3, A4] = maps:get(<<"arrayField">>, M),
     ?assertEqual([1,2,3], A1),
@@ -70,8 +70,8 @@ arrayofarrays_null_test() ->
                     [1,2,3], [4,5], [6], [7,8,9,10]
                 ]
     },
-    SchemaId = erlav_nif:create_encoder(<<"test/array_null_array.avsc">>),
-    Re2 = erlav_nif:do_encode(SchemaId, Term1),
+    SchemaId = erlav_nif:erlav_init(<<"test/array_null_array.avsc">>),
+    Re2 = erlav_nif:erlav_encode(SchemaId, Term1),
     M = maps:from_list(Decoder(Re2)),
     [A1, A2, A3, A4] = maps:get(<<"arrayField">>, M),
     ?assertEqual([1,2,3], A1),
@@ -90,8 +90,8 @@ array_null_ofmaps_test() ->
                                     }
                 ]
     },
-    SchemaId = erlav_nif:create_encoder(<<"test/array_map_null.avsc">>),
-    Re2 = erlav_nif:do_encode(SchemaId, Term1),
+    SchemaId = erlav_nif:erlav_init(<<"test/array_map_null.avsc">>),
+    Re2 = erlav_nif:erlav_encode(SchemaId, Term1),
     M = maps:from_list(Decoder(Re2)),
     [M1|_] = maps:get(<<"arrayField">>, M),
     ?assertEqual(<<"koko">>,  proplists:get_value(<<"rec2field">>, M1)),
@@ -116,8 +116,8 @@ arrayofrec_null_test() ->
                                     }
                 ]
     },
-    SchemaId = erlav_nif:create_encoder(<<"test/tschema_array_ofrecs_nullable.avsc">>),
-    Re2 = erlav_nif:do_encode(SchemaId, Term1),
+    SchemaId = erlav_nif:erlav_init(<<"test/tschema_array_ofrecs_nullable.avsc">>),
+    Re2 = erlav_nif:erlav_encode(SchemaId, Term1),
     M = maps:from_list(Decoder(Re2)),
     [M1,_,M3|_] = maps:get(<<"arrayField">>, M),
     ?assertEqual(1112244,  proplists:get_value(<<"rec1field">>, M1)),
@@ -133,8 +133,8 @@ array_complex1_test() ->
                                   [#{<<"m1key">> => <<"m1value">>}, #{<<"m2key">> => <<"m2value">>}]
                 ]
             },
-    SchemaId = erlav_nif:create_encoder(<<"test/array_arraymaps.avsc">>),
-    Re2 = erlav_nif:do_encode(SchemaId, Term1),
+    SchemaId = erlav_nif:erlav_init(<<"test/array_arraymaps.avsc">>),
+    Re2 = erlav_nif:erlav_encode(SchemaId, Term1),
     M = maps:from_list(Decoder(Re2)),
     [[M1, M2]|_] = maps:get(<<"arrayField">>, M),
     ?assertEqual(<<"m1value">>,  proplists:get_value(<<"m1key">>, M1)),
@@ -148,8 +148,8 @@ array_complex2_test() ->
                                   [#{<<"m1key">> => <<"m1value">>}, #{<<"m2key">> => <<"m2value">>}]
                 ]
             },
-    SchemaId = erlav_nif:create_encoder(<<"test/array_null_arraymaps.avsc">>),
-    Re2 = erlav_nif:do_encode(SchemaId, Term1),
+    SchemaId = erlav_nif:erlav_init(<<"test/array_null_arraymaps.avsc">>),
+    Re2 = erlav_nif:erlav_encode(SchemaId, Term1),
     M = maps:from_list(Decoder(Re2)),
     [[M1, M2]|_] = maps:get(<<"arrayField">>, M),
     ?assertEqual(<<"m1value">>,  proplists:get_value(<<"m1key">>, M1)),
@@ -166,8 +166,8 @@ array_complex3_test() ->
                                   ]
                 ]
             },
-    SchemaId = erlav_nif:create_encoder(<<"test/array_null_recursive_array.avsc">>),
-    Re2 = erlav_nif:do_encode(SchemaId, Term1),
+    SchemaId = erlav_nif:erlav_init(<<"test/array_null_recursive_array.avsc">>),
+    Re2 = erlav_nif:erlav_encode(SchemaId, Term1),
     M = maps:from_list(Decoder(Re2)),
     [[ [M1, M2], [M21, M22]]|_] = maps:get(<<"arrayField">>, M),
     ?assertEqual(<<"m1value">>,  proplists:get_value(<<"m1key">>, M1)),

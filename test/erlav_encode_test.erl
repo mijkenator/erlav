@@ -15,15 +15,15 @@ primitive_types_test() ->
     },
     R1 = iolist_to_binary(Encoder(Term)),
     io:format("R1: ~p ~n", [R1]),
-    SchemaId = erlav_nif:create_encoder(<<"priv/tschema2.avsc">>),
-    Ret = erlav_nif:do_encode(SchemaId, Term),
+    SchemaId = erlav_nif:erlav_init(<<"priv/tschema2.avsc">>),
+    Ret = erlav_nif:erlav_encode(SchemaId, Term),
     io:format("c++ ret: ~p ~n", [Ret]),
     ?assertEqual(R1, Ret).
 
 create_encoder_test() ->
-    Ret = erlav_nif:create_encoder(<<"priv/tschema2.avsc">>),
+    Ret = erlav_nif:erlav_init(<<"priv/tschema2.avsc">>),
     io:format("CET1 ret: ~p ~n", [Ret]),
-    Ret1 = erlav_nif:create_encoder(<<"priv/tschema2.avsc">>),
+    Ret1 = erlav_nif:erlav_init(<<"priv/tschema2.avsc">>),
     io:format("CET2 ret: ~p ~n", [Ret]),
     ?assertEqual(Ret, Ret1),
     ok.
@@ -40,8 +40,8 @@ null_all_test() ->
         <<"stringField">> => <<"asdadasdasdasd3453534dfgdgd123456789">>
     },
     R1 = iolist_to_binary(Encoder(Term)),
-    SchemaId = erlav_nif:create_encoder(<<"test/tschema_all_null.avsc">>),
-    Ret = erlav_nif:do_encode(SchemaId, Term),
+    SchemaId = erlav_nif:erlav_init(<<"test/tschema_all_null.avsc">>),
+    Ret = erlav_nif:erlav_encode(SchemaId, Term),
     ?assertEqual(R1, Ret),
 
     Term2 = #{
@@ -52,8 +52,8 @@ null_all_test() ->
         <<"boolField">> => true
     },
     R21 = iolist_to_binary(Encoder(Term2)),
-    SchemaId = erlav_nif:create_encoder(<<"test/tschema_all_null.avsc">>),
-    Ret2 = erlav_nif:do_encode(SchemaId, Term2),
+    SchemaId = erlav_nif:erlav_init(<<"test/tschema_all_null.avsc">>),
+    Ret2 = erlav_nif:erlav_encode(SchemaId, Term2),
     ?assertEqual(R21, Ret2),
     
     Term3 = #{
@@ -61,7 +61,7 @@ null_all_test() ->
         <<"longField">> => 2
     },
     R31 = iolist_to_binary(Encoder(Term3)),
-    Ret3 = erlav_nif:do_encode(SchemaId, Term3),
+    Ret3 = erlav_nif:erlav_encode(SchemaId, Term3),
     ?assertEqual(R31, Ret3),
     
     ok.
@@ -71,7 +71,7 @@ array_test() ->
     {ok, SchemaJSON1} = file:read_file("test/tschema_array.avsc"),
     Encoder1 = avro:make_simple_encoder(SchemaJSON1, []),
     Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
-    SchemaId = erlav_nif:create_encoder(<<"test/tschema_array.avsc">>),
+    SchemaId = erlav_nif:erlav_init(<<"test/tschema_array.avsc">>),
     Term1 = #{
         <<"arrayField">> => [1]
     },
@@ -87,13 +87,13 @@ array_test() ->
     Term5 = #{
         <<"arrayField">> => [10000]
     },
-    A1 = maps:get(<<"arrayField">>,  maps:from_list(Decoder(erlav_nif:do_encode(SchemaId, Term1)))),
+    A1 = maps:get(<<"arrayField">>,  maps:from_list(Decoder(erlav_nif:erlav_encode(SchemaId, Term1)))),
     ?assertEqual([1], A1),
-    ?assertEqual(Term1, maps:from_list(Decoder(erlav_nif:do_encode(SchemaId, Term1)))),
-    ?assertEqual(Term2, maps:from_list(Decoder(erlav_nif:do_encode(SchemaId, Term2)))),
-    ?assertEqual(Term3, maps:from_list(Decoder(erlav_nif:do_encode(SchemaId, Term3)))),
-    ?assertEqual(Term4, maps:from_list(Decoder(erlav_nif:do_encode(SchemaId, Term4)))),
-    ?assertEqual(Term5, maps:from_list(Decoder(erlav_nif:do_encode(SchemaId, Term5)))),
+    ?assertEqual(Term1, maps:from_list(Decoder(erlav_nif:erlav_encode(SchemaId, Term1)))),
+    ?assertEqual(Term2, maps:from_list(Decoder(erlav_nif:erlav_encode(SchemaId, Term2)))),
+    ?assertEqual(Term3, maps:from_list(Decoder(erlav_nif:erlav_encode(SchemaId, Term3)))),
+    ?assertEqual(Term4, maps:from_list(Decoder(erlav_nif:erlav_encode(SchemaId, Term4)))),
+    ?assertEqual(Term5, maps:from_list(Decoder(erlav_nif:erlav_encode(SchemaId, Term5)))),
 
     ok.
 
@@ -108,8 +108,8 @@ map_test() ->
                 <<"k2">> => 2
                 }
     },
-    SchemaId = erlav_nif:create_encoder(<<"test/tschema_map.avsc">>),
-    Re2 = erlav_nif:do_encode(SchemaId, Term1),
+    SchemaId = erlav_nif:erlav_init(<<"test/tschema_map.avsc">>),
+    Re2 = erlav_nif:erlav_encode(SchemaId, Term1),
     RTerm = maps:from_list(Decoder(Re2)),
     ?assertEqual(RTerm, #{<<"mapField">> => [{<<"k1">>,1},{<<"k2">>,2}]}),
     %file:write_file("/tmp/rfile.txt", io_lib:format("~p~n", [RTerm]),[append]),
@@ -137,9 +137,9 @@ map_test() ->
                 <<"aaa">> => 3
                 }
     },
-    Ret2 = erlav_nif:do_encode(SchemaId, Term2),
-    Ret3 = erlav_nif:do_encode(SchemaId, Term3),
-    Ret4 = erlav_nif:do_encode(SchemaId, Term4),
+    Ret2 = erlav_nif:erlav_encode(SchemaId, Term2),
+    Ret3 = erlav_nif:erlav_encode(SchemaId, Term3),
+    Ret4 = erlav_nif:erlav_encode(SchemaId, Term4),
     TRet2 = maps:from_list(Decoder(Ret2)),
     TRet3 = maps:from_list(Decoder(Ret3)),
     TRet4 = maps:from_list(Decoder(Ret4)),
@@ -162,8 +162,8 @@ map_null_test() ->
                 <<"k2">> => 2
                 }
     },
-    SchemaId = erlav_nif:create_encoder(<<"test/map_int_null.avsc">>),
-    Re2 = erlav_nif:do_encode(SchemaId, Term1),
+    SchemaId = erlav_nif:erlav_init(<<"test/map_int_null.avsc">>),
+    Re2 = erlav_nif:erlav_encode(SchemaId, Term1),
     RTerm = maps:from_list(Decoder(Re2)),
     ?assertEqual(RTerm, #{<<"mapField">> => [{<<"k1">>,1},{<<"k2">>,2}]}),
     %file:write_file("/tmp/rfile.txt", io_lib:format("~p~n", [RTerm]),[append]),
@@ -191,9 +191,9 @@ map_null_test() ->
                 <<"aaa">> => 3
                 }
     },
-    Ret2 = erlav_nif:do_encode(SchemaId, Term2),
-    Ret3 = erlav_nif:do_encode(SchemaId, Term3),
-    Ret4 = erlav_nif:do_encode(SchemaId, Term4),
+    Ret2 = erlav_nif:erlav_encode(SchemaId, Term2),
+    Ret3 = erlav_nif:erlav_encode(SchemaId, Term3),
+    Ret4 = erlav_nif:erlav_encode(SchemaId, Term4),
     TRet2 = maps:from_list(Decoder(Ret2)),
     TRet3 = maps:from_list(Decoder(Ret3)),
     TRet4 = maps:from_list(Decoder(Ret4)),
@@ -216,8 +216,8 @@ null_map_test() ->
                 <<"k2">> => 2
                 }
     },
-    SchemaId = erlav_nif:create_encoder(<<"test/map_int_null.avsc">>),
-    Re2 = erlav_nif:do_encode(SchemaId, Term1),
+    SchemaId = erlav_nif:erlav_init(<<"test/map_int_null.avsc">>),
+    Re2 = erlav_nif:erlav_encode(SchemaId, Term1),
     RTerm = maps:from_list(Decoder(Re2)),
     io:format("======================================================== ~n"),
     io:format("~p ~n", [RTerm]),
@@ -237,8 +237,8 @@ record_test() ->
                 }
     },
     
-    SchemaId = erlav_nif:create_encoder(<<"test/tschema_record.avsc">>),
-    Re2 = erlav_nif:do_encode(SchemaId, Term1),
+    SchemaId = erlav_nif:erlav_init(<<"test/tschema_record.avsc">>),
+    Re2 = erlav_nif:erlav_encode(SchemaId, Term1),
     M = maps:from_list(Decoder(Re2)),
     %file:write_file("/tmp/rfile.txt", io_lib:format("~p~n", [RTerm]),[append]),
     ?assertEqual(1, proplists:get_value(<<"rec1field">>, maps:get(<<"recordField">>, M))),
@@ -260,8 +260,8 @@ record2_test() ->
                 }
     },
     
-    SchemaId = erlav_nif:create_encoder(<<"test/tschema_record2.avsc">>),
-    Re2 = erlav_nif:do_encode(SchemaId, Term1),
+    SchemaId = erlav_nif:erlav_init(<<"test/tschema_record2.avsc">>),
+    Re2 = erlav_nif:erlav_encode(SchemaId, Term1),
     M = maps:from_list(Decoder(Re2)),
     %file:write_file("/tmp/rfile.txt", io_lib:format("~p~n", [RTerm]),[append]),
     ?assertEqual(1, proplists:get_value(<<"rec1field">>, maps:get(<<"recordField">>, M))),
@@ -282,8 +282,8 @@ record3_test() ->
                 }
     },
     
-    SchemaId = erlav_nif:create_encoder(<<"test/tschema_record3.avsc">>),
-    Re2 = erlav_nif:do_encode(SchemaId, Term1),
+    SchemaId = erlav_nif:erlav_init(<<"test/tschema_record3.avsc">>),
+    Re2 = erlav_nif:erlav_encode(SchemaId, Term1),
     M = maps:from_list(Decoder(Re2)),
     %file:write_file("/tmp/rfile.txt", io_lib:format("~p~n", [RTerm]),[append]),
     ?assertEqual(1, proplists:get_value(<<"rec1field">>, maps:get(<<"recordField">>, M))),
@@ -303,8 +303,8 @@ multistring_null_test() ->
     },
     R1 = iolist_to_binary(Encoder(Term)),
     ?debugFmt("=============== MSTRING erlang =================== ~n ~p ~n", [R1]),
-    SchemaId = erlav_nif:create_encoder(<<"test/perfstr_null.avsc">>),
-    Ret = erlav_nif:do_encode(SchemaId, Term),
+    SchemaId = erlav_nif:erlav_init(<<"test/perfstr_null.avsc">>),
+    Ret = erlav_nif:erlav_encode(SchemaId, Term),
     ?debugFmt("=============== MSTRING c++ =================== ~n ~p ~n", [Ret]),
     ?assertEqual(R1, Ret).
 
@@ -321,8 +321,8 @@ multistring_test() ->
     },
     R1 = iolist_to_binary(Encoder(Term)),
     ?debugFmt("=============== MSTRING erlang =================== ~n ~p ~n", [R1]),
-    SchemaId = erlav_nif:create_encoder(<<"test/perfstr.avsc">>),
-    Ret = erlav_nif:do_encode(SchemaId, Term),
+    SchemaId = erlav_nif:erlav_init(<<"test/perfstr.avsc">>),
+    Ret = erlav_nif:erlav_encode(SchemaId, Term),
     ?debugFmt("=============== MSTRING c++ =================== ~n ~p ~n", [Ret]),
     ?assertEqual(R1, Ret).
 
@@ -339,8 +339,8 @@ multistring_b64_test() ->
     Encoder = avro:make_simple_encoder(SchemaJSON, []),
     R1 = iolist_to_binary(Encoder(Term)),
     ?debugFmt("=============== MSTRING gen erlang =================== ~n ~p ~n", [R1]),
-    SchemaId = erlav_nif:create_encoder(<<"test/perfstr.avsc">>),
-    Ret = erlav_nif:do_encode(SchemaId, Term),
+    SchemaId = erlav_nif:erlav_init(<<"test/perfstr.avsc">>),
+    Ret = erlav_nif:erlav_encode(SchemaId, Term),
     ?debugFmt("=============== MSTRING gen c++ =================== ~n ~p ~n", [Ret]),
     ?assertEqual(R1, Ret).
 
