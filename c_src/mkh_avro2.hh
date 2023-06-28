@@ -43,7 +43,7 @@ typedef struct SchemaItem {
         }else if(otype["type"] == "map"){
             intsi = new SchemaItem("map", otype["values"], 4);
         }else if(otype["type"] == "record"){
-            intsi = new SchemaItem("record", otype["fields"], 3);
+            intsi = new SchemaItem(otype["name"], otype["fields"], 3);
         }else{
             if(otype["type"].is_string() && is_scalar(otype["type"])){
                 // record field with scalar type
@@ -257,7 +257,8 @@ int encoderecord(SchemaItem* si, ErlNifEnv* env, const ERL_NIF_TERM* input, std:
         if(enif_get_map_value(env, *input, key, &val)){
             int encodeCode = encodevalue(it, env, &val, ret);
             if(encodeCode != 0){
-                throw encodeCode;
+                //throw encodeCode;
+                throw mkh_avro::AvroException("Rec:" + si->obj_name + " field:" + it->obj_name, encodeCode);
             }
         }else if(it->is_nullable == 1){
             ret->push_back(0);

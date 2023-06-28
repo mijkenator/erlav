@@ -4,11 +4,10 @@
 namespace mkh_avro {
 
     class AvroException : public std::exception {
-        private:
+        public:
         std::string message;
         uint32_t code;
 
-        public:
         AvroException(std::string msg, uint32_t c): message(msg), code(c) {}
         char * what () {
             std::string ret("Error message: ");

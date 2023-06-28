@@ -39,3 +39,4 @@ filter_null_values(#{} = V) ->
     M1 = maps:filter(fun(_, null) -> false; (_,_) -> true end, V),
     maps:map(fun(_, Val) -> filter_null_values(Val) end, M1);
 filter_null_values(V) -> V.
+

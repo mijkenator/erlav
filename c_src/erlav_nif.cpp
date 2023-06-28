@@ -122,8 +122,18 @@ ERL_NIF_TERM erlav_encode_nif(ErlNifEnv* env, int argc,
     if (!enif_get_int(env, argv[0], &enc_ref)) {
         return enif_make_badarg(env);
     }
-    
-    return mkh_avro2::encode(env, erlav_encoders_map[enc_ref], &argv[1]);
+    try{
+        auto ret = mkh_avro2::encode(env, erlav_encoders_map[enc_ref], &argv[1]);
+        return ret;
+    }catch(int x){
+        return enif_make_int(env, x);
+    }catch(mkh_avro::AvroException const& ae){
+        ERL_NIF_TERM t1 = enif_make_atom(env, "error");
+        ERL_NIF_TERM t2 = enif_make_string(env, &(ae.message[0]), ERL_NIF_LATIN1);
+        ERL_NIF_TERM t3 = enif_make_int(env, ae.code);
+        return enif_make_tuple3(env, t1, t2, t3);  
+    }
+    return enif_make_int(env, -1);    
 }
 
 ERL_NIF_TERM do_encode_int(ErlNifEnv* env, int schema_id, const ERL_NIF_TERM* input){
