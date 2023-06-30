@@ -3,6 +3,7 @@
 #include <vector>
 #include <stdexcept>
 #include "include/json.hpp"
+#include "avro_exceptions.hh"
 using json = nlohmann::json;
 
 namespace mkh_avro2 {
