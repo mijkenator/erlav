@@ -4,6 +4,8 @@
     erlav_perf_tst/1, 
     erlav_perf_tst2/1, 
     erlav_perf_tst2/3, 
+    erlav_perf_tst3/1, 
+    erlav_perf_tst3/3, 
     erlav_perf_string/2, 
     erlav_perf_integer/2,
     erlav_perf_strings/3,
@@ -13,7 +15,8 @@
     array_str_perf_tst/3,
     array_map_perf_tst/3,
     all_tests/3,
-    all_tests/0
+    all_tests/0,
+    long_run/1
 ]).
 
 erlav_perf_tst(Num) ->
@@ -70,11 +73,39 @@ erlav_perf_tst2(Num) ->
     
     {true, Total1/Num, Total3/Num}.
 
+erlav_perf_tst3(Num, _, _) -> erlav_perf_tst3(Num).
+erlav_perf_tst3(Num) ->
+    {ok, SchemaJSON1} = file:read_file("test/opnrtb.avsc"),
+    Encoder  = avro:make_simple_encoder(SchemaJSON1, []),
+    _Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    SchemaId1 = erlav_nif:erlav_init(<<"test/opnrtb.avsc">>),
+    {ok, [Term1]} = file:consult("test/field_test.data"),
+    Terms = [ randomize(Term1) || _ <- lists:seq(1, Num)],
+
+    io:format("Started ..... ~n", []),
+
+    T1 = erlang:system_time(microsecond),
+    lists:foreach(fun(Term1r) ->
+        iolist_to_binary(Encoder(Term1r))
+                  end, Terms),
+    Total1 = erlang:system_time(microsecond) - T1,
+    io:format("Erlavro encoding time: ~p microseconds ~n", [T1]),
+
+    T3 = erlang:system_time(microsecond),
+    lists:foreach(fun(Term1r) ->
+        erlav_nif:erlav_encode(SchemaId1, Term1r)
+                  end, Terms),
+    Total3 = erlang:system_time(microsecond) - T3,
+    io:format("Erlav2 encoding time: ~p microseconds ~n", [T3]),
+    
+    {true, Total1/Num, Total3/Num}.
+
 randomize(Map) when is_map(Map) ->
     maps:filtermap(fun
             (_, V) when is_binary(V)  -> {true, base64:encode(crypto:strong_rand_bytes(100))}; 
             (_, V) when is_integer(V) -> {true, rand:uniform(999999)};
             (_, V) when is_map(V)     -> {true, randomize(V)};
+            (_, [Vi|_]) when is_integer(Vi) -> {true, [ rand:uniform(999999) || _  <- lists:seq(1, 100)]};
             (_, V) when is_list(V)    -> {true, [ randomize(Vi) || Vi <- V]};
             (_, _) -> true
     end, Map);
@@ -489,7 +520,7 @@ array_map_perf_tst(NumIterations, _StrLen, IsNullable) ->
 all_tests() -> all_tests(10000, 50, null).
 
 all_tests(NumIterations, StrLen, IsNullable) ->
-    Funs = [erlav_perf_tst2, map_perf_tst1, map_perf_tst2, array_int_perf_tst, array_str_perf_tst, array_map_perf_tst],
+    Funs = [erlav_perf_tst2, erlav_perf_tst3, map_perf_tst1, map_perf_tst2, array_int_perf_tst, array_str_perf_tst, array_map_perf_tst],
     Report = lists:map(fun(FName) -> 
         {IsSame, ErlTime, CppTime2} = apply(erlav_perf, FName, [NumIterations, StrLen, IsNullable]),
         io:format("~p, equal: ~p, erltime: ~p, cpptime2: ~p ~n~n", [FName, IsSame, ErlTime,  CppTime2]),
@@ -500,3 +531,28 @@ all_tests(NumIterations, StrLen, IsNullable) ->
         io:format("~p, equal: ~p, erltime: ~p,  cpptime2: ~p  ~n~n", [Test, IsSameR, ErlTimeR,  CppTime2R])
     end, Ret).
 
+long_run(Num) -> 
+    SchemaId1 = erlav_nif:erlav_init(<<"test/opnrtb.avsc">>),
+    {ok, [Term1]} = file:consult("test/field_test.data"),
+    long_run(SchemaId1, Term1, Num, 0).
+long_run(_, _, 0, Ret) -> Ret;
+long_run(SchemaId1, Term1, Num, Acc) ->
+    Term1r = randomize(Term1),
+
+    T3 = erlang:system_time(microsecond),
+    _ = erlav_nif:erlav_encode(SchemaId1, Term1r),
+    Total3 = erlang:system_time(microsecond) - T3,
+
+    Acc1 = case Acc of
+        0 -> Total3;
+        _ -> (Acc + Total3)/2
+    end,
+
+    PT = Num rem 1000,
+    case PT of
+        0 ->
+            io:format("~p \t\t\t ~p ~n", [Num, Acc1]);
+        _ -> ok
+    end,
+
+    long_run(SchemaId1, Term1, Num - 1, Acc1).
