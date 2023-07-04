@@ -16,7 +16,8 @@
     array_map_perf_tst/3,
     all_tests/3,
     all_tests/0,
-    long_run/1
+    long_run/1,
+    comp/1
 ]).
 
 erlav_perf_tst(Num) ->
@@ -556,3 +557,59 @@ long_run(SchemaId1, Term1, Num, Acc) ->
     end,
 
     long_run(SchemaId1, Term1, Num - 1, Acc1).
+
+comp(Num) ->
+    SchemaId1 = erlav_nif:erlav_init(<<"test/comp.avsc">>),
+    comp(SchemaId1, Num, 0).
+comp(_Schema, 0, Acc) -> Acc;
+comp(Schema,  N, Acc) -> 
+    Term1r = #{
+        <<"f1">> => rand:uniform(999999),
+        <<"f2">> => base64:encode(crypto:strong_rand_bytes(100)),
+        <<"f3">> => base64:encode(crypto:strong_rand_bytes(100)),
+        <<"dependencies">> => [base64:encode(crypto:strong_rand_bytes(100)),
+                               base64:encode(crypto:strong_rand_bytes(100)),
+                               base64:encode(crypto:strong_rand_bytes(100))]
+    },
+    T3 = erlang:system_time(microsecond),
+    _ = erlav_nif:erlav_encode(Schema, Term1r),
+    Total3 = erlang:system_time(microsecond) - T3,
+
+    Acc1 = case Acc of
+        0 -> Total3;
+        _ -> (Acc + Total3)/2
+    end,
+    comp(Schema, N-1, Acc1).
+
+% ========================== OTP 25 ===================================
+%
+%erlav_perf_tst2, equal: true, erltime: 736.0807,  cpptime2: 157.5774  
+%
+%erlav_perf_tst3, equal: true, erltime: 1624.1517,  cpptime2: 275.6801  
+%
+%map_perf_tst1, equal: true, erltime: 1099.2018,  cpptime2: 321.0694  
+%
+%map_perf_tst2, equal: true, erltime: 220.8326,  cpptime2: 70.6076  
+%
+%array_int_perf_tst, equal: true, erltime: 20.3412,  cpptime2: 3.8873  
+%
+%array_str_perf_tst, equal: true, erltime: 157.9552,  cpptime2: 36.6631  
+%
+%array_map_perf_tst, equal: true, erltime: 337.2408,  cpptime2: 117.7044
+%
+%
+%==========================OTP 26 ======================================
+%erlav_perf_tst2, equal: true, erltime: 723.9108,  cpptime2: 143.6409  
+%
+%erlav_perf_tst3, equal: true, erltime: 1536.0579,  cpptime2: 250.879  
+%
+%map_perf_tst1, equal: true, erltime: 755.1804,  cpptime2: 221.4425  
+%
+%map_perf_tst2, equal: true, erltime: 186.8392,  cpptime2: 68.1011  
+%
+%array_int_perf_tst, equal: true, erltime: 20.7628,  cpptime2: 4.1068  
+%
+%array_str_perf_tst, equal: true, erltime: 174.4728,  cpptime2: 30.6247  
+%
+%array_map_perf_tst, equal: true, erltime: 380.2661,  cpptime2: 117.3047
+

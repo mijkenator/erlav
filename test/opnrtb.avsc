@@ -748,7 +748,7 @@
                 },
                 {
                     "name": "app",
-                    "type": ["null",{
+                    "type": ["null",{:  
                         "type": "record",
                         "name": "app",
                         "fields":[
