@@ -1,0 +1,7 @@
+{"type": "record", "name":"Interop", "namespace": "org.apache.avro",
+  "fields": [
+      {"name": "key", "type": "bytes"}
+  ]
+}
+
+

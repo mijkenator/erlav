@@ -1,0 +1,16 @@
+{
+  "type": "record",
+  "name": "avrotest",
+  "fields" : [
+	{"name": "f1", "type": "long"},
+	{"name": "f2", "type": "string"},
+	{"name": "f3", "type": "string"},
+	{
+		"name": "dependencies",
+		"type": {
+			"type": "array",
+			"items": "string"
+		}
+	}
+  ]
+}
