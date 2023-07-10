@@ -5,6 +5,7 @@
       {"name": "floatField", "type": "float"},
       {"name": "doubleField", "type": "double"},
       {"name": "stringField", "type": "string"},
-      {"name": "boolField", "type": "boolean"}
+      {"name": "boolField", "type": "boolean"},
+      {"name": "bytesField", "type": "bytes"}
   ]
 }

@@ -11,7 +11,8 @@ primitive_types_test() ->
         <<"doubleField">> => 11.2345,
         <<"floatField">> => 23.12,
         <<"boolField">> => true,
-        <<"stringField">> => <<"asdadasdasdasd3453534dfgdgd123456789">>
+        <<"stringField">> => <<"asdadasdasdasd3453534dfgdgd123456789">>,
+        <<"bytesField">> => <<1,99,57,127,0,56>>
     },
     R1 = iolist_to_binary(Encoder(Term)),
     io:format("R1: ~p ~n", [R1]),

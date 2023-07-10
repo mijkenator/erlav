@@ -8,7 +8,7 @@ using json = nlohmann::json;
 
 namespace mkh_avro2 {
 
-const std::vector<std::string> scalars{"int", "long", "double", "float", "boolean", "string"};
+const std::vector<std::string> scalars{"int", "long", "double", "float", "boolean", "string", "bytes"};
 bool is_scalar(std::string ttype){
     return std::find(scalars.begin(), scalars.end(), ttype) != scalars.end();
 }
@@ -137,6 +137,7 @@ int encode_long_fast(ErlNifEnv*, int64_t, std::vector<uint8_t>*);
 int encode_float(ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*);
 int encode_double(ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*);
 int encode_string(ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*);
+int encode_bytes(ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*);
 int encode_boolean(ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*);
 int enif_get_bool(ErlNifEnv*, ERL_NIF_TERM*, bool*);
 size_t encodeInt32(int32_t, std::array<uint8_t, 5> &output) noexcept;
@@ -336,6 +337,8 @@ int encodescalar(int scalar_type, ErlNifEnv* env, ERL_NIF_TERM* val, std::vector
             return encode_boolean(env, val, ret);
         case 5:
             return encode_string(env, val, ret);
+        case 6:
+            return encode_bytes(env, val, ret);
     }
     return 1;
 }
@@ -466,6 +469,22 @@ int encode_double(ErlNifEnv* env, ERL_NIF_TERM* input, std::vector<uint8_t>* ret
 }
 
 int encode_string(ErlNifEnv* env, ERL_NIF_TERM* input, std::vector<uint8_t>* ret){
+    std::array<uint8_t, 10> output;
+    ErlNifBinary sbin;
+
+    if (!enif_inspect_binary(env, *input, &sbin)) {
+        return 5;
+    }
+
+    auto len = sbin.size;
+    auto len2 = encodeInt64(len, output);
+    ret->insert(ret->end(), output.data(), output.data() + len2);
+    ret->insert(ret->end(), sbin.data, sbin.data + len);
+
+    return 0;
+}
+
+int encode_bytes(ErlNifEnv* env, ERL_NIF_TERM* input, std::vector<uint8_t>* ret){
     std::array<uint8_t, 10> output;
     ErlNifBinary sbin;
 
