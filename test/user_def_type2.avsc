@@ -1,0 +1,57 @@
+{
+  "namespace": "gatex.avro.schema",
+  "type": "record",
+  "name": "Book",
+  "fields": [
+    {
+      "name": "id",
+      "type": "int"
+    },
+    {
+      "name": "name",
+      "type": "string"
+    },
+    {
+      "name":"author",
+      "type": {
+		  "type": "record",
+		  "name": "Author",
+		  "fields": [
+			{
+			  "name": "id",
+			  "type": "int"
+			},
+			{
+			  "name": "name",
+			  "type": "string"
+			},
+			{
+			  "name":"publication",
+			  "type":"string"
+			}
+		  ]
+	  }
+    },
+    {
+      "name":"coauthor",
+      "type":["null", "gatex.avro.schema.Author"],
+      "default": null
+    },
+    {
+      "name":"publication",
+      "type":"string"
+    },
+    {
+      "name":"authors",
+      "type": {
+        "type": "record",
+        "name": "Authors",
+        "fields": [
+          {"name": "a1", "type":"gatex.avro.schema.Author"},
+          {"name": "a2", "type":"gatex.avro.schema.Author"}
+        ]
+      }
+    }
+  ]
+}
+
