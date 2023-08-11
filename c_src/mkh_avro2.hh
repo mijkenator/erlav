@@ -8,6 +8,9 @@ using json = nlohmann::json;
 
 namespace mkh_avro2 {
 
+typedef std::vector<std::string> MJpaths;
+typedef std::map<std::string, MJpaths> MJpatch;
+
 const std::vector<std::string> scalars{"int", "long", "double", "float", "boolean", "string", "bytes"};
 bool is_scalar(std::string ttype){
     return std::find(scalars.begin(), scalars.end(), ttype) != scalars.end();
@@ -343,11 +346,87 @@ int encodescalar(int scalar_type, ErlNifEnv* env, ERL_NIF_TERM* val, std::vector
     return 1;
 }
 
+json get_type_object(std::string obj_name, json &data){
+    if(data.is_array()){
+        for (auto it : data){
+            if(it.is_object() && it["type"].is_string() && it["type"] == "record" && it["name"] == obj_name ){
+                return it;
+            }else if(it.is_object() && it["type"].is_object() && it["type"]["type"] == "record"){
+                if(it["type"]["name"] == obj_name){
+                    return it["type"];
+                }else{
+                    get_type_object(obj_name, it["type"]["fields"]);
+                }
+            }
+        }
+    }
+	return json::object({});
+}
+
+
+void resolve_user_types(std::string jpath, std::string ns, json &data, MJpatch &mp) {
+    if(data.is_array()){
+        int num = 0;
+        for (auto it : data){
+            if(it.is_object() && it["type"].is_string() && it["type"].get<std::string>().rfind(ns, 0) == 0 ){
+                std::string cpath = jpath + "/" + std::to_string(num) + "/type";
+                auto key = it["type"].get<std::string>();
+                if(mp.find(key) == mp.end()){
+                    mp[key] = {cpath};
+                }else{
+                    MJpaths jv = mp[key];
+                    jv.push_back(cpath);
+                    mp[key] = jv;
+                }
+            }else if(it.is_object() && it["type"].is_array()){
+                int intnum = 0;
+                for (auto ait : it["type"]){
+                    if(ait.is_string() && ait.get<std::string>().rfind(ns, 0) == 0){
+                        std::string cpath = jpath + "/" + std::to_string(num) + "/type/" + std::to_string(intnum);
+                        auto key = ait.get<std::string>();
+                        if(mp.find(key) == mp.end()){
+                            mp[key] = {cpath};
+                        }else{
+                            MJpaths jv = mp[key];
+                            jv.push_back(cpath);
+                            mp[key] = jv;
+                        }
+                    }else if(ait.is_object() && ait["type"] == "record"){
+                        resolve_user_types(jpath + "/" + std::to_string(num) + "/type/" + std::to_string(intnum), ns, ait["fields"], mp);
+                    }
+                    intnum++;
+                }
+            }else if(it.is_object() && it["type"].is_object() && it["type"]["type"] == "record"){
+                resolve_user_types(jpath + "/" + std::to_string(num) + "/type/fields", ns, it["type"]["fields"], mp);
+            }
+            num++;
+        }
+    }
+}
+
+void resolve_user_types(json &data) {
+    MJpatch mp;
+    std::string ns = data["namespace"];
+    resolve_user_types("/fields", ns, data["fields"], mp);
+
+    for (const auto &ele : mp) {
+        std::string fname = ele.first;
+        fname.erase(0, ns.length() + 1);
+        json repl_tst = get_type_object(fname, data["fields"]);
+        for (auto & ppath : ele.second){
+            std::string patch_command = "[{ \"op\": \"replace\", \"path\": \"" + ppath + "\", \"value\": " +  to_string(repl_tst) +  " }]";
+            data = data.patch(json::parse(patch_command));
+        }
+    }
+
+}
+
+
 SchemaItem*  read_schema(std::string schemaName){
     SchemaItem* si;
     std::ifstream f(schemaName);
     json data = json::parse(f);
-
+	resolve_user_types(data);
     si = new SchemaItem(data["name"], data["fields"], 3);
     return si;
 }

@@ -13,8 +13,6 @@ using json = nlohmann::json;
 std::map<int, mkh_avro2::SchemaItem*  > erlav_encoders_map;
 std::map<std::string, int> erlav_schema_map;
 
-
-
 ERL_NIF_TERM erlav_init_nif(ErlNifEnv* env, int argc, 
     const ERL_NIF_TERM argv[])
 {
