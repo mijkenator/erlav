@@ -2,7 +2,9 @@
 
 -export([
         erlav_init/1,
-        erlav_encode/2
+        erlav_encode/2,
+        erlav_safe_encode/2,
+        replace_keys/1
         ]).
 
 -nifs([erlav_init/1, erlav_encode/2]).
@@ -35,4 +37,23 @@ erlav_encode(_A, _B) ->
 
 erlav_init(_A) ->
     not_loaded(?LINE).
+
+erlav_safe_encode(SchemaId, Data) ->
+    erlav_encode(SchemaId, replace_keys(Data)).
+
+replace_keys(Term) when is_map(Term) ->
+    maps:fold(fun (K, V, AccIn) ->
+        maps:put(key_to_binary(K), replace_keys(V), AccIn)
+    end, #{}, Term);
+replace_keys([{_,_}|_] = Lst) -> 
+    replace_keys(maps:from_list(Lst));
+replace_keys(Term) -> value_to_binary(Term).
+
+value_to_binary(A) when is_atom(A) -> atom_to_binary(A);
+value_to_binary(V) -> V.
+
+key_to_binary(A) when is_atom(A) -> atom_to_binary(A);
+key_to_binary([L1|_] = L) when is_integer(L1) -> list_to_binary(L);
+key_to_binary(K) -> K.
+    
 
