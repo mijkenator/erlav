@@ -58,11 +58,12 @@ value_to_binary(V) -> V.
 
 key_to_binary(A) when is_atom(A) -> atom_to_binary(A);
 key_to_binary([L1|_] = L) when is_integer(L1) -> list_to_binary(L);
+key_to_binary(K) -> K.
 
 isprint(X) when X >= 32, X < 127 -> true;
 isprint(_) -> false.
 is_string(List) when is_list(List) -> lists:all(fun isprint/1, List);
 is_string(_) -> false.
-key_to_binary(K) -> K.
+
     
 
