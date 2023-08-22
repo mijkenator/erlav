@@ -49,7 +49,7 @@ replace_keys([{_,_}|_] = Lst) ->
     replace_keys(maps:from_list(Lst));
 replace_keys(Term) -> value_to_binary(Term).
 
-value_to_binary(A) when is_atom(A) -> atom_to_binary(A);
+value_to_binary([L1|_] = L) when is_integer(L1) -> list_to_binary(L);
 value_to_binary(V) -> V.
 
 key_to_binary(A) when is_atom(A) -> atom_to_binary(A);
