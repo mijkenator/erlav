@@ -49,11 +49,20 @@ replace_keys([{_,_}|_] = Lst) ->
     replace_keys(maps:from_list(Lst));
 replace_keys(Term) -> value_to_binary(Term).
 
-value_to_binary([L1|_] = L) when is_integer(L1) -> list_to_binary(L);
+value_to_binary([L1|_] = L) when is_integer(L1) -> 
+    case is_string(L) of
+        true -> list_to_binary(L);
+        _ -> L
+    end;
 value_to_binary(V) -> V.
 
 key_to_binary(A) when is_atom(A) -> atom_to_binary(A);
 key_to_binary([L1|_] = L) when is_integer(L1) -> list_to_binary(L);
+
+isprint(X) when X >= 32, X < 127 -> true;
+isprint(_) -> false.
+is_string(List) when is_list(List) -> lists:all(fun isprint/1, List);
+is_string(_) -> false.
 key_to_binary(K) -> K.
     
 
