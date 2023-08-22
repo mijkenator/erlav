@@ -1,0 +1,15 @@
+#{bid_active_bidder => true,bid_active_datacenter => true,
+  bid_active_exchange => true,
+  bid_request =>
+      #{ext =>
+            #{ads_txt_db_loaded => false,
+              ads_txt_relationship => <<"ads_txt_relationship">>,
+              ads_txt_strategy => 0,
+              bid_feedback =>
+                  #{<<"id">> => <<"bid_feedback_id">>,<<"price">> => 3.99},
+              channel => <<"channel">>,optout => false,ssl => 0},
+        guaranteed => true,id => <<"sdaDASDASQEEASFDAFA">>,imp => [],
+        tmax => 0},
+  event => <<"request">>,hostname => <<"localhost">>,maxtime => 0,
+  network_time => 0,sampling => <<"1000">>,thinktime => 11,
+  timestamp => 12121211}.
