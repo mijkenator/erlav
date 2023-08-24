@@ -520,9 +520,13 @@ int encode_long_fast(ErlNifEnv* env, int64_t input, std::vector<uint8_t>* ret){
 int encode_float(ErlNifEnv* env, ERL_NIF_TERM* input, std::vector<uint8_t>* ret){
     float f;
     double dbl;
+    int64_t i64;
     
     if (!enif_get_double(env, *input, &dbl)) {
-        return 3;
+        if (!enif_get_int64(env, *input, &i64)) {
+            return 3;
+        }
+        dbl = i64;
     }
 
     f = dbl;
@@ -536,9 +540,13 @@ int encode_float(ErlNifEnv* env, ERL_NIF_TERM* input, std::vector<uint8_t>* ret)
 
 int encode_double(ErlNifEnv* env, ERL_NIF_TERM* input, std::vector<uint8_t>* ret){
     double dbl;
+    int64_t i64;
     
     if (!enif_get_double(env, *input, &dbl)) {
-        return 4;
+        if (!enif_get_int64(env, *input, &i64)) {
+            return 4;
+        }
+        dbl = i64;
     }
 
     auto len = sizeof(double);
