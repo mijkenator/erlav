@@ -1,0 +1,203 @@
+#{all_impression_responses =>
+      #{<<"446384_7">> =>
+            [#{advertiser_id => 9826,
+               bid_request_id => <<"a0e56cba-309b-11ee-a146-f2fcb958e814">>,
+               bidder_bid_price => 170000,bidder_id => 1,
+               buyer_fee_schedule_id => 2,buyer_id => 314,
+               campaign_id => 135318,
+               creative_group_lookup_id => <<"a281519">>,
+               deal_id => <<"97ec9173-3b88-4132-86b2-73656a394ade">>,
+               dsp_id => 1,flight_id => 389984,
+               impression_id => <<"446384_7">>,pg_deal => false,
+               price => 128768},
+             #{advertiser_id => 9826,
+               bid_request_id => <<"a0e56cba-309b-11ee-a146-f2fcb958e814">>,
+               bidder_bid_price => 170000,bidder_id => 1,
+               buyer_fee_schedule_id => 2,buyer_id => 314,
+               campaign_id => 133736,
+               creative_group_lookup_id => <<"a279842">>,
+               deal_id => <<"97ec9173-3b88-4132-86b2-73656a394ade">>,
+               dsp_id => 1,flight_id => 387066,
+               impression_id => <<"446384_7">>,pg_deal => false,
+               price => 128768},
+             #{advertiser_id => 9826,
+               bid_request_id => <<"a0e56cba-309b-11ee-a146-f2fcb958e814">>,
+               bidder_bid_price => 170000,bidder_id => 1,
+               buyer_fee_schedule_id => 2,buyer_id => 314,
+               campaign_id => 135266,
+               creative_group_lookup_id => <<"a281349">>,
+               deal_id => <<"97ec9173-3b88-4132-86b2-73656a394ade">>,
+               dsp_id => 1,flight_id => 389927,
+               impression_id => <<"446384_7">>,pg_deal => false,
+               price => 128768}]},
+  bid_active_bidder => true,bid_active_datacenter => true,
+  bid_active_exchange => true,
+  bid_request =>
+        #{app =>
+            #{bundle => <<"samsung.tv.plus.1149">>,cat => [],
+              content => #{genre => <<"GV">>},
+              domain =>
+                  <<"https://www.samsung.com/us/appstore/app/G15147002586">>,
+              ext =>
+                  #{applist_ids => [3192,3215,3216,3254,3312,3329],
+                    exchange_id => 17,
+                    exchange_seller_alphanumeric_id => <<"1">>,
+                    exchange_seller_id => 1,iab_categories => []},
+              id => <<"samsung.tv.plus.1149">>,
+              name => <<"Samsung TV Plus">>,
+              pagecat => [<<"IAB1-7">>],
+              publisher =>
+                  #{id => <<"27da6881-036b-4d64-bd03-6876dba60fb8">>},
+              storeurl =>
+                  <<"https://www.samsung.com/us/appstore/app/G15147002586">>},
+        at => 1,
+        badv =>
+            [<<"lg.com">>,<<"charlottesweb.com">>,
+             <<"rockymountainvalues.org">>,<<"vudu.com">>,
+             <<"conservationco.org">>,<<"chumashcasino.com">>,
+             <<"tulsi2020.com">>,<<"nakedcannabis.co">>,
+             <<"veriheal.com">>,<<"skynfeel.com">>,<<"veev-vape.com">>,
+             <<"hunterstandsforjustice.com">>,<<"vuse.com">>,
+             <<"adameve.com">>,<<"lgads.com">>,<<"revloninc.com">>,
+             <<"revlon.com">>,<<"elizabetharden.com">>,<<"almay.com">>,
+             <<"americancrew.com">>,<<"cnd.com">>,<<"cutex.com">>,
+             <<"sinfulcolors.com">>,<<"mitchum.com">>,
+             <<"perfumes.christinaaguilera.com">>,<<"us.allsaints.com">>,
+             <<"juicycouturebeauty.com">>,<<"alfredsung.com">>,
+             <<"neimanmarcus.com">>,<<"stxentertainment.com">>,
+             <<"stxfilms.com">>,<<"pmi.com">>,<<"iqos.com">>,
+             <<"ocs.ca">>],
+        device =>
+            #{carrier => <<"Spectrum">>,dnt => 1,
+              ext =>
+                  #{browser_combination_id => 0,browser_id => 0,
+                    browser_variant_id => 0,device_id => 12,device_type_id => 5,
+                    global_iplist_ids => [],marketing_name => <<"UNKNOWN">>,
+                    netmask => 24,netspeed => <<"cable_dsl">>,
+                    operating_system_device_combination_id => 84,
+                    operating_system_id => 19,operating_system_variant_id => 0,
+                    org_name => <<"Spectrum">>,truncated_ip => true,
+                    tvidlist_ids => [],user_agent_hash => 2563081482},
+              geo =>
+                  #{country => <<"US">>,
+                    ext =>
+                        #{dma => 803,
+                          geo_radius_list_ids => [24089],
+                          normalized_city => <<"riverside">>,
+                          timezone => <<"America/Los_Angeles">>},
+                    lat => 33.9764,lon => -117.3341,region => <<"CA">>,
+                    type => 2,zip => <<"92507">>},
+              ip => <<"71.84.76.0">>,js => 0,lmt => 1,
+              ua =>
+                  <<"Mozilla/5.0 (SMART-TV; Linux; Tizen 2.4.0) AppleWebKit/538.1 (KHTML, like Gecko) Version/2.4.0 TV Safari/538.1">>},
+        ext =>
+            #{ads_txt_db_loaded => false,
+              ads_txt_relationship => <<"unknown">>,ads_txt_strategy => 0,
+              channel => <<"ctv">>,optout => true,
+              optout_reason => <<"dnt">>,ssl => 1,
+              upstream_id => <<"cj4l5ms3q9lsnqlt6rsg_7">>},
+        guaranteed => false,
+        id => <<"a0e56cba-309b-11ee-a146-f2fcb958e814">>,
+        imp =>
+            [#{ext =>
+                   #{allowed_types => [3],
+                     deal_ids => [<<"97ec9173-3b88-4132-86b2-73656a394ade">>],
+                     filtered_flight_ids =>
+                         #{<<"1">> =>
+                               [389984,386161,387066,384671,394708,391396,392982,384014,
+                                391545,392988,378885,391753,393039,393130,381763,392958,
+                                378767,391187,393067,389550,390032,391264,393510,393110,
+                                389969,392943,389927]},
+                     filtered_paced_flight_ids =>
+                         #{<<"1">> =>
+                               [389984,387066,391396,392982,391545,392988,391753,393039,
+                                393130,392958,391187,393067,389550,390032,391264,393510,
+                                393110,389969,392943,389927]},
+                     flights_dropped_fuse =>
+                         [378767,378885,381763,384014,384671,386161],
+                     h => [1],
+                     impression_responses =>
+                         [#{ext =>
+                                #{advertiser_id => 9826,bidder_bid_price => 170000,
+                                  bidder_id => 1,buyer_fee_schedule_id => 2,buyer_id => 314,
+                                  creative_group_lookup_id => <<"a281519">>,
+                                  deal_id => <<"97ec9173-3b88-4132-86b2-73656a394ade">>,
+                                  dsp_id => 1,flight_id => 389984},
+                            id => <<"a0e56cba-309b-11ee-a146-f2fcb958e814:446384_7">>,
+                            impid => <<"446384_7">>,price => 0.129},
+                          #{ext =>
+                                #{advertiser_id => 9826,bidder_bid_price => 170000,
+                                  bidder_id => 1,buyer_fee_schedule_id => 2,buyer_id => 314,
+                                  creative_group_lookup_id => <<"a279842">>,
+                                  deal_id => <<"97ec9173-3b88-4132-86b2-73656a394ade">>,
+                                  dsp_id => 1,flight_id => 387066},
+                            id => <<"a0e56cba-309b-11ee-a146-f2fcb958e814:446384_7">>,
+                            impid => <<"446384_7">>,price => 0.129},
+                          #{ext =>
+                                #{advertiser_id => 9826,bidder_bid_price => 170000,
+                                  bidder_id => 1,buyer_fee_schedule_id => 2,buyer_id => 314,
+                                  creative_group_lookup_id => <<"a281349">>,
+                                  deal_id => <<"97ec9173-3b88-4132-86b2-73656a394ade">>,
+                                  dsp_id => 1,flight_id => 389927},
+                            id => <<"a0e56cba-309b-11ee-a146-f2fcb958e814:446384_7">>,
+                            impid => <<"446384_7">>,price => 0.129}],
+                     masked => false,private => true,
+                     w => [1]},
+               id => <<"446384_7">>,
+               pmp =>
+                   #{deals =>
+                         [#{bidfloor => 0.12,
+                            id => <<"97ec9173-3b88-4132-86b2-73656a394ade">>}],
+                     private_auction => 1},
+               secure => 1,
+               tagid => <<"ceceddb7-0aeb-44df-a6b1-16d111899fd5">>,
+               video =>
+                   #{ext =>
+                         #{contentgrouplists => [],player_h => 1080,
+                           player_premium => true,player_w => 1920,
+                           pod_id => <<"cj4l5ms3q9lsnqlt6ro0">>,site_id => <<"26151">>,
+                           vpaid => []},
+                     h => 1,linearity => 1,maxduration => 120,
+                     mimes => [<<"video/mp4">>],
+                     minduration => 6,placement => 1,
+                     playbackmethod => [1],
+                     protocol => 6,
+                     protocols => [1,2,3,4,5,6,7,8],
+                     startdelay => 0,w => 1}}],
+        regs => #{ext => #{gdpr => 0,us_privacy => <<"1YNY">>}},
+        source =>
+            #{ext => #{},fd => 1,tid => <<"cj4l5ms3q9lsnqlt6rt0">>},
+        tmax => 1232,
+        user =>
+            #{data => [],
+              ext =>
+                  #{adobe_aam_ids => [],bluekai_3p_ids => [],
+                    bluekai_custom_ids => [],bluekai_ids => [],
+                    buyeruid_new => false,consent => <<"0">>,krux_1p_ids => [],
+                    liveramp_1p_ids => [],liveramp_3p_ids => [],
+                    lotame_ids => [],merkle_ids => [],neustar_ids => [],
+                    nielsen_ids => [],unified_ids => []}}},
+  bid_response =>
+      #{id => <<"a0e56cba-309b-11ee-a146-f2fcb958e814">>,
+        seatbid =>
+            [#{bid =>
+                   [#{ext =>
+                          #{advertiser_id => 9826,bidder_bid_price => 0.128774,
+                            bidder_id => 1,buyer_currency => <<"cad">>,
+                            buyer_currency_rate => 0.7575,buyer_fee_schedule_id => 2,
+                            buyer_id => 314,campaign_id => 136285,
+                            creative_group_lookup_id => <<"a282907">>,
+                            creative_id => 282907,
+                            deal_id => <<"97ec9173-3b88-4132-86b2-73656a394ade">>,
+                            discrepancy_percent => 0.0,dsp_id => 1,
+                            exchange_currency => <<"usd">>,exchange_currency_rate => 1,
+                            flight_id => 391545,tag_id => 282907,video_duration => 15},
+                      id => <<"a0e56cba-309b-11ee-a146-f2fcb958e814:446384_7">>,
+                      impid => <<"446384_7">>,price => 0.129}]}]},
+  event => <<"request">>,filtered_flights_result => #{},
+  filtered_paced_flights_result => #{},
+  flights_dropped_fuse =>
+      [378767,378885,381763,384014,384671,386161],
+  hostname => <<"lga-gateway-67">>,maxtime => 1232,
+  network_time => 16,sampling => <<"1000">>,thinktime => 35,
+  timestamp => 1690915547.251035}.
