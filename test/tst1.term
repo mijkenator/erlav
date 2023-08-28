@@ -1,0 +1,17 @@
+#{
+  bid_response =>
+      #{
+        seatbid =>
+            [#{bid =>
+                   [#{
+                       ext =>
+                          #{
+                            deal_id => <<"2222">>
+                            }
+
+                      }]
+    }]
+    },
+
+  event => <<"request">>
+  }.

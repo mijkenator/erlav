@@ -47,6 +47,7 @@ replace_keys(Term) when is_map(Term) ->
     end, #{}, Term);
 replace_keys([{_,_}|_] = Lst) -> 
     replace_keys(maps:from_list(Lst));
+replace_keys(L) when is_list(L) -> [replace_keys(Ele) || Ele <- L]; 
 replace_keys(Term) -> value_to_binary(Term).
 
 value_to_binary([L1|_] = L) when is_integer(L1) -> 
