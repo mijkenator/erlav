@@ -1,0 +1,15 @@
+#{
+  bid_request =>#{
+        app => #{
+
+              ext =>
+                  #{
+                    exchange_id => 17,
+                    exchange_seller_id => 1,
+                    iab_categories => []
+                    }
+        },
+        tmax => 1232
+  },
+  event => <<"request">>
+  }.

@@ -33,6 +33,19 @@ term2_test() ->
     ?debugFmt("Decoded result: ~p ~n", [Re1]),
     ok.
 
+term5_test() ->
+    {ok, [Term1|_]} = file:consult("test/tst5.term"),
+    Map1 = erlav_nif:replace_keys(Term1),
+    ?debugFmt("New map: ~p ~n", [Map1]),
+    SchemaId = erlav_nif:erlav_init(<<"test/opnrtb_test1.avsc">>),
+    Re1 = erlav_nif:erlav_safe_encode(SchemaId, Map1),
+    ?debugFmt("Encde result: ~p ~n", [Re1]),
+    {ok, SchemaJSON1} = file:read_file("test/opnrtb_test1.avsc"),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    M = to_map(Decoder(Re1)),
+    ?debugFmt("Decoded result: ~p ~n", [Re1]),
+    ok.
+
 term3_test() ->
     {ok, [Term1|_]} = file:consult("test/tst1.term"),
     Map1 = erlav_nif:replace_keys(Term1),
