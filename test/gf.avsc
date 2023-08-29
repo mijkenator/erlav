@@ -1,0 +1,2384 @@
+{
+  "namespace": "rtb.gateway.request",
+  "type": "record",
+  "name": "GatewayRequest",
+  "doc":  "main rtb-gateway log for all type bid_requests and bid_responses",
+  "fields": [
+    {
+        "name": "event",
+        "type": "string",
+        "doc": "type of event"
+    },
+    {
+        "name": "sampling",
+        "type": ["null", "long", "string"],
+        "default": null,
+        "doc": "sampling value if any"
+    },
+    {
+        "name": "timestamp",
+        "type": ["null", "double", "long"],
+        "default": null,
+        "doc": "time of request"
+    },
+    {
+        "name": "bid_request",
+        "type": ["null",{
+            "type": "record",
+            "name": "bid_request",
+            "fields":[
+                {
+                    "name": "id",
+                    "type": ["null","string","long"],
+                    "default": null,
+                    "doc": "Unique ID of the bid request, provided by the exchange."
+                },
+                {
+                    "name": "imp",
+                    "type": ["null",{
+                        "type": "array",
+                        "items":
+                            {
+                                "type": "record",
+                                "name": "bid_imp",
+                                "fields":[
+                                    {
+                                        "name": "id",
+                                        "type": ["null","string","long"],
+                                        "default": null,
+                                        "doc": "A unique identifier for this impression within the context of the bid request"
+                                    },
+                                    {
+                                        "name": "banner",
+                                        "type": ["null", {
+                                            "type": "record",
+                                            "name": "banner",
+                                            "fields": [
+                                                {
+                                                    "name":"w",
+                                                    "type":["null","long"],
+                                                    "default": null,
+                                                    "doc": "Exact width in device independent pixels (DIPS)"
+                                                },
+                                                {
+                                                    "name":"h",
+                                                    "type":["null","long"],
+                                                    "default": null,
+                                                    "doc": "Exact height in device independent pixels (DIPS)"
+                                                },
+                                                {
+                                                    "name":"pos",
+                                                    "type":["null","long"],
+                                                    "default": null,
+                                                    "doc": "Ad position on screen. Refer to List 5.4 OpenRtb spec"
+                                                },
+                                                {
+                                                    "name":"btype",
+                                                    "type":["null",{
+                                                        "type": "array",
+                                                        "items": "long"
+                                                    }],
+                                                    "default": null,
+                                                    "doc": "Blocked banner ad types. Refer to List 5.2 OpenRtb spec"
+                                                },
+                                                {
+                                                    "name":"battr",
+                                                    "type":["null",{
+                                                        "type": "array",
+                                                        "items": "long"
+                                                    }],
+                                                    "default": null,
+                                                    "doc": "Blocked creative attributes. Refer to List 5.3 OpenRtb spec"
+                                                },
+                                                {
+                                                    "name":"expdir",
+                                                    "type":["null",{
+                                                        "type": "array",
+                                                        "items": "long"
+                                                    }],
+                                                    "default": null,
+                                                    "doc": "Directions in which the banner may expand. Refer to List 5.5 OpenRtb spec"
+                                                },
+                                                {
+                                                    "name":"topframe",
+                                                    "type":["null","long"],
+                                                    "default": null,
+                                                    "doc": "Indicates if the banner is in the top frame as opposed to an iframe, where 0 = no, 1 = yes."
+                                                }
+                                            ]
+                                        }],
+                                        "default": null,
+                                        "doc": "A Banner object (Section 3.2.6); required if this impression is offered as a banner ad opportunity."
+                                    },
+                                    {
+                                        "name": "video",
+                                        "type": ["null", {
+                                            "type": "record",
+                                            "name": "bid_video",
+                                            "fields": [
+                                                {
+                                                    "name": "mimes",
+                                                    "type": ["null", {
+                                                        "type": "array",
+                                                        "items": "string"
+                                                      }],
+                                                    "default": null,
+                                                    "doc": "Content MIME types supported "
+                                                },
+                                                {
+                                                    "name":"linearity",
+                                                    "type":["null","long"],
+                                                    "default": null,
+                                                    "doc": "Indicates if the impression must be linear, nonlinear, etc. If none specified, assume all are allowed. Refer to List 5.7 OpenRtb spec"
+                                                },
+                                                {
+                                                    "name":"minduration",
+                                                    "type":["null","long"],
+                                                    "default": null,
+                                                    "doc": "Minimum video ad duration in seconds"
+                                                },
+                                                {
+                                                    "name":"maxduration",
+                                                    "type":["null","long"],
+                                                    "default": null,
+                                                    "doc": "Maximum video ad duration in seconds"
+                                                },
+                                                {
+                                                    "name":"protocol",
+                                                    "type":["null","long"],
+                                                    "default": null,
+                                                    "doc": "Supported video protocol"
+                                                },
+                                                {
+                                                    "name":"protocols",
+                                                    "type": ["null",{
+                                                        "type": "array",
+                                                        "items": "long"
+                                                      }],
+                                                    "default": null,
+                                                    "doc": "Array of supported video protocols. Refer to List 5.8 OpenRtb spec"
+                                                },
+                                                {
+                                                    "name":"w",
+                                                    "type":"long",
+                                                    "doc": "Width of the video player in device independent pixels (DIPS)"
+                                                },
+                                                {
+                                                    "name":"h",
+                                                    "type":"long",
+                                                    "doc": "Height of the video player in device independent pixels (DIPS)"
+                                                },
+                                                {
+                                                    "name": "startdelay",
+                                                    "type": ["null","long"],
+                                                    "default": null,
+                                                    "doc": "Indicates the start delay in seconds for pre-roll, mid-roll, or post-roll ad placements. "
+                                                },
+                                                {
+                                                    "name":"battr",
+                                                    "type": ["null",{
+                                                        "type": "array",
+                                                        "items": "long"
+                                                    }],
+                                                    "default": null,
+                                                    "doc": "Blocked creative attributes. Refer to List 5.3"
+                                                },
+                                                {
+                                                    "name":"api",
+                                                    "type": ["null",{
+                                                        "type": "array",
+                                                        "items": "long"
+                                                    }],
+                                                    "default": null,
+                                                    "doc": "List of supported API frameworks for this impression. "
+                                                },
+                                                {
+                                                    "name":"ext",
+                                                    "type":["null", {
+                                                        "type": "record",
+                                                        "name": "bid_video_ext",
+                                                        "fields":[
+                                                            {
+                                                                "name":"player_w",
+                                                                "type":["null", "long"],
+                                                                "default": null,
+                                                                "doc": "player width"
+                                                            },
+                                                            {
+                                                                "name":"player_h",
+                                                                "type":["null", "long"],
+                                                                "default": null,
+                                                                "doc": "player height"
+                                                            },
+                                                            {
+                                                                "name":"player_premium",
+                                                                "type":["null", "boolean"],
+                                                                "default": null,
+                                                                "doc": "?????"
+                                                            },
+                                                            {
+                                                                "name":"vpaid",
+                                                                "type": ["null",{
+                                                                    "type": "array",
+                                                                    "items": "long"
+                                                                }],
+                                                                "default": null,
+                                                                "doc": "vpaid fraimworks list"
+                                                            },
+                                                            {
+                                                                "name": "site_id",
+                                                                "type": ["null", "string", "long"],
+                                                                "default": null,
+                                                                "doc": "site Id"
+                                                            },
+                                                            {
+                                                                "name": "contentgrouplists",
+                                                                "type": ["null", {
+                                                                    "type": "array",
+                                                                    "items": "long"
+                                                                }],
+                                                                "default": null,
+                                                                "doc": "????"
+                                                            }
+                                                        ]
+                                                    }],
+                                                    "default": null,
+                                                    "doc": "Video Impression extended object"
+                                                },
+                                                {
+                                                    "name":"placement",
+                                                    "type":["null","long"],
+                                                    "default": null,
+                                                    "doc": "Placement type for the impression. Refer to List 5.9 OpenRtb spec"
+                                                },
+                                                {
+                                                    "name":"sequence",
+                                                    "type":["null","long"],
+                                                    "default": null,
+                                                    "doc": "If multiple ad impressions are offered in the same bid request, the sequence number will allow for the coordinated delivery of multiple creatives."
+                                                },
+                                                {
+                                                    "name":"skip",
+                                                    "type":["null","long"],
+                                                    "default": null,
+                                                    "doc": "Indicates if the player will allow the video to be skipped, where 0 = no, 1 = yes"
+                                                },
+                                                {
+                                                    "name":"skipafter",
+                                                    "type":["null","long"],
+                                                    "default": null,
+                                                    "doc": "Number of seconds a video must play before skipping is enabled; only applicable if the ad is skippable."
+                                                },
+                                                {
+                                                    "name":"playbackmethod",
+                                                    "type": ["null", {
+                                                        "type": "array",
+                                                        "items": "long"
+                                                      }],
+                                                    "default": null,
+                                                    "doc": "Playback methods that may be in use. "
+                                                },
+                                                {
+                                                    "name":"pos",
+                                                    "type":["null","long"],
+                                                    "default": null,
+                                                    "doc": "Ad position on screen. Refer to List 5.4 OpenRtbSpec"
+                                                }
+                                            ]
+                                        }],
+                                        "default": null,
+                                        "doc": "This object represents an in-stream video impression"
+                                    },
+                                    {
+                                        "name": "native",
+                                        "type": ["null", {
+                                            "type": "record",
+                                            "name": "bid_native",
+                                            "fields": [
+                                                {
+                                                    "name":"request",
+                                                    "type":["null",{
+                                                        "type": "record",
+                                                        "name": "native_req",
+                                                        "fields": [
+                                                            {
+                                                                "name":"ver",
+                                                                "type":["null","string"],
+                                                                "default": null,
+                                                                "doc": "Version of  the Native  Markup  version in  use"
+                                                            },
+                                                            {
+                                                                "name":"context",
+                                                                "type":["null","long"],
+                                                                "default": null,
+                                                                "doc": "The context in  which   the ad  appears"
+                                                            },
+                                                            {
+                                                                "name":"contextsubtype",
+                                                                "type":["null","long"],
+                                                                "default": null,
+                                                                "doc": "A more detailed context in which the ad appears"
+                                                            },
+                                                            {
+                                                                "name":"plcmttype",
+                                                                "type":["null","long"],
+                                                                "default": null,
+                                                                "doc": "The design/format/layout of the ad unit being offered."
+                                                            },
+                                                            {
+                                                                "name":"plcmtcnt",
+                                                                "type":["null","long"],
+                                                                "default": null,
+                                                                "doc": "The number of identical placements in this Layout."
+                                                            },
+                                                            {
+                                                                "name":"seq",
+                                                                "type":["null","long"],
+                                                                "default": null,
+                                                                "doc": "0   for the first ad, 1 for the second ad, and so on"
+                                                            },
+                                                            {
+                                                                "name":"assests",
+                                                                "type":["null",{
+                                                                    "type": "array",
+                                                                    "items": {
+                                                                        "type": "record",
+                                                                        "name": "native_req_asset",
+                                                                        "fields": [
+                                                                            {
+                                                                                "name": "id",
+                                                                                "type": "long",
+                                                                                "doc": "Unique asset ID, assigned by exchange."
+                                                                            },
+                                                                            {
+                                                                                "name": "required",
+                                                                                "type": "long",
+                                                                                "doc": "Set to 1 if asset is required"
+                                                                            },
+                                                                            {
+                                                                                "name": "title",
+                                                                                "type": ["null","long"],
+                                                                                "default": null,
+                                                                                "doc": "Title   object  for title   assets"
+                                                                            },
+                                                                            {
+                                                                                "name": "img",
+                                                                                "type": ["null",{
+                                                                                    "type": "record",
+                                                                                    "name": "native_req_img",
+                                                                                    "fields": [
+                                                                                        {
+                                                                                            "name": "type",
+                                                                                            "type": ["null","long"],
+                                                                                            "default": null,
+                                                                                            "doc": "Type ID of the image element supported by the publisher"
+                                                                                        },
+                                                                                        {
+                                                                                            "name": "w",
+                                                                                            "type": ["null","long"],
+                                                                                            "default": null,
+                                                                                            "doc": "Width   of  the image   in  pixels."
+                                                                                        },
+                                                                                        {
+                                                                                            "name": "wmin",
+                                                                                            "type": ["null","long"],
+                                                                                            "default": null,
+                                                                                            "doc": "The minimum requested width of the image in pixels"
+                                                                                        },
+                                                                                        {
+                                                                                            "name": "h",
+                                                                                            "type": ["null","long"],
+                                                                                            "default": null,
+                                                                                            "doc": "Height  of  the image   in  pixels. "
+                                                                                        },
+                                                                                        {
+                                                                                            "name": "hmin",
+                                                                                            "type": ["null","long"],
+                                                                                            "default": null,
+                                                                                            "doc": "The minimum requested height of the image in pixels."
+                                                                                        },
+                                                                                        {
+                                                                                            "name": "mimes",
+                                                                                            "type": ["null",{
+                                                                                                "type": "array",
+                                                                                                "items": "string"
+                                                                                            }],
+                                                                                            "default": null,
+                                                                                            "doc": "Whitelist of content MIME types supported."
+                                                                                        }
+                                                                                    ]
+                                                                                }],
+                                                                                "default": null,
+                                                                                "doc": "Image   object  for image   assets."
+                                                                            },
+                                                                            {
+                                                                                "name": "video",
+                                                                                "type": ["null",{
+                                                                                    "type": "record",
+                                                                                    "name": "native_req_video",
+                                                                                    "fields":[
+                                                                                        {
+                                                                                            "name": "mimes",
+                                                                                            "type": ["null", {
+                                                                                                "type": "array",
+                                                                                                "items": "string"
+                                                                                            }],
+                                                                                            "default": null,
+                                                                                            "doc": "Content MIME    types   supported"
+                                                                                        },
+                                                                                        {
+                                                                                            "name": "minduration",
+                                                                                            "type": ["null","long"],
+                                                                                            "default": null,
+                                                                                            "doc": "Minimum video ad duration in seconds"
+                                                                                        },
+                                                                                        {
+                                                                                            "name": "maxduration",
+                                                                                            "type": ["null","long"],
+                                                                                            "default": null,
+                                                                                            "doc": "Maximum video ad duration in seconds."
+                                                                                        },
+                                                                                        {
+                                                                                            "name": "protocols",
+                                                                                            "type": ["null", {
+                                                                                                "type": "array",
+                                                                                                "items": "long"
+                                                                                            }],
+                                                                                            "default": null,
+                                                                                            "doc": "An array of video protocols the publisher can accept in the bid response"
+                                                                                        }
+                                                                                    ]
+                                                                                }],
+                                                                                "default": null,
+                                                                                "doc": "Video   object  for video   assets"
+                                                                            },
+                                                                            {
+                                                                                "name": "data",
+                                                                                "type": ["null",{
+                                                                                    "type": "record",
+                                                                                    "name": "native_req_data",
+                                                                                    "fields": [
+                                                                                        {
+                                                                                            "name": "type",
+                                                                                            "type": "long",
+                                                                                            "doc": "Type ID of the element supported by the publisher"
+                                                                                        },
+                                                                                        {
+                                                                                            "name": "len",
+                                                                                            "type": ["null","long"],
+                                                                                            "default": null,
+                                                                                            "doc": "Maximum length of the text in the element’s response."
+                                                                                        }
+                                                                                    ]
+                                                                                }],
+                                                                                "default": null,
+                                                                                "doc": "Data object for brand name, description, ratings, prices etc"
+                                                                            }
+                                                                        ]
+                                                                    }
+                                                                }],
+                                                                "default": null,
+                                                                "doc": "An array of Asset Objects"
+                                                            },
+                                                            {
+                                                                "name":"aurlsupport",
+                                                                "type":["null","long"],
+                                                                "default": null,
+                                                                "doc": "Whether the supply source/impression supports returning an asseturl instead of an asset object."
+                                                            },
+                                                            {
+                                                                "name":"durlsupport",
+                                                                "type":["null","long"],
+                                                                "default": null,
+                                                                "doc": "????"
+                                                            },
+                                                            {
+                                                                "name":"eventtrackers",
+                                                                "type":["null",{
+                                                                    "type": "array",
+                                                                    "items": {
+                                                                        "type": "record",
+                                                                        "name": "native_req_tracker",
+                                                                        "fields": [
+                                                                            {
+                                                                                "name":"event",
+                                                                                "type":["null","long"],
+                                                                                "default": null
+                                                                            },
+                                                                            {
+                                                                                "name":"methods",
+                                                                                "type":["null",{
+                                                                                    "type": "array",
+                                                                                    "items": "long"
+                                                                                }],
+                                                                                "default": null
+                                                                            }
+                                                                        ]
+                                                                    }
+                                                                }],
+                                                                "default": null,
+                                                                "doc": "Specifies what type of event tracking is supported."
+                                                            },
+                                                            {
+                                                                "name":"privacy",
+                                                                "type":["null","long"],
+                                                                "default": null,
+                                                                "doc": "Set to 1 when the native ad supports buyer-specific privacy notice"
+                                                            }
+                                                        ]
+                                                    }],
+                                                    "default": null,
+                                                    "doc": "Request payload complying with the Native Ad Specification."
+                                                },
+                                                {
+                                                    "name":"ver",
+                                                    "type":["null","string"],
+                                                    "default": null,
+                                                    "doc": "Version of the Dynamic Native Ads API to which request complies"
+                                                },
+                                                {
+                                                    "name":"battr",
+                                                    "type":["null",{
+                                                        "type": "array",
+                                                        "items": "long"
+                                                    }],
+                                                    "default": null,
+                                                    "doc": "Blocked creative attributes. Refer to List 5.3 OpenRtb spec"
+                                                }
+                                            ]
+                                        }],
+                                        "default": null,
+                                        "doc": "This object represents a native type impression. "
+                                    },
+                                    {
+                                        "name": "pmp",
+                                        "type": [
+                                           "null",
+                                          {
+                                            "type": "record",
+                                            "name": "pmp",
+                                            "fields": [
+                                                {
+                                                    "name": "private_auction",
+                                                    "type":["null","long"],
+                                                    "default": null,
+                                                    "doc": "Indicator of auction eligibility to seats named in the Direct Deals object, where 0 = all bids are accepted, 1 = bids are restricted to the deals specified and the terms thereof."
+                                                },
+                                                {
+                                                    "name": "deals",
+                                                    "type": ["null",{
+                                                        "type": "array",
+                                                        "items": {
+                                                            "type": "record",
+                                                            "name": "deals",
+                                                            "fields": [
+
+
+                                                                {
+                                                                    "name": "id",
+                                                                    "type": "string",
+                                                                    "doc": "A unique identifier for the direct deal."
+                                                                },
+                                                                {
+                                                                    "name": "bidfloor",
+                                                                    "type": ["null","double","long"],
+                                                                    "default": null,
+                                                                    "doc": "Minimum bid for this impression expressed in CPM."
+                                                                },
+                                                                {
+                                                                    "name": "bidfloorcur",
+                                                                    "type": ["null","string"],
+                                                                    "default": null,
+                                                                    "doc": "Currency specified using ISO-4217 alpha codes."
+                                                                },
+                                                                {
+                                                                    "name": "wseat",
+                                                                    "type": ["null",{
+                                                                        "type": "array",
+                                                                        "items": "string"
+                                                                    }],
+                                                                    "default": null,
+                                                                    "doc": "Whitelist of buyer seats (e.g., advertisers, agencies) allowed to bid on this deal."
+                                                                },
+                                                                {
+                                                                    "name": "at",
+                                                                    "type": ["null", "long"],
+                                                                    "default": null,
+                                                                    "doc": "Optional override of the overall auction type of the bid request"
+                                                                },
+                                                                {
+                                                                    "name": "ext",
+                                                                    "type": ["null",{
+                                                                        "type": "record",
+                                                                        "name": "bid_deal_ext",
+                                                                        "fields": [
+                                                                            {
+                                                                                "name": "priority",
+                                                                                "type": ["null","string"],
+                                                                                "default": null,
+                                                                                "doc": "Priority for this deal"
+                                                                            },
+                                                                            {
+                                                                                "name": "maxduration",
+                                                                                "type": ["null","long"],
+                                                                                "default": null,
+                                                                                "doc": "video max duration"
+                                                                            },
+                                                                            {
+                                                                                "name": "wadvs",
+                                                                                "type": ["null", {
+                                                                                    "type": "array",
+                                                                                    "items": "string"
+                                                                                }],
+                                                                                "default": null,
+                                                                                "doc": "?????"
+                                                                            }
+                                                                        ]
+                                                                    }],
+                                                                    "default": null,
+                                                                    "doc": "Pmp object extension"
+                                                                }
+
+                                                            ]
+                                                        }
+                                                    }],
+                                                    "default": null,
+                                                    "doc": "Array of Deal (Section 3.2.12 OpenRTB) objects that convey the specific deals applicable to this impression."
+                                                }
+                                            ]
+                                        }],
+                                        "default": null,
+                                        "doc": "This object is the private marketplace container for direct deals between buyers and sellers that may pertain to this impression."
+                                    },
+                                    {
+                                        "name": "bidfloor",
+                                        "type": ["null","float","long"],
+                                        "default": null,
+                                        "doc": "Minimum bid for this impression expressed in CPM."
+                                    },
+                                    {
+                                        "name": "secure",
+                                        "type": ["null","long"],
+                                        "default": null,
+                                        "doc": "Flag to indicate if the impression requires secure HTTPS URL creative assets and markup, where 0 = non-secure, 1 = secure. "
+                                    },
+                                    {
+                                        "name": "exp",
+                                        "type": ["null","long"],
+                                        "default": null,
+                                        "doc": "Advisory as to the number of seconds that may elapse between the auction and the actual impression"
+                                    },
+                                    {
+                                        "name": "tagid",
+                                        "type": ["null", "string"],
+                                        "default": null,
+                                        "doc": "Identifier for specific ad placement or ad tag that was used to initiate the auction. This can be useful for debugging of any issues, or for optimization by the buyer."
+                                    },
+                                    {
+                                        "name": "instl",
+                                        "type": ["null", "long"],
+                                        "default": null,
+                                        "doc": "1 = the ad is interstitial or full screen, 0 = not interstitial."
+                                    },
+                                    {
+                                        "name": "rwdd",
+                                        "type": ["null", "long"],
+                                        "default": null,
+                                        "doc": "1 = the ad is rewarded, 0 = not rewarded."
+                                    },
+                                    {
+                                        "name": "ext",
+                                        "type": ["null",{
+                                            "type": "record",
+                                            "name": "bid_imp_ext",
+                                            "fields": [
+                                                {
+                                                    "name": "allowed_types",
+                                                    "type": ["null", {
+                                                        "type": "array",
+                                                        "items": "long"
+                                                    }],
+                                                    "default": null,
+                                                    "doc": "list of allowed MIME types"
+                                                },
+                                                {
+                                                    "name": "w",
+                                                    "type": ["null", {
+                                                        "type": "array",
+                                                        "items": "long"
+                                                    }],
+                                                    "default": null,
+                                                    "doc": "Exact width in device independent pixels (DIPS)"
+                                                },
+                                                {
+                                                    "name": "h",
+                                                    "type": ["null", {
+                                                        "type": "array",
+                                                        "items": "long"
+                                                    }],
+                                                    "default": null,
+                                                    "doc": "Exact height in device independent pixels (DIPS)"
+                                                },
+                                                {
+                                                    "name": "private",
+                                                    "type": "boolean",
+                                                    "doc": "???????"
+                                                },
+                                                {
+                                                    "name": "deal_ids",
+                                                    "type": ["null", {
+                                                        "type": "array",
+                                                        "items": "string"
+                                                    }],
+                                                    "default": null,
+                                                    "doc": "list of Deal id's -> Imp.Pmp.deals"
+                                                },
+                                                {
+                                                    "name": "exchange_seat_ids",
+                                                    "type": ["null", {
+                                                        "type": "array",
+                                                        "items": "long"
+                                                    }],
+                                                    "default": null,
+                                                    "doc": "list of exchange seat ids"
+                                                },
+                                                {
+                                                    "name": "impression_responses",
+                                                    "type": ["null", {
+                                                            "type": "array",
+                                                            "items": {
+
+                                                                "type": "record",
+                                                                "name": "impression_resp_rec",
+                                                                "fields":[
+                                                                    {
+                                                                        "name": "id",
+                                                                        "type": "string",
+                                                                        "doc": "Id in format BidRequestID:ImpressionID"
+                                                                    },
+                                                                    {
+                                                                        "name": "impid",
+                                                                        "type": "string",
+                                                                        "doc": "ImpressionId"
+                                                                    },
+                                                                    {
+                                                                        "name": "price",
+                                                                        "type": ["null","float","long"],
+                                                                        "default": null,
+                                                                        "doc": "Bid price"
+                                                                    },
+                                                                    {
+                                                                        "name": "ext",
+                                                                        "type": {
+                                                                            "type": "record",
+                                                                            "name": "impression_responses_ext",
+                                                                            "fields":[
+                                                                                {
+                                                                                    "name": "bidder_id",
+                                                                                    "type": "long",
+                                                                                    "doc": "Bidder ID"
+                                                                                },
+                                                                                {
+                                                                                    "name": "dsp_id",
+                                                                                    "type": "long",
+                                                                                    "doc": "DSP ID"
+                                                                                },
+                                                                                {
+                                                                                    "name": "buyer_id",
+                                                                                    "type": "long",
+                                                                                    "doc": "Buyer Id"
+                                                                                },
+                                                                                {
+                                                                                    "name": "advertiser_id",
+                                                                                    "type": "long",
+                                                                                    "doc": "advertiser_id"
+                                                                                },
+                                                                                {
+                                                                                    "name": "flight_id",
+                                                                                    "type": "long",
+                                                                                    "doc": "Flight Id"
+                                                                                },
+                                                                                {
+                                                                                    "name": "creative_group_lookup_id",
+                                                                                    "type": ["string","long"],
+                                                                                    "doc": "????"
+                                                                                },
+                                                                                {
+                                                                                    "name": "deal_id",
+                                                                                    "type": ["null", "string"],
+                                                                                    "default": null,
+                                                                                    "doc": "Deal Id -> Imp.Pmp.Deals"
+                                                                                },
+                                                                                {
+                                                                                    "name": "bidder_bid_price",
+                                                                                    "type": ["long","float"],
+                                                                                    "doc": "Bid price"
+                                                                                }
+                                                                            ]
+                                                                        },
+                                                                        "doc": "Impression response extension object"
+                                                                    }
+                                                                ]
+
+                                                            }
+                                                    }],
+                                                    "default": null,
+                                                    "doc": "list of possible impression responses for this bid request"
+                                                },
+
+                                                {
+                                                    "name": "filtered_flight_ids",
+                                                    "type": ["null", {
+                                                        "name": "filtered_flight_ids_map",
+                                                        "type": "map",
+                                                        "values": {
+                                                            "type": "array",
+                                                            "items": "long"
+                                                        }
+                                                    }],
+                                                    "default": null,
+                                                    "doc": "Matched flights for this bid request"
+                                                },
+                                                {
+                                                    "name": "filtered_paced_flight_ids",
+                                                    "type": ["null", {
+                                                        "name": "filtered_paced_flight_ids_map",
+                                                        "type": "map",
+                                                        "values": {
+                                                            "type": "array",
+                                                            "items": "long"
+                                                        }
+                                                    }],
+                                                    "default": null,
+                                                    "doc": "List of flights after pacing phase"
+                                                },
+                                                {
+                                                    "name": "flights_dropped_fuse",
+                                                    "type": ["null", {
+                                                        "type": "array",
+                                                        "items": "long"
+                                                    }],
+                                                    "default": null,
+                                                    "doc": "List of flights droped by burst protection"
+                                                }
+                                            ]
+                                        }],
+                                        "default": null,
+                                        "doc": "Imp exchange-specific extensions to OpenRTB."
+                                    }
+                                ]
+                            }
+                    }],
+                    "default": null,
+                    "doc": "This object describes an ad placement or impression being auctioned"
+                },
+                {
+                    "name": "app",
+                    "type": ["null",{
+                        "type": "record",
+                        "name": "app",
+                        "fields":[
+                            {
+                                "name": "id",
+                                "type": ["null","string"],
+                                "default": null,
+                                "doc": "Exchange-specific app ID"
+                            },
+                            {
+                                "name": "privacypolicy",
+                                "type": ["null","long"],
+                                "default": null,
+                                "doc": "Indicates if the app has a privacy policy, where 0 = no, 1 = yes."
+                            },
+                            {
+                                "name": "name",
+                                "type": ["null","string"],
+                                "default": null,
+                                "doc": "App name (may be aliased at the publisher’s request)."
+                            },
+                            {
+                                "name": "domain",
+                                "type": ["null","string"],
+                                "default": null,
+                                "doc": "Domain of the app (e.g., mygame.foo.com)."
+                            },
+                            {
+                                "name": "cat",
+                                "type": ["null", {
+                                  "type": "array",
+                                  "items": "string"
+                                }],
+                                "default": null,
+                                "doc": "Array of IAB content categories of the app. Refer to List 5.1 OpenRtb spec"
+                            },
+                            {
+                                "name": "sectioncat",
+                                "type": ["null", {
+                                  "type": "array",
+                                  "items": "string"
+                                }],
+                                "default": null,
+                                "doc": "Array of IAB content categories that describe the current section of the app. Refer to List 5.1. OpenRtb spec"
+                            },
+                            {
+                                "name": "pagecat",
+                                "type": ["null", {
+                                  "type": "array",
+                                  "items": "string"
+                                }],
+                                "default": null,
+                                "doc": "Array of IAB content categories that describe the current page or view of the app. Refer to List 5.1 OpenRtb spec"
+                            },
+                            {
+                                "name": "ver",
+                                "type": ["null","string"],
+                                "default": null,
+                                "doc": "Application version."
+                            },
+                            {
+                                "name": "bundle",
+                                "type": ["null","string"],
+                                "default": null,
+                                "doc": "A platform-specific application identifier intended to be unique to the app and independent of the exchange"
+                            },
+                            {
+                                "name": "paid",
+                                "type": ["null","long"],
+                                "default": null,
+                                "doc": "0 = app is free, 1 = the app is a paid version."
+                            },
+                            {
+                                "name": "publisher",
+                                "type": ["null",{
+                                    "type": "record",
+                                    "name": "publisher",
+                                    "fields": [
+                                        {
+                                            "name": "id",
+                                            "type": ["null", "string"],
+                                            "default": null,
+                                            "doc": "Exchange-specific publisher ID."
+                                        },
+                                        {
+                                            "name": "domain",
+                                            "type": ["null", "string"],
+                                            "default": null,
+                                            "doc": "Highest level domain of the publisher (e.g., publisher.com)."
+                                        }
+                                    ]
+                                }],
+                                "default": null,
+                                "doc": "Details about the Publisher (Section 3.2.15) of the app"
+                            },
+                            {
+                                "name": "content",
+                                "type": ["null",{
+                                    "type": "record",
+                                    "name": "content",
+                                    "fields": [
+                                        {
+                                            "name": "genre",
+                                            "type": ["null","string"],
+                                            "default": null,
+                                            "doc": "Genre that best describes the content (e.g., rock, pop, etc)."
+                                        }
+                                    ]
+                                }],
+                                "default": null,
+                                "doc": "Details about the Content (Section 3.2.16) within the app"
+                            },
+                            {
+                                "name": "storeurl",
+                                "type": ["null","string"],
+                                "default": null,
+                                "doc": "App store URL for an installed app; for IQG 2.1 compliance"
+                            },
+                            {
+                                "name": "ext",
+                                "type": {
+                                    "type": "record",
+                                    "name": "bid_app_ext",
+                                    "fields": [
+                                        {
+                                            "name": "exchange_id",
+                                            "type": ["null","long"],
+                                            "default": null,
+                                            "doc": "Exchange ID"
+                                        },
+                                        {
+                                            "name": "exchange_seller_id",
+                                            "type": ["null","long"],
+                                            "default": null,
+                                            "doc": "Exchange's version of the seller ID from the config/rig/BERT ETS table, original integer version."
+                                        },
+                                        {
+                                            "name": "exchange_seller_alphanumeric_id",
+                                            "type": ["null", "string"],
+                                            "default": null,
+                                            "doc": "Exchange's version of the seller ID from the config/rig/BERT ETS table, alphanumeric version"
+                                        },
+                                        {
+                                            "name": "exchange_seller_app_id",
+                                            "type": ["null","long"],
+                                            "default": null,
+                                            "doc": "Exchange Seller App ID"
+                                        },
+                                        {
+                                            "name": "iab_categories",
+                                            "type": ["null",{
+                                              "type": "array",
+                                              "items": "long"
+                                            }],
+                                            "default": null,
+                                            "doc": "Array of IAB content categories of the app"
+                                        },
+                                        {
+                                            "name": "publisher_id",
+                                            "type": ["null","long"],
+                                            "default": null,
+                                            "doc": "publisher Id"
+                                        },
+                                        {
+                                            "name": "seller_id",
+                                            "type": ["null","long"],
+                                            "default": null,
+                                            "doc": "seller id"
+                                        },
+                                        {
+                                            "name": "applist_ids",
+                                            "type": ["null",{
+                                              "type": "array",
+                                              "items": "long"
+                                            }],
+                                            "default": null,
+                                            "doc": "????"
+                                        }
+                                    ]
+                                },
+                                "doc": "App extension object"
+                            }
+                        ]
+                    }],
+                    "default": null,
+                    "doc": "This object should be included if the ad supported content is a non-browser application"
+                },
+                {
+                    "name": "device",
+                    "type": ["null",{
+                        "type": "record",
+                        "name": "device",
+                        "fields": [
+                            {
+                                "name": "lmt",
+                                "type": ["null", "long"],
+                                "default": null,
+                                "doc": "'Limit Ad Tracking' signal commercially endorsed (e.g., iOS, Android), where 0 = tracking is unrestricted, 1 = tracking must be limited per commercial guidelines."
+                            },
+                            {
+                                "name": "dnt",
+                                "type": ["null", "long"],
+                                "default": null,
+                                "doc": "Standard “Do Not Track” flag as set in the header by the browser, where 0 = tracking is unrestricted, 1 = do not track."
+                            },
+                            {
+                                "name": "ua",
+                                "type": ["null","string"],
+                                "default": null,
+                                "doc": "Browser user agent string."
+                            },
+                            {
+                                "name": "ip",
+                                "type": ["null","string"],
+                                "default": null,
+                                "doc": "IPv4 address closest to device."
+                            },
+                            {
+                                "name": "ipv6",
+                                "type": ["null","string"],
+                                "default": null,
+                                "doc": "IP address closest to device as IPv6."
+                            },
+                            {
+                                "name": "geo",
+                                "type": {
+                                    "type": "record",
+                                    "name": "geo",
+                                    "fields": [
+                                        {
+                                            "name": "lat",
+                                            "type": ["null","float"],
+                                            "default": null,
+                                            "doc": "Latitude from -90.0 to +90.0, where negative is south"
+                                        },
+                                        {
+                                            "name": "lon",
+                                            "type": ["null","float"],
+                                            "default": null,
+                                            "doc": "Longitude from -180.0 to +180.0, where negative is west."
+                                        },
+                                        {
+                                            "name": "country",
+                                            "type": ["null","string"],
+                                            "default": null,
+                                            "doc": "Country code using ISO-3166-1-alpha-3."
+                                        },
+                                        {
+                                            "name": "region",
+                                            "type": ["null","string"],
+                                            "default": null,
+                                            "doc": "Region code using ISO-3166-2; 2-letter state code if USA"
+                                        },
+                                        {
+                                            "name": "regionfips104",
+                                            "type": ["null","string"],
+                                            "default": null,
+                                            "doc": "Region of a country using FIPS 10-4 notation. While OpenRTB supports this attribute, it has been withdrawn by NIST in 2008"
+                                        },
+                                        {
+                                            "name": "zip",
+                                            "type": ["null","string"],
+                                            "default": null,
+                                            "doc": "Zip or postal code."
+                                        },
+                                        {
+                                            "name": "type",
+                                            "type": ["null","long"],
+                                            "default": null,
+                                            "doc": "Source of location data; recommended when passing lat/lon. Refer to List 5.20 OpenRtb spec"
+                                        },
+                                        {
+                                            "name": "city",
+                                            "type": ["null","long","string"],
+                                            "default": null,
+                                            "doc": "City using United Nations Code for Trade & Transport Locations"
+                                        },
+                                        {
+                                            "name": "ext",
+                                            "type": ["null",{
+                                                "type": "record",
+                                                "name": "bod_device_geo_ext",
+                                                "fields":[
+                                                    {
+                                                        "name": "normalized_city",
+                                                        "type": ["null","string"],
+                                                        "default": null,
+                                                        "doc": "City name"
+                                                    },
+                                                    {
+                                                        "name": "dma",
+                                                        "type": ["null","long"],
+                                                        "default": null,
+                                                        "doc": "DMA code (Designated Market Area)"
+                                                    },
+                                                    {
+                                                        "name": "timezone",
+                                                        "type": ["null","string"],
+                                                        "default": null,
+                                                        "doc": "Timezone"
+                                                    },
+                                                    {
+                                                        "name": "geo_radius_list_ids",
+                                                        "type": ["null", {
+                                                            "type": "array",
+                                                            "items": "long"
+                                                        }],
+                                                        "default": null,
+                                                        "doc": "rtb_gateway_geo_radius_index:lookup(lat,lon)"
+                                                    }
+                                                ]
+                                            }],
+                                            "default": null,
+                                            "doc": "Extension object for Device"
+                                        }
+                                    ]
+                                },
+                                "doc": "Location of the device assumed to be the user’s current location defined by a Geo object"
+                            },
+                            {
+                                "name": "carrier",
+                                "type": ["null","string"],
+                                "default": null,
+                                "doc": "Carrier or ISP"
+                            },
+                            {
+                                "name": "os",
+                                "type": ["null","string"],
+                                "default": null,
+                                "doc": "Device operating system "
+                            },
+                            {
+                                "name": "osv",
+                                "type": ["null","string"],
+                                "default": null,
+                                "doc": "Device operating system version"
+                            },
+                            {
+                                "name": "devicetype",
+                                "type": ["null","long"],
+                                "default": null,
+                                "doc": "The general type of device. Refer to List 5.21 OpenRTB spec"
+                            },
+                            {
+                                "name": "language",
+                                "type": ["null","string"],
+                                "default": null,
+                                "doc": "Browser language using ISO-639-1-alpha-2"
+                            },
+                            {
+                                "name": "js",
+                                "type": ["null","long"],
+                                "default": null,
+                                "doc": "Support for JavaScript, where 0 = no, 1 = yes"
+                            },
+                            {
+                                "name": "ifa",
+                                "type": ["null","string"],
+                                "default": null,
+                                "doc": "ID sanctioned for advertiser use in the clear (i.e., not hashed)"
+                            },
+                            {
+                                "name": "ext",
+                                "type": ["null",{
+                                    "type": "record",
+                                    "name": "bid_device_ext",
+                                    "fields": [
+                                        {
+                                            "name":"samsung_affinity",
+                                            "type": ["null", "string"],
+                                            "default": null,
+                                            "doc": "ip, direct, "
+                                        },
+                                        {
+                                            "name":"samsung_psid",
+                                            "type": ["null", "string"],
+                                            "default": null,
+                                            "doc": "????"
+                                        },
+                                        {
+                                            "name":"samsung_tvid",
+                                            "type": ["null", "string"],
+                                            "default": null,
+                                            "doc": "Samsung TVID"
+                                        },
+                                        {
+                                            "name": "samsung_tvids",
+                                            "type": ["null", {
+                                                "type": "array",
+                                                "items":"string"
+                                            }],
+                                            "default": null,
+                                            "doc": "List of TV ids"
+                                        },
+                                        {
+                                            "name":"samsung_hhid",
+                                            "type": ["null", "string"],
+                                            "default": null,
+                                            "doc": "samsung household id"
+                                        },
+                                        {
+                                            "name": "samsung_hhids",
+                                            "type": ["null", {
+                                                "type": "array",
+                                                "items":"string"
+                                            }],
+                                            "default": null,
+                                            "doc": "list of household ids"
+                                        },
+                                        {
+                                            "name":"samsung_product_id",
+                                            "type": ["null", "string"],
+                                            "default": null,
+                                            "doc": "????"
+                                        },
+                                        {
+                                            "name":"samsung_device_year",
+                                            "type": ["null", "long"],
+                                            "default": null,
+                                            "doc": "Year of device build"
+                                        },
+                                        {
+                                            "name":"samsung_firmware_code",
+                                            "type": ["null", "string"],
+                                            "default": null,
+                                            "doc": "firmvare code"
+                                        },
+                                        {
+                                            "name":"samsung_model_code",
+                                            "type": ["null", "string"],
+                                            "default": null,
+                                            "doc": "model code"
+                                        },
+                                        {
+                                            "name":"samsung_ad_type",
+                                            "type": ["null", "string"],
+                                            "default": null,
+                                            "doc": "universal_guide_masthead_combined, apps_store_masthead, ...."
+                                        },
+                                        {
+                                            "name":"samsung_device_country",
+                                            "type": ["null", "string"],
+                                            "default": null,
+                                            "doc": "device country"
+                                        },
+                                        {
+                                            "name":"liveramp_hhid",
+                                            "type": ["null", "string"],
+                                            "default": null,
+                                            "doc": "liveramp house hold id"
+                                        },
+                                        {
+                                            "name":"liveramp_pid",
+                                            "type": ["null", "string"],
+                                            "default": null,
+                                            "doc": "liveramp person ID"
+                                        },
+                                        {
+                                            "name":"devicetype",
+                                            "type": ["null", "string"],
+                                            "default": null,
+                                            "doc": "The general type of device. Refer to List 5.21 OpenRTB spec"
+                                        },
+                                        {
+                                            "name":"browser",
+                                            "type": ["null", "string"],
+                                            "default": null,
+                                            "doc": "Browser user agent string."
+                                        },
+                                        {
+                                            "name":"timezone",
+                                            "type": ["null", "string", "long"],
+                                            "default": null,
+                                            "doc": "Timezone"
+                                        },
+                                        {
+                                            "name":"device_type_id",
+                                            "type":["null","long"],
+                                            "default": null,
+                                            "doc": "internal device type id, check device_type_id_to_openrtb_id function"
+                                        },
+                                        {
+                                            "name":"device_id",
+                                            "type":["null","long"],
+                                            "default": null,
+                                            "doc": "Device Id"
+                                        },
+                                        {
+                                            "name":"operating_system_id",
+                                            "type":["null","long"],
+                                            "default": null,
+                                            "doc": "operating_system_id"
+                                        },
+                                        {
+                                            "name":"operating_system_variant_id",
+                                            "type":["null","long"],
+                                            "default": null,
+                                            "doc": "operating_system_variant_id"
+                                        },
+                                        {
+                                            "name":"browser_id",
+                                            "type":["null","long"],
+                                            "default": null,
+                                            "doc": "Browser ID from boolean expression"
+                                        },
+                                        {
+                                            "name":"browser_variant_id",
+                                            "type":["null","long"],
+                                            "default": null,
+                                            "doc": "From boolean expression"
+                                        },
+                                        {
+                                            "name":"operating_system_device_combination_id",
+                                            "type":["null","long"],
+                                            "default": null,
+                                            "doc": "from boolean expression"
+                                        },
+                                        {
+                                            "name":"browser_combination_id",
+                                            "type":["null","long"],
+                                            "default": null,
+                                            "doc": "from boolean expression"
+                                        },
+                                        {
+                                            "name":"user_agent_hash",
+                                            "type":["null", "long"],
+                                            "default": null,
+                                            "doc": "from boolean expression"
+                                        },
+                                        {
+                                            "name":"netmask",
+                                            "type":["null","long"],
+                                            "default": null,
+                                            "doc": "????"
+                                        },
+                                        {
+                                            "name":"org_name",
+                                            "type":["null","string"],
+                                            "default": null,
+                                            "doc": "ISP name"
+                                        },
+                                        {
+                                            "name":"marketing_name",
+                                            "type":["null","string"],
+                                            "default": null,
+                                            "doc": "????"
+                                        },
+                                        {
+                                            "name":"uid_type",
+                                            "type":["null","long"],
+                                            "default": null,
+                                            "doc": "Type of UID: uuid, appleifa, samsungtvid, rokurida ...."
+                                        },
+                                        {
+                                            "name":"netspeed",
+                                            "type":["null","string"],
+                                            "default": null,
+                                            "doc": "Network speed: cellular, dialup, cable, corporate ..."
+                                        },
+                                        {
+                                            "name":"truncated_ip",
+                                            "type":["null","boolean"],
+                                            "default": null,
+                                            "doc": "????"
+                                        },
+                                        {
+                                            "name":"tv_modelcode_is_whitelisted",
+                                            "type":["null","boolean"],
+                                            "default": null,
+                                            "doc": "is tv model allowed"
+                                        },
+                                        {
+                                            "name":"tv_modelcode",
+                                            "type":["null","string"],
+                                            "default": null,
+                                            "doc": "TV modelcode"
+                                        },
+                                        {
+                                            "name":"stv_year",
+                                            "type":["null","long"],
+                                            "default": null,
+                                            "doc": "STV year build"
+                                        },
+                                        {
+                                            "name":"stv_chipset",
+                                            "type":["null","string"],
+                                            "default": null,
+                                            "doc": "STV chipset"
+                                        },
+                                        {
+                                            "name":"ad_agent_version",
+                                            "type":["null","string"],
+                                            "default": null,
+                                            "doc": "?????"
+                                        },
+                                        {
+                                            "name": "tvidlist_ids",
+                                            "type": ["null", {
+                                                "type": "array",
+                                                "items": "long"
+                                            }],
+                                            "default": null,
+                                            "doc": "allowed tvid list"
+                                        },
+                                        {
+                                            "name": "iplist_ids",
+                                            "type": ["null", {
+                                                "type": "array",
+                                                "items": "long"
+                                            }],
+                                            "default": null,
+                                            "doc": "allowed ip list"
+                                        },
+                                        {
+                                            "name": "global_iplist_ids",
+                                            "type": ["null", {
+                                                "type": "array",
+                                                "items": "long"
+                                            }],
+                                            "default": null,
+                                            "doc": "????"
+                                        },
+                                        {
+                                            "name":"matched_merkle_ifa",
+                                            "type":["null","string"],
+                                            "default": null,
+                                            "doc": "????"
+                                        },
+                                        {
+                                            "name":"matched_merkle_ifa_type",
+                                            "type":["null","long"],
+                                            "default": null,
+                                            "doc": "????"
+                                        }
+                                    ]
+                                }],
+                                "default": null,
+                                "doc": "Extenson object for device"
+                            }
+                        ]
+                    }],
+                    "default": null,
+                    "doc": "This object provides information pertaining to the device through which the user is interacting"
+                },
+                {
+                    "name": "user",
+                    "type": ["null",{
+                        "type": "record",
+                        "name": "user",
+                        "fields":[
+                            {
+                                "name": "id",
+                                "type": ["null","string"],
+                                "default": null,
+                                "doc": "Exchange-specific ID for the user."
+                            },
+                            {
+                                "name": "buyeruid",
+                                "type": ["null","string"],
+                                "default": null,
+                                "doc": "Buyer-specific ID for the user as mapped by the exchange for the buyer."
+                            },
+                            {
+                                "name": "data",
+                                "type": ["null",{
+                                    "type": "array",
+                                    "items":
+                                            {
+                                                "type": "record",
+                                                "name": "bid_data",
+                                                "fields": [
+                                                    {
+                                                        "name": "id",
+                                                        "type": ["null","string"],
+                                                        "default": null,
+                                                        "doc": "Exchange-specific ID for the data provider."
+                                                    },
+                                                    {
+                                                        "name": "segment",
+                                                        "type": ["null",{
+                                                            "type": "array",
+                                                            "items": {
+                                                                "type": "record",
+                                                                "name": "bid_segment",
+                                                                "fields": [
+                                                                    {
+                                                                        "name": "id",
+                                                                        "type": ["null","string"],
+                                                                        "default": null,
+                                                                        "doc": "ID of the data segment specific to the data provider."
+                                                                    },
+                                                                    {
+                                                                        "name": "value",
+                                                                        "type": ["null","string"],
+                                                                        "default": null,
+                                                                        "doc": "String representation of the data segment value"
+                                                                    }
+                                                                ]
+                                                            }
+                                                        }],
+                                                        "default": null,
+                                                        "doc": "Array of Segment (Section 3.2.22) objects that contain the actual data values"
+                                                    },
+                                                    {
+                                                        "name": "ext",
+                                                        "type": ["null",{
+                                                            "type": "record",
+                                                            "name": "bid_data_ext",
+                                                            "fields": [
+
+                                                                {
+                                                                    "name": "frequency_caps",
+                                                                    "type": ["null",{
+                                                                        "type": "array",
+                                                                        "items":
+                                                                            {
+                                                                                "type": "record",
+                                                                                "name": "frequency_caps_ext",
+                                                                                "fields":[
+                                                                                    {"name":"frequency_cap_id", "type":["null", "long"], "default": null, "doc": "FCAP id"},
+                                                                                    {"name":"frequency_cap_namespace", "type":["null", "string"], "default": null, "doc":"FCAP namespace"},
+                                                                                    {"name":"frequency_cap_type", "type":["null", "string"], "default": null, "doc": "FCAP type"},
+                                                                                    {"name":"frequency_cap_value", "type":["null", "long"], "default": null, "doc": "FCAP value"},
+                                                                                    {"name":"frequency_cap_write_time", "type":["null", "long"], "default": null, "doc": "FCAP time"}
+                                                                                ]
+                                                                            }
+                                                                    }],
+                                                                    "default": null,
+                                                                    "doc": "FCAP list"
+                                                                }
+                                                            ]
+                                                        }],
+                                                        "default": null,
+                                                        "doc": "Placeholder for exchange-specific extensions to OpenRTB."
+                                                    }
+
+                                                ]
+                                            }
+                                }],
+                                "default": null,
+                                "doc": "Additional user data"
+                            },
+                            {
+                                "name": "ext",
+                                "type": ["null", {
+                                    "type": "record",
+                                    "name": "bid_user_ext",
+                                    "fields": [
+                                        {"name": "lotame_ids","type": ["null", {"type": "array", "items": "long"}],"default": null, "doc": "lotame user id"},
+                                        {"name": "adobe_aam_ids","type": ["null", {"type": "array", "items": "long"}],"default": null, "doc": "adobe user id"},
+                                        {"name": "liveramp_1p_ids","type": ["null", {"type": "array", "items": "long"}],"default": null, "doc": "liveramp user id"},
+                                        {"name": "liveramp_3p_ids","type": ["null", {"type": "array", "items": "long"}],"default": null, "doc": "liveramp 3-party id"},
+                                        {"name": "nielsen_ids","type": ["null", {"type": "array", "items": "long"}],"default": null, "doc": "nielsen user id"},
+                                        {"name": "bluekai_ids","type": ["null", {"type": "array", "items": "long"}],"default": null, "doc": "bluekai user id"},
+                                        {"name": "bluekai_3p_ids","type": ["null", {"type": "array", "items": "long"}],"default": null, "doc": "bluekai 3-party user id"},
+                                        {"name": "bluekai_custom_ids","type": ["null", {"type": "array", "items": "long"}],"default": null, "doc": "bluekai custom id"},
+                                        {"name": "neustar_ids","type": ["null", {"type": "array", "items": "long"}],"default": null, "doc": "neustar user id"},
+                                        {"name": "krux_1p_ids","type": ["null", {"type": "array", "items": "long"}],"default": null, "doc": "krux user id"},
+                                        {"name": "merkle_ids","type": ["null", {"type": "array", "items": "long"}],"default": null, "doc": "merkle user id"},
+                                        {"name": "unified_ids","type": ["null", {"type": "array", "items": "long"}],"default": null, "doc": "unified user id"},
+                                        {
+                                            "name": "pending_bid_responses",
+                                            "type": ["null","long"],
+                                            "default": null,
+                                            "doc": "pending bid responses"
+                                        },
+                                        {
+                                            "name": "consent",
+                                            "type": ["null","string"],
+                                            "default": null,
+                                            "doc": "privacy consent data"
+                                        },
+                                        {
+                                            "name": "gdpr",
+                                            "type": ["null","long"],
+                                            "default": null,
+                                            "doc": "General Data Protection Regulation ???"
+                                        },
+                                        {
+                                            "name": "liveramp_pid",
+                                            "type": ["null","string"],
+                                            "default": null,
+                                            "doc": "???"
+                                        }
+                                    ]
+                                }],
+                                "default": null,
+                                "doc": "User extened object"
+                            }
+                        ]
+                    }],
+                    "default": null,
+                    "doc": "This object contains information known or derived about the human user of the device "
+                },
+                {
+                    "name": "at",
+                    "type": ["null","long"],
+                    "default": null,
+                    "doc": "Auction type, where 1 = First Price, 2 = Second Price Plus. Exchange-specific auction types can be defined using values greater than 500."
+                },
+                {
+                    "name": "tmax",
+                    "type": ["null","long"],
+                    "default": null,
+                    "doc": "Maximum time in milliseconds the exchange allows for bids to be received including Internet latency to avoid timeout."
+                },
+                {
+                    "name": "site",
+                    "type": ["null",{
+                        "type": "record",
+                        "name": "site",
+                        "fields": [
+                            {
+                                "name": "ext",
+                                "type": ["null", {
+                                    "type": "record",
+                                    "name": "site_ext",
+                                    "fields":[
+                                        {
+                                            "name": "doubleclick_verticals",
+                                            "type": ["null", {
+                                                "type": "array",
+                                                "items": "long"
+                                            }],
+                                            "default": null,
+                                            "doc": "?????"
+                                        },
+                                        {
+                                            "name": "exchange_id",
+                                            "type": ["null", "long"],
+                                            "default": null,
+                                            "doc": "Exchange id for site"
+                                        },
+                                        {
+                                            "name": "exchange_seller_id",
+                                            "type": ["null", "long"],
+                                            "default": null,
+                                            "doc": "Exchange's version of the seller ID from the config/rig/BERT ETS table, old integer version"
+                                        },
+                                        {
+                                            "name": "exchange_seller_alphanumeric_id",
+                                            "type": ["null", "string"],
+                                            "default": null,
+                                            "doc": "Exchange's version of the seller ID from the config/rig/BERT ETS table, new alphanumeric version"
+                                        },
+                                        {
+                                            "name": "exchange_seller_site_id",
+                                            "type": ["null","long"],
+                                            "default": null,
+                                            "doc": "site exchange seller id"
+                                        },
+                                        {
+                                            "name": "iab_categories",
+                                            "type": ["null", {"type": "array","items": "long"}],
+                                            "default": null,
+                                            "doc": "allowed iab content categories"
+                                        },
+                                        {
+                                            "name": "publisher_id",
+                                            "type": ["null", {"type": "array","items": "long"}],
+                                            "default": null,
+                                            "doc": "Publisher id"
+                                        },
+                                        {
+                                            "name": "ias_segments",
+                                            "type": ["null", {"type": "array","items": "long"}],
+                                            "default": null,
+                                            "doc": "list of allowed IAS segments"
+                                        },
+                                        {
+                                            "name": "sitelist_ids",
+                                            "type": ["null", {"type": "array","items": "long"}],
+                                            "default": null,
+                                            "doc": "????"
+                                        }
+                                    ]
+                                }],
+                                "default": null,
+                                "doc": "Site extened object"
+                            },
+                            {
+                                "name": "id",
+                                "type": ["null", "string"],
+                                "default": null,
+                                "doc": "Exchange-specific site ID"
+                            },
+                            {
+                                "name": "domain",
+                                "type": ["null", "string"],
+                                "default": null,
+                                "doc": "Domain of the site"
+                            },
+                            {
+                                "name": "name",
+                                "type": ["null", "string"],
+                                "default": null,
+                                "doc": "Site name (may be aliased at the publisher’s request)"
+                            },
+                            {
+                                "name": "cat",
+                                "type": ["null", {
+                                  "type": "array",
+                                  "items": "string"
+                                }],
+                                "default": null,
+                                "doc": "Array of IAB content categories of the site"
+                            },
+                            {
+                                "name": "page",
+                                "type": ["null", "string"],
+                                "default": null,
+                                "doc": "URL of the page where the impression will be shown"
+                            },
+                            {
+                                "name": "ref",
+                                "type": ["null", "string"],
+                                "default": null,
+                                "doc": "Referrer URL that caused navigation to the current page."
+                            },
+                            {
+                                "name": "keywords",
+                                "type": ["null", "string"],
+                                "default": null,
+                                "doc": "Comma separated list of keywords about the site."
+                            },
+                            {
+                                "name": "publisher",
+                                "type": ["null", {
+                                    "type": "record",
+                                    "name": "site_publisher",
+                                    "fields":[
+                                        {
+                                            "name": "id",
+                                            "type": "string",
+                                            "doc": "Exchange-specific publisher ID."
+                                        },
+                                        {
+                                            "name": "domain",
+                                            "type": ["null", "string"],
+                                            "default": null,
+                                            "doc": "Highest level domain of the publisher"
+                                        }
+                                    ]
+                                }],
+                                "default": null,
+                                "doc": "Details about the Publisher (Section 3.2.15 OpenRTB) of the site."
+                            },
+                            {
+                                "name": "content",
+                                "type": ["null", {
+                                    "type": "record",
+                                    "name": "bid_content",
+                                    "fields":[
+                                        {
+                                            "name": "genre",
+                                            "type": ["null", "string"],
+                                            "default": null,
+                                            "doc": "Genre that best describes the content (e.g., rock, pop, etc)."
+                                        }
+                                    ]
+                                }],
+                                "default": null,
+                                "doc": "Details about the Content (Section 3.2.16 OpenRTB) within the site."
+                            }
+                        ]
+                    }],
+                    "default": null,
+                    "doc": "This object should be included if the ad supported content is a website"
+                },
+                {
+                    "name": "regs",
+                    "type": ["null",{
+                        "type": "record",
+                        "name": "regs",
+                        "fields": [
+                            {
+                                "name": "ext",
+                                "type": ["null", {
+                                    "type": "record",
+                                    "name": "bid_regs_ext",
+                                    "fields":[
+                                        {
+                                            "name": "us_privacy",
+                                            "type": ["null", "string"],
+                                            "default": null,
+                                            "doc": "us privacy info"
+                                        },
+                                        {
+                                            "name": "gdpr",
+                                            "type": ["null","long"],
+                                            "default": null,
+                                            "doc": "if this request subject for General Data Protection Regulation"
+                                        }
+                                    ]
+                                }],
+                                "default": null,
+                                "doc": "Regs extension object"
+                            },
+                            {
+                                "name": "coppa",
+                                "type": ["null", "long"],
+                                "default": null,
+                                "doc": "Flag indicating if this request is subject to the COPPA regulations established by the USA FTC, where 0 = no, 1 = yes."
+                            }
+                        ]
+                    }],
+                    "default": null,
+                    "doc": "This object contains any legal, governmental, or industry regulations that apply to the request"
+                },
+                {
+                    "name": "source",
+                    "type": ["null",{
+                        "type": "record",
+                        "name": "source",
+                        "fields": [
+                            {
+                                "name": "pchain",
+                                "type": ["null", "string"],
+                                "default": null,
+                                "doc": "Payment ID chain string containing embedded syntax described in the TAG Payment ID Protocol v1.0."
+                            },
+                            {
+                                "name": "tid",
+                                "type": ["null", "string"],
+                                "default": null,
+                                "doc": "Transaction ID that must be common across all participants in this bid request"
+                            },
+                            {
+                                "name": "fd",
+                                "type": ["null", "long"],
+                                "default": null,
+                                "doc": "Entity responsible for the final impression sale decision, where 0 = exchange, 1 = upstream source."
+                            },
+                            {
+                                "name": "ext",
+                                "type": ["null",{
+                                    "type": "record",
+                                    "name": "source_ext",
+                                    "fields":[
+                                        {
+                                            "name": "schain",
+                                            "type": ["null",{
+                                                "type": "record",
+                                                "name": "schain",
+                                                "fields": [
+                                                    {
+                                                        "name": "complete",
+                                                        "type": ["null","long"],
+                                                        "default": null,
+                                                        "doc": "Flag indicating whether the chain contains all nodes involved in the transaction leading back to the owner of the site, app or other medium of the inventory, where 0 = no, 1 = yes."
+                                                    },
+                                                    {
+                                                        "name": "nodes",
+                                                        "type": ["null",{
+                                                            "type": "array",
+                                                            "items":{
+                                                                "type": "record",
+                                                                "name": "nodes",
+                                                                "fields":[
+                                                                    {
+                                                                        "name": "asi",
+                                                                        "type": ["null", "string"],
+                                                                        "default": null,
+                                                                        "doc": "The canonical domain name of the SSP, Exchange, Header Wrapper, etc system that bidders connect to. This may be the operational domain of the system, if that is different than the parent corporate domain, to facilitate WHOIS and reverse IP lookups to establish clear ownership of the delegate system. This should be the same value as used to identify sellers in an ads.txt file if one exists."
+                                                                    },
+                                                                    {
+                                                                        "name": "sid",
+                                                                        "type": ["null", "string"],
+                                                                        "default": null,
+                                                                        "doc": "The identifier associated with the seller or reseller account within the advertising system. This must contain the same value used in transactions (i.e. OpenRTB bid requests) in the field specified by the SSP/exchange. Typically, in OpenRTB, this is publisher.id. For OpenDirect it is typically the publisher’s organization ID.Should be limited to 64 characters in length."
+                                                                    },
+                                                                    {
+                                                                        "name": "rid",
+                                                                        "type": ["null", "string"],
+                                                                        "default": null,
+                                                                        "doc": "The OpenRTB RequestId of the request as issued by this seller."
+                                                                    },
+                                                                    {
+                                                                        "name": "name",
+                                                                        "type": ["null", "string"],
+                                                                        "default": null,
+                                                                        "doc": "The name of the company (the legal entity) that is paid for inventory transacted under the given seller_ID. This value is optional and should NOT be included if it exists in the advertising system’s sellers.json file."
+                                                                    },
+                                                                    {
+                                                                        "name": "domain",
+                                                                        "type": ["null", "string"],
+                                                                        "default": null,
+                                                                        "doc": "The business domain name of the entity represented by this node. This value is optional and should NOT be included if it exists in the advertising system’s sellers.json file."
+                                                                    },
+                                                                    {
+                                                                        "name": "hp",
+                                                                        "type": ["null", "long"],
+                                                                        "default": null,
+                                                                        "doc": "For version 1.0 of SupplyChain, this property should always be 1."
+                                                                    }
+                                                                ]
+                                                            }
+                                                        }],
+                                                        "default": null,
+                                                        "doc": "Array of SupplyChainNode objects in the order of the chain. In a complete supply chain, the first node represents the initial OpenRTB 2.6 iabtechlab.com/openrtb Page 34 of 85 advertising system and seller ID involved in the transaction, i.e. the owner of the site, app, or other medium. In an incomplete supply chain, it represents the first known node. The last node represents the entity sending this bid request"
+                                                    },
+                                                    {
+                                                        "name": "ver",
+                                                        "type": "string",
+                                                        "doc": "Version of the supply chain specification in use, in the format of “major.minor”. For example, for version 1.0 of the spec, use the string “1.0”."
+                                                    }
+                                                ]
+                                            }],
+                                            "default": null,
+                                            "doc": "Supply chain object. This object represents both the links in the supply chain as well as an indicator whether or not the supply chain is complete."
+                                        }
+                                    ]
+                                }],
+                                "default": null,
+                                "doc": "Source extension object"
+                            }
+                        ]
+                    }],
+                    "default": null,
+                    "doc": "This object describes the nature and behavior of the entity that is the source of the bid request upstream from the exchange."
+                },
+                {
+                    "name": "guaranteed",
+                    "type": ["null", "boolean"],
+                    "default": null,
+                    "doc": "????"
+                },
+                {
+                    "name": "ext",
+                    "type": ["null",{
+                        "type": "record",
+                        "name": "bid_req_ext",
+                        "fields": [
+                            {"name": "ads_txt_db_loaded","type": ["null","boolean"], "default":null, "doc": "fraud detection memchace db loaded"},
+                            {"name": "ads_txt_strategy","type": ["null","long"], "default":null, "doc": "????"},
+                            {
+                                "name": "ads_txt_relationship",
+                                "type": ["null","string"],
+                                "default": null,
+                                "doc": "????"
+                            },
+                            {
+                                "name": "channel",
+                                "type": ["null", "string"],
+                                "default": null,
+                                "doc": "olv, ctv, display ...."
+                            },
+                            {
+                                "name": "upstream_id",
+                                "type": ["null", "string"],
+                                "default": null,
+                                "doc": "????"
+                            },
+                            {
+                                "name": "ssl",
+                                "type": ["null", "long"],
+                                "default": null,
+                                "doc": "is ssl requred"
+                            },
+                            {"name": "s2s_nurl","type": ["null","long"], "default":null, "doc": "????"},
+                            {"name": "optout","type": ["null","boolean"], "default":null, "doc": "is optout in request"},
+                            {"name": "optout_reason","type": ["null","string"], "default":null, "doc": "optout reason"},
+                            {"name": "optout_cross_check","type": ["null","string"], "default":null, "doc": "????"},
+                            {"name": "appnexus_member_id","type": ["null","long"], "default":null, "doc": "AppNexus member id"},
+                            {"name": "bid_feedback", "type": ["null", {
+                                "type": "record",
+                                "name": "bid_req_ext_feedback",
+                                "fields": [
+                                    {"name": "id", "type": ["null", "string"], "default": null, "doc": "pubmatic id"},
+                                    {"name": "creative_status_code", "type": ["null", "long"], "default": null, "doc": "creative status code"},
+                                    {"name": "price", "type": ["null", "double"], "default": null, "doc": "preice in CPM"},
+                                    {"name": "minimum_bid_to_win", "type": ["null", "double"], "default": null, "doc": "Minimum bid to win"},
+                                    {"name": "buyer_creative_id", "type": ["null", "string", "long"], "default": null, "doc": "Creative id"},
+                                    {"name": "event_notification_token", "type": ["null",{
+                                      "type": "record",
+                                      "name": "event_notification_token",
+                                      "fields": [
+                                        {"name": "payload", "type": ["null", "string"], "default": null, "doc": "token payload"}
+                                      ]
+                                    }], "default": null, "doc": "event notification tocken"}
+                                  ]
+                            }], "default": null, "doc": "Pubmatic extension"}
+                        ]
+                    }],
+                    "default": null,
+                    "doc": "Bid request extended meta info"
+                },
+                {
+                    "name": "wseat",
+                    "type": ["null","string"],
+                    "default": null,
+                    "doc": "White list of buyer seats (e.g., advertisers, agencies) allowed to bid on this impression."
+                }
+
+            ]
+        }],
+        "default": null,
+        "doc": "Bid request related metadata"
+    },
+    {
+        "name": "bid_active_bidder",
+        "type": ["null", "boolean"],
+        "default": null,
+        "doc": "Is current bidder active in gateway configuration"
+    },
+    {
+        "name": "bid_active_datacenter",
+        "type": ["null", "boolean"],
+        "default": null,
+        "doc": "Is current datacenter active in configuration"
+    },
+    {
+        "name": "bid_active_exchange",
+        "type": ["null", "boolean"],
+        "default": null,
+        "doc": "Is exchange requester active in gateway configuration"
+    },
+    {
+        "name": "hostname",
+        "type": ["null","string"],
+        "default": null,
+        "doc": "Hostname of message's server originator"
+    },
+    {
+        "name": "thinktime",
+        "type": ["null", "long"],
+        "default": null,
+        "doc": "Processing time in microseconds"
+    },
+    {
+        "name": "bid_response",
+        "type": ["null", {
+            "type": "record",
+            "name": "bid_response",
+            "fields":[
+                {
+                    "name": "id",
+                    "type": ["null","string"],
+                    "default": null,
+                    "doc": "bid request id"
+                },
+                {
+                    "name": "bidid",
+                    "type": ["null","string"],
+                    "default": null,
+                    "doc": "winner bidid"
+                },
+                {
+                    "name": "cur",
+                    "type": ["null","string"],
+                    "default": null,
+                    "doc": "Currency"
+                },
+                {
+                    "name": "seatbid",
+                    "type": ["null", {
+                        "type": "array",
+                        "items": {
+                            "name": "seatbid_rec",
+                            "type": "record",
+                            "fields": [
+                                {
+                                    "name": "bid",
+                                    "type": {
+                                        "type": "array",
+                                        "items": {
+                                            "name": "seatbid_rec_bid",
+                                            "type": "record",
+                                            "fields":[
+                                                {"name": "id","type":["null", "string"],"default":null, "doc": "Bid Id"},
+                                                {"name": "impid","type":["null", "string"],"default":null, "doc": "Impression Id"},
+                                                {"name": "price","type":["null", "float", "long"],"default":null,
+                                                    "doc": "Bid price expressed as CPM although the actual transaction is for a unit impression only"},
+                                                {"name": "adid","type":["null", "string"],"default":null,
+                                                    "doc": "ID of a preloaded ad to be served if the bid wins"},
+                                                {"name": "nurl","type":["null", "string"],"default":null,
+                                                    "doc": "Win notice URL called by the exchange if the bid wins "},
+                                                {"name": "burl","type":["null", "string"],"default":null,
+                                                    "doc": "Billing notice URL called by the exchange when a winning bid becomes billable based on exchange-specific business policy"},
+                                                {"name": "adm","type":["null", "string"],"default":null,
+                                                    "doc": "Optional means of conveying ad markup in case the bid wins"},
+                                                {"name": "adomain","type":["null", {"type":"array","items":"string"}],"default":null,
+                                                    "doc": "Advertiser domains for block list checking"},
+                                                {"name": "bundle","type":["null", "string"],"default":null,
+                                                    "doc": "A platform-specific application identifier intended to be unique to the app and independent of the exchange"},
+                                                {"name": "iurl","type":["null", "string"],"default":null,
+                                                    "doc": "URL without cache-busting to an image that is representative of the content of the campaign for ad quality/safety checking"},
+                                                {"name": "cid","type":["null", "string"],"default":null,
+                                                    "doc": "Campaign ID to assist with ad quality checking; the collectionof creatives for which iurl should be representative"},
+                                                {"name": "crid","type":["null", "string"],"default":null,
+                                                    "doc": "Creative ID to assist with ad quality checking"},
+                                                {"name": "cat","type":["null", "string"],"default":null,
+                                                    "doc": "IAB Category ID of the creative. Only set for AppLovin and always IAB9-30"},
+                                                {"name": "dealid","type":["null", "string"],"default":null,
+                                                    "doc": "Reference to the deal.id from the bid request if this bid pertains to a private marketplace direct deal"},
+                                                {"name": "attr","type":["null", {"type":"array","items":"long"}],"default":null,
+                                                    "doc": "Set of attributes describing the creative. Refer to List 5.3 OpenRTB spec"},
+                                                {
+                                                    "name": "ext",
+                                                    "type": ["null",{
+                                                        "type": "record",
+                                                        "name": "bid_ext",
+                                                        "fields": [
+                                                            {"name": "bidder_id","type":["null", "long"],"default":null,
+                                                                "doc": "Bidder Id"},
+                                                            {"name": "seat_id","type":["null", "long"],"default":null,
+                                                                "doc": "Buyer seat account Id"},
+                                                            {"name": "dsp_id","type":["null", "long"],"default":null,
+                                                                "doc": "dsp_id"},
+                                                            {"name": "buyer_id","type":["null", "long"],"default":null,
+                                                                "doc": "Buyer Id"},
+                                                            {"name": "advertiser_id","type":["null", "long"],"default":null,
+                                                                "doc": "Advertiser Id"},
+                                                            {"name": "flight_id","type":["null", "long"],"default":null,
+                                                                "doc": "Flight Id"},
+                                                            {"name": "campaign_id","type":["null", "long"],"default":null,
+                                                                "doc": "Campaign Id"},
+                                                            {"name": "creative_id","type":["null", "long"],"default":null,
+                                                                "doc": "Creative Id"},
+                                                            {"name": "creative_group_lookup_id","type":["null", "long", "string"],"default":null,
+                                                                "doc": "?????"},
+                                                            {"name": "tag_id","type":["null", "long"],"default":null,
+                                                                "doc": "Identifier for specific ad placement or ad tag that was used to initiate the auction"},
+                                                            {"name": "product_id","type":["null", "long"],"default":null,
+                                                                "doc": "?????"},
+                                                            {"name": "deal_id","type":["null","string"],"default":null,
+                                                                "doc": "A unique identifier for the direct deal"},
+                                                            {"name": "passback","type":["null", "string"],"default":null,
+                                                                "doc": "Passback strategy"},
+                                                            {"name": "win_price","type":["null", "long", "float"],"default":null,
+                                                                "doc": "Win price"},
+                                                            {"name": "appnexus","type":["null", {
+                                                                "type": "record",
+                                                                "name": "appnexus",
+                                                                "fields":[
+                                                                    {"name": "allowed_media_subtypes","type":["null", {
+                                                                        "type":"array", "items": "long"
+                                                                    }],"default":null, "doc": "Allowed media subtypes list"}
+                                                                ],
+                                                                "doc": "AppNexus extra meta info"
+                                                            }],"default":null},
+                                                            {"name": "video_duration","type":["null", "long"],"default":null,
+                                                                "doc": "Video duration in seconds"},
+                                                            {"name": "discrepancy_percent","type":["null", "float", "long"],"default":null,
+                                                                "doc": "??????"},
+                                                            {"name": "exchange_currency","type":["null", "string"],"default":null,
+                                                                "doc": "Exchange currency code"},
+                                                            {"name": "exchange_currency_rate","type":["null", "float"],"default":null,
+                                                                "doc": "rtb_gateway_config:currency_exchange_rate(ExchangeCurrency, usd)"},
+                                                            {"name": "buyer_currency","type":["null", "string"],"default":null,
+                                                                "doc": "Buyer currency code"},
+                                                            {"name": "buyer_currency_rate","type":["null", "float"],"default":null,
+                                                                "doc": "rtb_gateway_config:currency_exchange_rate(BuyerCurrency, usd)"},
+                                                            {"name": "buyer_fee_schedule_id","type":["null", "long"],"default":null,
+                                                                "doc": "?????"},
+                                                            {"name": "bidder_bid_price","type":["null", "long", "float"],"default":null,
+                                                                "doc": "Bid price"}
+                                                        ]
+                                                    }],
+                                                    "default": null,
+                                                    "doc": "Bid record extension meta info"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    "doc": "Bid data records"
+                                }
+                            ]
+                        }
+                    }],
+                    "default": null,
+                    "doc": "Buyer bids meta information"
+                },
+                {
+                    "name": "ext",
+                    "type": ["null",{
+                        "type": "record",
+                        "name": "bid_response_ext",
+                        "fields": [
+                            {"name":"ssl","type":["null", "long"],"default":null, "doc": "Is using SSL"}
+                        ]
+                    }],
+                    "default": null,
+                    "doc": "Bid response extension meta info"
+                }
+            ]
+        }],
+        "default": null,
+        "doc": "Bid response related metadata"
+    },
+    {
+        "name": "error",
+        "type": ["null","string"],
+        "default": null,
+        "doc": "Error description"
+    },
+    {
+        "name": "error_info",
+        "type": ["null",{
+            "type": "record",
+            "name": "error_info",
+            "fields": [
+                {
+                    "name": "exchange_id",
+                    "type": ["null", "long"],
+                    "default": null,
+                    "doc": "Exchange Id"
+                },
+                {
+                    "name": "iplist_id",
+                    "type": ["null", "long"],
+                    "default": null,
+                    "doc": "IpList Id"
+                },
+                {
+                    "name": "ip",
+                    "type": ["null", "string"],
+                    "default": null,
+                    "doc": "user Ip"
+                },
+                {
+                    "name": "exchange_seller_id",
+                    "type": ["null", "long"],
+                    "default": null,
+                    "doc": "(ExchangeId, SellerId) -> Exchange Seller Id (exchange_seller.bert2)"
+                },
+                {
+                    "name": "exchange_seller_alphanumeric_id",
+                    "type": ["null", "string"],
+                    "default": null,
+                    "doc": "Exchange's version of the seller ID from the config/rig/BERT ETS table, alphanumeric version"
+                },
+                {
+                    "name": "exchange_seller_app_id",
+                    "type": ["null", "long", "string"],
+                    "default": null,
+                    "doc": "????"
+                },
+                {
+                    "name": "exchange_seller_site_id",
+                    "type": ["null", "long", "string"],
+                    "default": null,
+                    "doc": "????"
+                }
+            ]
+        }],
+        "default": null,
+        "doc": "Error related metadata"
+    },
+    {
+        "name": "filtered_ssp_result",
+        "type": ["null", {
+            "name": "filtered_ssp_result_map",
+            "type": "map",
+            "values": {
+                "type": "array",
+                "items": "long"
+            }
+        }],
+        "default": null,
+        "doc": "Samsung SSP impressions"
+    },
+    {
+        "name": "filtered_app_compatible_result",
+        "type": ["null", {
+            "name": "filtered_app_compatible_result_map",
+            "type": "map",
+            "values": {
+                "type": "array",
+                "items": "long"
+            }
+        }],
+        "default": null,
+        "doc": "Samsung SSP impressions response map"
+    },
+    {
+        "name": "seller_request_cpm",
+        "type": ["null", "long"],
+        "default": null,
+        "doc": "Seller cost per thousand impressions from gatex config"
+    },
+    {
+        "name": "seller_request_fee_cpm",
+        "type": ["null", "long"],
+        "default": null,
+        "doc": "Fees per thousand impressions"
+    },
+    {
+        "name": "seller_trader_fee_cpm",
+        "type": ["null", "long"],
+        "default": null,
+        "doc": "Trader fees CPM"
+    },
+    {
+        "name": "maxtime",
+        "type": ["null", "long"],
+        "default": null,
+        "doc": "Max time in ms allowed to respond"
+    },
+    {
+        "name": "reason",
+        "type": ["null","string"],
+       	"default": null,
+        "doc": "reason for BR (SSP specific)"
+ 	}
+  ]
+}
