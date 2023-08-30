@@ -67,6 +67,19 @@ term4_test() ->
     ?debugFmt("Map: ~p ~n", [Map1]),
     ?assert(Map1 == Term2).
 
+term6_test() ->
+    {ok, [Term1|_]} = file:consult("test/tst6.term"),
+    Map1 = erlav_nif:replace_keys(Term1),
+    ?debugFmt("New map: ~p ~n", [Map1]),
+    SchemaId = erlav_nif:erlav_init(<<"test/gf.avsc">>),
+    Re1 = erlav_nif:erlav_safe_encode(SchemaId, Map1),
+    ?debugFmt("Encde result: ~p ~n", [Re1]),
+    {ok, SchemaJSON1} = file:read_file("test/gf.avsc"),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    M = to_map(Decoder(Re1)),
+    ?debugFmt("Decoded result: ~p ~n", [Re1]),
+    ok.
+
 to_map([{_,_}|_] = L) ->
     maps:from_list([{K, to_map(V)} || {K, V} <- L]);
 to_map(V) -> V.
