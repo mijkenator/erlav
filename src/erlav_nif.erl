@@ -42,8 +42,9 @@ erlav_safe_encode(SchemaId, Data) ->
     erlav_encode(SchemaId, replace_keys(Data)).
 
 replace_keys(Term) when is_map(Term) ->
-    maps:fold(fun (_, [], AccIn) -> AccIn;
-                  (K, V, AccIn)  -> maps:put(key_to_binary(K), replace_keys(V), AccIn)
+    maps:fold(fun (_, [], AccIn)   -> AccIn;
+                  (_, null, AccIn) -> AccIn;
+                  (K, V, AccIn)    -> maps:put(key_to_binary(K), replace_keys(V), AccIn)
     end, #{}, Term);
 replace_keys([{_,_}|_] = Lst) -> 
     replace_keys(maps:from_list(Lst));
