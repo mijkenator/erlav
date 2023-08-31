@@ -267,6 +267,8 @@ int encoderecord(SchemaItem* si, ErlNifEnv* env, const ERL_NIF_TERM* input, std:
             }
         }else if(it->is_nullable == 1){
             ret->push_back(0);
+        }else if(it->obj_type == 2){
+            ret->push_back(0);
         }
 
     }

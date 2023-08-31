@@ -3,7 +3,8 @@
 -export([
     compare_maps/2,
     to_map/1,
-    filter_null_values/1
+    filter_null_values/1,
+    compare_maps_extra_fields/2
 ]).
 
 compare_maps(M1, M2) ->
@@ -27,3 +28,26 @@ filter_null_values(#{} = V) ->
     maps:map(fun(_, Val) -> filter_null_values(Val) end, M1);
 filter_null_values(V) -> V.
 
+%
+% M1 - source map
+% M2 - map after decoding
+% M1 can contain fields not existing in schema
+%
+compare_maps_extra_fields(M1, M2) ->
+    KL1 = maps:keys(M1),
+    MR = lists:map(fun(Key) ->
+        V1 = maps:get(Key, M1),
+        V2 = filter_null_values(maps:get(Key, M2, notexists)),
+        case V2 of
+            notexists -> true;
+            _ ->
+                    io:format("~p ~p ~p ~n", [Key, V1, V2]),
+                    case is_float(V2) of
+                        true ->
+                            round(V1) =:= round(V2)
+                        ;_ -> V1 =:= V2
+                    end
+        end
+    end, KL1),
+    io:format("================================ ~n ~p ~n", [MR]),
+    lists:all(fun(true) -> true; (_) -> false end, MR).
