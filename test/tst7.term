@@ -1,0 +1,28 @@
+#{
+player_w => 1920, 
+contentgrouplists => [], merkle_segments => [], applist_ids => [735,1640,1680,1686,1688,1689,1691,1695,1696,1698,1700,1703,1711
+,1712,1771,
+ 1775,1793,1826,1829,1830,1841,1842,1932,1969,1997,1998,2000,2002,2004,2005,
+ 2009,2014,2017,2020,2021,2022,2024,2036,2041,2046,2049,2059,2066,2068,2084,
+ 2087,2088,2089,2090,2098,2106,2107,2108,2109,2110,2112,2113,2125,2173,2248,
+ 2251,2253,2256,2276,2281,2291,2296,2298,2301,2304,2330,2334,2335,2340,2350,
+ 2367,2376,2378,2384,2386,2390,2402,2417,2434,2440,2441,2457,2495,2525,2526,
+ 2556,2557,2558,2572,2573,2576,2586,2591,2597,2622,2639,2642,2644,2658,2683,
+ 2695,2701,2703,2704,2711,2718,2721,2729,2738,2740,2750,2776,2810,2813,2818,
+ 2832,2833,2834,2835,2836,2841,2842,2843,2844,2845,2846,2847,2852,2853,2854,
+ 2855,2856,2857,2858,2863,2864,2949,2977,2993,2994,2995,2996,2998,3014,3015,
+ 3021,3022,3024,3043,3052,3074,3075,3077,3083,3089,3090,3127,3144,3150,3153,
+ 3154,3155,3159,3170,3171,3176,3184,3186,3187,3191,3192,3193,3210,3245,3254,
+ 3261,3278,3312,3321,3329,3362,3367,3368], 
+ ip=> <<"111.111.111.0">>, 
+ uid_type => null, 
+ dma => null, 
+ genre => <<"FF">>, 
+ pc => <<"65193">>, 
+ width => 1, bluekai_segments => [], hdmi_product => null, matched_idl_hhid => false, marketing_name => <<"UNKNOWN">>, height => 1, operating_system_id => 19, impression_type => <<"app">>, matched_idl_pid => false, adobe_aam_segments => [], ads_txt_relationship => 2, matched_tv => false, max_duration => 90, unified_segments => [], doubleclick_verticals => null, ias_segments => null, krux_1p_segments => [], device_located => false, 
+ member_alphanumeric_id => <<"0">>, country => <<"DE">>, member_id => 0, neustar_segments => [], tvidlist_ids => [], operating_system_variant_id => 0, sitelist_ids => [], bluekai_custom_segments => [], samsung_device_country => null, types => [3], now => 1693493550, longitude => 8.25, private => true, rand => 712171, device_id =>12, 
+matched_ip=>false, exchange_seller_app_id=>null, exchange=>14, device_type_id=>5, position=>null, hdmi_vendor=>null, lg=><<"en">>, lotame_segments=>[], publisher_id=>null, city=><<"wiesbaden">>, exchange_seller_site_id=>null, liveramp_3p_segments=>[], browser_id=>0, segments_with_timestamp=>[], latitude=>50.08, iplist_ids=>null, matched_user=>false, iab_categories=>[], stv_model=><<>>, 
+deal_ids=>[<<"0483df24-4bab-4032-97d0-dbbd09f75905">>], bidder_ids=>[1,4], video_start_delay=>0, region=><<"05">>, netspeed=><<"Cable/DSL">>, liveramp_1p_segments=>[], org_name=><<"Versatel Deutschland">>, genre_array=>[<<"FF">>]
+, 
+player_premium=>true, nielsen_segments=>[], exchange_seat_ids=>null, frequency_caps=>[], min_duration=>6, 
+isp=><<"Versatel Deutschland">>, player_h=>1080, ssl=>true, browser_variant_id=>0, geo_radius_list_ids=>[], adgear_segments=>[], bluekai_3p_segments=>[]}.
