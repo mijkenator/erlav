@@ -30,7 +30,7 @@ term2_test() ->
     {ok, SchemaJSON1} = file:read_file("test/opnrtb_test1.avsc"),
     Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
     M = to_map(Decoder(Re1)),
-    ?debugFmt("Decoded result: ~p ~n", [Re1]),
+    ?debugFmt("Decoded result: ~p ~n", [M]),
     ok.
 
 term5_test() ->
@@ -43,7 +43,7 @@ term5_test() ->
     {ok, SchemaJSON1} = file:read_file("test/opnrtb_test1.avsc"),
     Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
     M = to_map(Decoder(Re1)),
-    ?debugFmt("Decoded result: ~p ~n", [Re1]),
+    ?debugFmt("Decoded result: ~p ~n", [M]),
     ok.
 
 term3_test() ->
@@ -77,7 +77,7 @@ term6_test() ->
     {ok, SchemaJSON1} = file:read_file("test/gf.avsc"),
     Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
     M = to_map(Decoder(Re1)),
-    ?debugFmt("Decoded result: ~p ~n", [Re1]),
+    ?debugFmt("Decoded result: ~p ~n", [M]),
     ok.
 
 term7_test() ->
@@ -98,8 +98,12 @@ term7_test() ->
 term8_test() ->
     {ok, SchemaJSON1} = file:read_file("test/tschema_arr.avs"),
     Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    ?debugFmt("====== 8 started ==========  ~n", []),
     SchemaId = erlav_nif:erlav_init(<<"test/tschema_arr.avs">>),
+    ?debugFmt("====== 8 inited  ==========  ~n", []),
     {ok, Terms} = file:consult("test/fails.term"),
+    ?debugFmt("====== 8 data loaded  ==========  ~n", []),
+
     F = fun(Term1) ->
         ?debugFmt("============================================ ~n", []),
         Map1 = erlav_nif:replace_keys(Term1),

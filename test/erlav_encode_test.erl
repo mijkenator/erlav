@@ -104,7 +104,7 @@ array_m_test() ->
     Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
     SchemaId = erlav_nif:erlav_init(<<"test/array_multi_type.avsc">>),
     Term1 = #{
-        <<"arrayField">> => [1, 1, 1]
+        <<"arrayField">> => [1, 11, 111, 1111, 11111, 111111111111]
     },
     E1 = erlav_nif:erlav_encode(SchemaId, Term1),
     E2 = Encoder1(Term1),
@@ -112,9 +112,48 @@ array_m_test() ->
     ?debugFmt("Erlav encoded: ~p ~n", [E1]),
 
     A1 = maps:get(<<"arrayField">>,  maps:from_list(Decoder(erlav_nif:erlav_encode(SchemaId, Term1)))),
-    ?assertEqual([1], A1),
+    ?assertEqual([1, 11, 111, 1111, 11111, 111111111111], A1),
     ?assertEqual(Term1, maps:from_list(Decoder(erlav_nif:erlav_encode(SchemaId, Term1)))),
 
+    Term2 = #{
+        <<"arrayField">> => [<<"lalala">>, <<"kokoko">>]
+    },
+    E21 = erlav_nif:erlav_encode(SchemaId, Term2),
+    E22 = Encoder1(Term2),
+    ?debugFmt("Erlang encoded: ~p ~n", [E22]),
+    ?debugFmt("Erlav encoded: ~p ~n", [E21]),
+
+    A2 = maps:get(<<"arrayField">>,  maps:from_list(Decoder(erlav_nif:erlav_encode(SchemaId, Term2)))),
+    ?assertEqual([<<"lalala">>, <<"kokoko">>], A2),
+    ok.
+
+array_m2_test() ->
+    {ok, SchemaJSON1} = file:read_file("test/array_multi_type2.avsc"),
+    Encoder1 = avro:make_simple_encoder(SchemaJSON1, []),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    SchemaId = erlav_nif:erlav_init(<<"test/array_multi_type2.avsc">>),
+    Term1 = #{
+        <<"arrayField">> => [1, [3]]
+    },
+    E1 = erlav_nif:erlav_encode(SchemaId, Term1),
+    E2 = Encoder1(Term1),
+    ?debugFmt("Erlang encoded: ~p ~n", [E2]),
+    ?debugFmt("Erlav encoded: ~p ~n", [E1]),
+
+    A1 = maps:get(<<"arrayField">>,  maps:from_list(Decoder(erlav_nif:erlav_encode(SchemaId, Term1)))),
+    ?assertEqual([1, [3]], A1),
+    ?assertEqual(Term1, maps:from_list(Decoder(erlav_nif:erlav_encode(SchemaId, Term1)))),
+
+    Term2 = #{
+        <<"arrayField">> => [1, [<<"lalala">>, 55, <<"kokoko">>],3]
+    },
+    E21 = erlav_nif:erlav_encode(SchemaId, Term2),
+    E22 = Encoder1(Term2),
+    ?debugFmt("Erlang encoded: ~p ~n", [E22]),
+    ?debugFmt("Erlav encoded: ~p ~n", [E21]),
+
+    A2 = maps:get(<<"arrayField">>,  maps:from_list(Decoder(erlav_nif:erlav_encode(SchemaId, Term2)))),
+    ?assertEqual([1, [<<"lalala">>, 55, <<"kokoko">>], 3], A2),
     ok.
 
 map_test() ->

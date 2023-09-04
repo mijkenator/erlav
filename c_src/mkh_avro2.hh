@@ -27,18 +27,34 @@ int get_scalar_type(std::string ntype){
 
 typedef struct SchemaItem {
     int obj_type = -1;
+    int array_type = -1;
     int scalar_type = -1;
     int obj_simple_type = 0;
     int is_nullable = 0;
     std::string obj_name;
     std::vector<SchemaItem *> childItems;
     std::string obj_field = "complex";
+    std::map<std::string, int> array_multi_type;
 
     void set_undefined_obj_type(int ot){
         if(obj_type == -1){
             obj_type = ot;
         }
     }
+
+    void set_array_multi_types(json atypes){
+       int index = 0;
+       for (auto it : atypes){
+           if(it.is_string()){
+                array_multi_type[it] = index;
+           }else if(it.is_object() && it["type"] == "array"){
+                array_multi_type["array"] = index;
+                childItems = read_internal_types(it);
+           }
+           index++;
+       } 
+    }
+
 
     SchemaItem * read_object_type(json otype){
         SchemaItem * intsi;
@@ -98,8 +114,17 @@ typedef struct SchemaItem {
             // scalar types
             set_undefined_obj_type(0);
             obj_field = jtypes;
+            array_type = 0;
             scalar_type = get_scalar_type(jtypes);
+        }else if((2 == ot) && (jtypes.is_array()) ){
+            // array of multiple types
+            array_type = 1;
+            set_undefined_obj_type(0);
+            obj_field = "complex";
+            set_array_multi_types(jtypes);
+            scalar_type = -1;
         }else{
+            array_type = 0;
             childItems = read_internal_types(jtypes);
         }
     }
@@ -135,6 +160,7 @@ int encodearray(SchemaItem*, ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*);
 int encoderecord(SchemaItem* si, ErlNifEnv*, const ERL_NIF_TERM*, std::vector<uint8_t>*);
 int encodemap(SchemaItem* si, ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*);
 int encode_int(ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*);
+int encode_int(ErlNifEnv*, int, std::vector<uint8_t>*);
 int encode_long(ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*);
 int encode_long_fast(ErlNifEnv*, int64_t, std::vector<uint8_t>*);
 int encode_float(ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*);
@@ -288,6 +314,35 @@ int encodearray(SchemaItem* si, ErlNifEnv* env, ERL_NIF_TERM* val, std::vector<u
                     encodescalar(st, env, &elem, ret);
                 }
             }
+        } else if((si->obj_field == "complex") && si->array_type == 1) {
+            for(uint32_t i=0; i < len; i++){
+                if(enif_get_list_cell(env, *val, &elem, val)){
+                    if(enif_is_binary(env, elem)){
+                        int typeindex = si->array_multi_type.at("string");
+                        encode_int(env, typeindex, ret);
+                        encode_string(env, &elem, ret);
+                    } else if (enif_is_number(env, elem)){
+                        int64_t i64;
+                        double dbl;
+                        if (enif_get_int64(env, elem, &i64)) {
+                            // longs
+                            int typeindex = si->array_multi_type.at("long");
+                            encode_int(env, typeindex, ret);
+                            encode_long(env, &elem, ret);
+                        }else if(enif_get_double(env, elem, &dbl)){
+                            int typeindex = si->array_multi_type.at("double");
+                            encode_int(env, typeindex, ret);
+                            encode_double(env, &elem, ret);
+                        }
+
+                    } else if(enif_is_list(env, elem)) {
+                        int typeindex = si->array_multi_type.at("array");
+                        encode_int(env, typeindex, ret);
+                        encodearray(si->childItems[0], env, &elem, ret);
+                    }
+                }
+            }
+
         } else {
             // complex array - no support for union types yet
             for(uint32_t i=0; i < len; i++){
@@ -495,6 +550,16 @@ int encode_int(ErlNifEnv* env, ERL_NIF_TERM* input, std::vector<uint8_t>* ret){
     if (!enif_get_int(env, *input, &i32)) {
         return 1;
     }
+    auto len = encodeInt32(i32, output);
+    ret->insert(ret->end(), output.data(), output.data() + len);
+    return 0;
+}
+
+int encode_int(ErlNifEnv* env, int input, std::vector<uint8_t>* ret){
+    std::array<uint8_t, 5> output;
+    int32_t i32;
+   
+    i32 = input;
     auto len = encodeInt32(i32, output);
     ret->insert(ret->end(), output.data(), output.data() + len);
     return 0;
