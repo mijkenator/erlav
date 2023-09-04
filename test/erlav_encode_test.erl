@@ -98,6 +98,25 @@ array_test() ->
 
     ok.
 
+array_m_test() ->
+    {ok, SchemaJSON1} = file:read_file("test/array_multi_type.avsc"),
+    Encoder1 = avro:make_simple_encoder(SchemaJSON1, []),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    SchemaId = erlav_nif:erlav_init(<<"test/array_multi_type.avsc">>),
+    Term1 = #{
+        <<"arrayField">> => [1, 1, 1]
+    },
+    E1 = erlav_nif:erlav_encode(SchemaId, Term1),
+    E2 = Encoder1(Term1),
+    ?debugFmt("Erlang encoded: ~p ~n", [E2]),
+    ?debugFmt("Erlav encoded: ~p ~n", [E1]),
+
+    A1 = maps:get(<<"arrayField">>,  maps:from_list(Decoder(erlav_nif:erlav_encode(SchemaId, Term1)))),
+    ?assertEqual([1], A1),
+    ?assertEqual(Term1, maps:from_list(Decoder(erlav_nif:erlav_encode(SchemaId, Term1)))),
+
+    ok.
+
 map_test() ->
     {ok, SchemaJSON1} = file:read_file("test/tschema_map.avsc"),
     Encoder1 = avro:make_simple_encoder(SchemaJSON1, []),

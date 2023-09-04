@@ -95,6 +95,40 @@ term7_test() ->
     ?assertEqual(CRet, true),
     ok.
 
+term8_test() ->
+    {ok, SchemaJSON1} = file:read_file("test/tschema_arr.avs"),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    SchemaId = erlav_nif:erlav_init(<<"test/tschema_arr.avs">>),
+    {ok, Terms} = file:consult("test/fails.term"),
+    F = fun(Term1) ->
+        ?debugFmt("============================================ ~n", []),
+        Map1 = erlav_nif:replace_keys(Term1),
+        ?debugFmt("New map: ~p ~n", [Map1]),
+        Re1 = erlav_nif:erlav_safe_encode(SchemaId, Map1),
+        ?debugFmt("Encde result: ~p ~n", [Re1]),
+        M = to_map(Decoder(Re1)),
+        ?debugFmt("Decoded result::::: ~p ~n", [M]),
+        CRet = tst_utils:compare_maps_extra_fields(Map1, M),
+        ?assertEqual(CRet, true)
+    end,
+    lists:foreach(F, Terms),
+    ok.
+
+term9_test() ->
+    {ok, [Term1|_]} = file:consult("test/tst9.term"),
+    Map1 = erlav_nif:replace_keys(Term1),
+    ?debugFmt("New map: ~p ~n", [Map1]),
+    SchemaId = erlav_nif:erlav_init(<<"test/tschema_arr.avs">>),
+    Re1 = erlav_nif:erlav_safe_encode(SchemaId, Map1),
+    ?debugFmt("Encde result: ~p ~n", [Re1]),
+    {ok, SchemaJSON1} = file:read_file("test/tschema_arr.avs"),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    M = to_map(Decoder(Re1)),
+    ?debugFmt("Decoded result::::: ~p ~n", [M]),
+    CRet = tst_utils:compare_maps_extra_fields(Map1, M),
+    ?assertEqual(CRet, true),
+    ok.
+
 to_map([{_,_}|_] = L) ->
     maps:from_list([{K, to_map(V)} || {K, V} <- L]);
 to_map(V) -> V.
