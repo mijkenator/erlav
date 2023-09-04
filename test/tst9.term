@@ -2,12 +2,13 @@
            <<"bidder_ids">> => [1,4],
            <<"member_id">> => 0,
 		   <<"exchange">> => 11,
+           <<"types">> => [556565],
 		   <<"device_id">> => 11,
            <<"browser_variant_id">> => 0,
            <<"sitelist_ids">> => [7824,7825],
 		   <<"now">> => 1693590010,
-           <<"tvidlist_ids">> => [149663],
-           <<"types">> => [1,2,3],
+           <<"tvidlist_ids">> => [149663,1],
+           <<"rand">> => 11111,
 
            <<"frequency_caps">> =>
                [[[<<"campaign">>,136753,<<"3632289">>],0,1693329952000000],

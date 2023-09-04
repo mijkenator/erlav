@@ -154,6 +154,17 @@ array_m2_test() ->
 
     A2 = maps:get(<<"arrayField">>,  maps:from_list(Decoder(erlav_nif:erlav_encode(SchemaId, Term2)))),
     ?assertEqual([1, [<<"lalala">>, 55, <<"kokoko">>], 3], A2),
+    
+    Term3 = #{
+        <<"arrayField">> => [1, [3, 4, 5], 2, [7], 99, [9,6,7,8,9], 11]
+    },
+    E31 = erlav_nif:erlav_encode(SchemaId, Term3),
+    E32 = Encoder1(Term3),
+    ?debugFmt("Erlang encoded: ~p ~n", [E32]),
+    ?debugFmt("Erlav encoded: ~p ~n", [E31]),
+
+    A3 = maps:get(<<"arrayField">>,  maps:from_list(Decoder(erlav_nif:erlav_encode(SchemaId, Term3)))),
+    ?assertEqual([1, [3, 4, 5], 2, [7], 99, [9,6,7,8,9], 11], A3),
     ok.
 
 map_test() ->
