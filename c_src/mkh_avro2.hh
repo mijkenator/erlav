@@ -315,7 +315,7 @@ int encodearray(SchemaItem* si, ErlNifEnv* env, ERL_NIF_TERM* val, std::vector<u
                 }
             }
         } else if((si->obj_field == "complex") && si->array_type == 1) {
-            std::cout << "complex A1 \r\n";
+            //std::cout << "complex A1 \r\n";
             for(uint32_t i=0; i < len; i++){
                 if(enif_get_list_cell(env, *val, &elem, val)){
                     if(enif_is_binary(env, elem)){
@@ -353,7 +353,7 @@ int encodearray(SchemaItem* si, ErlNifEnv* env, ERL_NIF_TERM* val, std::vector<u
             }
         }
         ret->push_back(0);
-        std::cout << "close array \r\n";
+        //std::cout << "close array \r\n";
         return 0;
     }
     return 8;
