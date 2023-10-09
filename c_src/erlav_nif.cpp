@@ -58,6 +58,8 @@ ERL_NIF_TERM erlav_encode_nif(ErlNifEnv* env, int argc,
         ERL_NIF_TERM t2 = enif_make_string(env, &(ae.message[0]), ERL_NIF_LATIN1);
         ERL_NIF_TERM t3 = enif_make_int(env, ae.code);
         return enif_make_tuple3(env, t1, t2, t3);  
+    }catch (...){
+        return enif_make_int(env, -1);    
     }
     return enif_make_int(env, -1);    
 }

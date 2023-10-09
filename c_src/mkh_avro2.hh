@@ -75,6 +75,8 @@ typedef struct SchemaItem {
                 intsi = new SchemaItem(otype["name"], otype["type"]["values"], 4);
             }else if(otype["type"].is_object() && otype["type"].contains("type") && otype["type"]["type"] == "record"){
                 intsi = new SchemaItem(otype["name"], otype["type"]["fields"], 3);
+            }else if(otype["type"].is_object() && otype["type"].contains("type") && otype["type"]["type"] == "enum"){
+                intsi = new SchemaItem(otype["name"], otype["type"]["symbols"], 5);
             }else{
                     intsi = new SchemaItem(otype["name"], otype["type"]);
             }
@@ -123,6 +125,10 @@ typedef struct SchemaItem {
             obj_field = "complex";
             set_array_multi_types(jtypes);
             scalar_type = -1;
+        }else if((5 == ot) && (jtypes.is_array()) ){ // enum
+            set_array_multi_types(jtypes);  // enum use array_multi_type to store possible values
+            obj_field = "complex";
+            scalar_type = -1;
         }else{
             array_type = 0;
             childItems = read_internal_types(jtypes);
@@ -169,6 +175,7 @@ int encode_string(ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*);
 int encode_bytes(ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*);
 int encode_boolean(ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*);
 int enif_get_bool(ErlNifEnv*, ERL_NIF_TERM*, bool*);
+int encodeenum(SchemaItem* si, ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*);
 size_t encodeInt32(int32_t, std::array<uint8_t, 5> &output) noexcept;
 
 ERL_NIF_TERM encode(ErlNifEnv* env, SchemaItem* si, const ERL_NIF_TERM* input){
@@ -205,11 +212,30 @@ int encodevalue(SchemaItem* si, ErlNifEnv* env, ERL_NIF_TERM* val, std::vector<u
             return encoderecord(si, env, val, ret);
         case 4:
             return encodemap(si, env, val, ret);
+        case 5:
+            return encodeenum(si, env, val, ret);
         default:
             std::cout << "ENCODE VALUE!!!\n\r";
 
     }
     return 0;
+}
+
+int encodeenum(SchemaItem* si, ErlNifEnv* env, ERL_NIF_TERM* input, std::vector<uint8_t>* ret){ 
+    ErlNifBinary sbin;
+    std::string enumval;
+
+    if (!enif_inspect_binary(env, *input, &sbin)) {
+        return 11;
+    }
+
+    enumval.assign((const char*)sbin.data, sbin.size);
+    try{
+        auto ind = si->array_multi_type.at(enumval);
+        return encode_int(env, ind, ret);
+    }catch (const std::out_of_range& oor) {
+        throw mkh_avro::AvroException("Rec:" + si->obj_name + " enum bad value:" + enumval, 11);
+    }
 }
 
 int encodemap(SchemaItem* si, ErlNifEnv* env, ERL_NIF_TERM* input, std::vector<uint8_t>* ret){ 

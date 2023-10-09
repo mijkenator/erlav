@@ -1,0 +1,18 @@
+{
+  "type": "record", 
+  "name":"Interop", 
+  "namespace": "org.apache.avro",
+  "fields": [
+      {
+        "name": "enumField",
+        "type": {
+            "name": "Kind",
+            "type": "enum",
+            "symbols" : ["ONE", "TWO", "THREE", "DIAMONDS", "kolobok"],
+            "default": "kolobok"
+        }
+      }
+  ]
+}
+
+

@@ -21,6 +21,27 @@ primitive_types_test() ->
     io:format("c++ ret: ~p ~n", [Ret]),
     ?assertEqual(R1, Ret).
 
+enum_test() ->
+    {ok, SchemaJSON} = file:read_file("test/enum.avsc"),
+    Encoder = avro:make_simple_encoder(SchemaJSON, []),
+    Term = #{
+        <<"enumField">> => <<"DIAMONDS">>
+    },
+    R1 = iolist_to_binary(Encoder(Term)),
+    io:format("R1: ~p ~n", [R1]),
+    SchemaId = erlav_nif:erlav_init(<<"test/enum.avsc">>),
+    Ret = erlav_nif:erlav_encode(SchemaId, Term),
+    io:format("c++ ret: ~p ~n", [Ret]),
+    ?assertEqual(R1, Ret),
+    
+    BadTerm = #{
+        <<"enumField">> => <<"DIAMONDS1">>
+    },
+    {error, ErrMsg, ErrCode} = erlav_nif:erlav_encode(SchemaId, BadTerm),
+    io:format("c++ ret: ~p ~n", [ErrMsg]),
+    ?assertEqual(ErrCode, 11).
+
+
 create_encoder_test() ->
     Ret = erlav_nif:erlav_init(<<"priv/tschema2.avsc">>),
     io:format("CET1 ret: ~p ~n", [Ret]),
