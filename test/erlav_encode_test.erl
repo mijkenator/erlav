@@ -41,6 +41,25 @@ enum_test() ->
     io:format("c++ ret: ~p ~n", [ErrMsg]),
     ?assertEqual(ErrCode, 11).
 
+enum_null_test() ->
+    {ok, SchemaJSON} = file:read_file("test/enum_null.avsc"),
+    Encoder = avro:make_simple_encoder(SchemaJSON, []),
+    Term = #{
+        <<"enumField">> => <<"DIAMONDS">>
+    },
+    R1 = iolist_to_binary(Encoder(Term)),
+    io:format("R1: ~p ~n", [R1]),
+    SchemaId = erlav_nif:erlav_init(<<"test/enum_null.avsc">>),
+    Ret = erlav_nif:erlav_encode(SchemaId, Term),
+    io:format("c++ ret: ~p ~n", [Ret]),
+    ?assertEqual(R1, Ret),
+    
+    BadTerm = #{
+        <<"enumField">> => <<"DIAMONDS1">>
+    },
+    {error, ErrMsg, ErrCode} = erlav_nif:erlav_encode(SchemaId, BadTerm),
+    io:format("c++ ret: ~p ~n", [ErrMsg]),
+    ?assertEqual(ErrCode, 11).
 
 create_encoder_test() ->
     Ret = erlav_nif:erlav_init(<<"priv/tschema2.avsc">>),

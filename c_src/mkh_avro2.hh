@@ -64,6 +64,8 @@ typedef struct SchemaItem {
             intsi = new SchemaItem("map", otype["values"], 4);
         }else if(otype["type"] == "record"){
             intsi = new SchemaItem(otype["name"], otype["fields"], 3);
+        }else if(otype["type"] == "enum"){   
+            intsi = new SchemaItem(otype["name"], otype["symbols"], 5);
         }else{
             if(otype["type"].is_string() && is_scalar(otype["type"])){
                 // record field with scalar type
@@ -76,6 +78,7 @@ typedef struct SchemaItem {
             }else if(otype["type"].is_object() && otype["type"].contains("type") && otype["type"]["type"] == "record"){
                 intsi = new SchemaItem(otype["name"], otype["type"]["fields"], 3);
             }else if(otype["type"].is_object() && otype["type"].contains("type") && otype["type"]["type"] == "enum"){
+                std::cout << "ENUM" << "\r\n";
                 intsi = new SchemaItem(otype["name"], otype["type"]["symbols"], 5);
             }else{
                     intsi = new SchemaItem(otype["name"], otype["type"]);
