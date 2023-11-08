@@ -1,0 +1,7 @@
+{"type": "record", "name":"Interop", "namespace": "org.apache.avro",
+  "fields": [
+      {"name": "intField", "type": ["null", "int"], "default": null},
+      {"name": "longField", "type": ["null", "long"], "default": null}
+  ]
+}
+
