@@ -402,7 +402,7 @@ encodearray(SchemaItem* si,
                         encode_int(env, typeindex, ret);
                         encode_string(env, &elem, ret);
                     } else if (enif_is_number(env, elem)) {
-                        int64_t i64;
+                        long i64;
                         double dbl;
                         if (enif_get_int64(env, elem, &i64)) {
                             // longs
@@ -683,7 +683,7 @@ encode_int(ErlNifEnv* env, int input, std::vector<uint8_t>* ret) {
 int
 encode_long(ErlNifEnv* env, ERL_NIF_TERM* input, std::vector<uint8_t>* ret) {
     std::array<uint8_t, 10> output;
-    int64_t i64;
+    long i64;
 
     if (!enif_get_int64(env, *input, &i64)) {
         return 2;
@@ -705,7 +705,7 @@ int
 encode_float(ErlNifEnv* env, ERL_NIF_TERM* input, std::vector<uint8_t>* ret) {
     float f;
     double dbl;
-    int64_t i64;
+    long i64;
 
     if (!enif_get_double(env, *input, &dbl)) {
         if (!enif_get_int64(env, *input, &i64)) {
@@ -725,7 +725,7 @@ encode_float(ErlNifEnv* env, ERL_NIF_TERM* input, std::vector<uint8_t>* ret) {
 int
 encode_double(ErlNifEnv* env, ERL_NIF_TERM* input, std::vector<uint8_t>* ret) {
     double dbl;
-    int64_t i64;
+    long i64;
 
     if (!enif_get_double(env, *input, &dbl)) {
         if (!enif_get_int64(env, *input, &i64)) {
