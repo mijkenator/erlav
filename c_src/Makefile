@@ -17,10 +17,10 @@ C_SRC_OUTPUT ?= $(CURDIR)/../priv/$(PROJECT).so
 
 UNAME_SYS := $(shell uname -s)
 ifeq ($(UNAME_SYS), Darwin)
-	CC = /usr/local/Cellar/gcc/13.1.0/bin/gcc-13
-        CXX = /usr/local/Cellar/gcc/13.1.0/bin/gcc-13
+	CC ?= cc
+        CXX := $(shell find /usr/local/bin -name gcc-?? | tail -1)
 	CFLAGS ?= -O3 -std=c++17 -finline-functions -Wall -Wmissing-prototypes
-	CXXFLAGS ?= -O3 -std=c++17 -finline-functions -Wall
+	CXXFLAGS ?= -O3 -std=c++17 -finline-functions -Wall -fpermissive
 	LDFLAGS ?= -flat_namespace -undefined suppress
 else ifeq ($(UNAME_SYS), FreeBSD)
 	CC ?= cc
