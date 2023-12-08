@@ -5,7 +5,7 @@
 #{
     <<"event">> => <<"event2">>,
     <<"sampling">> => <<"sampling2">>,
-    <<"timestamp">> => 1111111111,
+    <<"timestamp">> => 111111111.1,
     <<"seller_request_cpm">> => 1111,
     <<"seller_request_fee_cpm">> => 2222,
     <<"seller_trader_fee_cpm">> => 3333,
@@ -143,7 +143,7 @@
                     #{
                         <<"id">> => <<"seatbid_bid_id1">>,
                         <<"impid">> => <<"seatbid_bid_impid1">>,
-                        <<"price">> => 111,
+                        <<"price">> => 111.0,
                         <<"adid">> => <<"adid">>,
                         <<"nurl">> => <<"nurl">>,
                         <<"burl">> => <<"burl">>,
@@ -349,7 +349,7 @@
                     #{
                         <<"id">> => <<"seatbid_bid_id1">>,
                         <<"impid">> => <<"seatbid_bid_impid1">>,
-                        <<"price">> => 111,
+                        <<"price">> => 111.0,
                         <<"adid">> => <<"adid">>,
                         <<"nurl">> => <<"nurl">>,
                         <<"burl">> => <<"burl">>,
