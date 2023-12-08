@@ -29,3 +29,15 @@ Ret = erlav_nif:erlav_encode(SchemaId, Term)
 
 Performance
 -----
+
+run erlang shell
+
+```bash
+erl -pa _build/default/lib/*/ebin
+```
+
+run performance test ( it will generate report at the end )
+
+```erlang
+erlav_perf:all_tests().
+```
