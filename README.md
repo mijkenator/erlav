@@ -41,3 +41,15 @@ run performance test ( it will generate report at the end )
 ```erlang
 erlav_perf:all_tests().
 ```
+
+| Test name          | erlavro time | erlav time |
+|--------------------|-----------------|---------------|
+| erlav_perf_tst2    | 746.0727 | 142.3787 |
+| erlav_perf_tst3 | 1591.4327 | 250.2485 |
+| map_perf_tst1 | 1069.9354 |  331.2828  |
+| map_perf_tst2 | 217.3632 | 70.7547  |
+| array_int_perf_tst |  20.8804 |  3.9581 |
+| array_str_perf_tst |  152.1964 | 33.9999 |
+| array_map_perf_tst |  363.2405 |  120.0964 |
+
+
