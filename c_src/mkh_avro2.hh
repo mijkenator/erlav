@@ -5,6 +5,7 @@
 
 #include "avro_exceptions.hh"
 #include "include/json.hpp"
+#include "mkh_avro_decoder.hh"
 
 using json = nlohmann::json;
 
