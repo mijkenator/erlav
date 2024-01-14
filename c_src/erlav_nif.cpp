@@ -64,7 +64,15 @@ erlav_encode_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
     return enif_make_int(env, -1);
 }
 
+ERL_NIF_TERM
+erlav_decode_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+    ERL_NIF_TERM ret_map = enif_make_new_map(env);
+
+    return ret_map;
+}
+
 ErlNifFunc nif_funcs[] = {{"erlav_init", 1, erlav_init_nif},
-                          {"erlav_encode", 2, erlav_encode_nif}};
+                          {"erlav_encode", 2, erlav_encode_nif},
+                          {"erlav_decode", 1, erlav_decode_nif}};
 
 ERL_NIF_INIT(erlav_nif, nif_funcs, nullptr, nullptr, nullptr, nullptr);

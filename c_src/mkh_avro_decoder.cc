@@ -21,5 +21,25 @@ int64_t decodeLong(std::vector<uint8_t>::iterator& it) {
     return decodeZigzag64(encoded);
 }
 
+float decode_float(std::vector<uint8_t>::iterator& it){
+    std::array<uint8_t, sizeof(float)> vect2;
+    for (int i=0; i < sizeof(float); i++) {
+        vect2[i] = *it;
+        ++it;
+    }
+    const float* ret = reinterpret_cast<const float*>(&vect2);
+    return *ret;
+}
+
+double decode_double(std::vector<uint8_t>::iterator& it){
+    std::array<uint8_t, sizeof(double)> vect2;
+    for (int i=0; i < sizeof(double); i++) {
+        vect2[i] = *it;
+        ++it;
+    }
+    const double* ret = reinterpret_cast<const double*>(&vect2);
+    return *ret;
+}
+
 
 }
