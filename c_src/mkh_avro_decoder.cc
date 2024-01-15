@@ -3,6 +3,14 @@
 
 namespace mkh_avro2 {
 
+
+
+ERL_NIF_TERM  decode(ErlNifEnv* env, SchemaItem* si, std::vector<uint8_t>::iterator& it) {
+    ERL_NIF_TERM ret = enif_make_new_map(env);
+
+    return ret;
+}
+
 int64_t decodeLong(std::vector<uint8_t>::iterator& it) {
     uint64_t encoded = 0;
     int shift = 0;
@@ -23,7 +31,7 @@ int64_t decodeLong(std::vector<uint8_t>::iterator& it) {
 
 float decode_float(std::vector<uint8_t>::iterator& it){
     std::array<uint8_t, sizeof(float)> vect2;
-    for (int i=0; i < sizeof(float); i++) {
+    for (long unsigned int i=0; i < sizeof(float); i++) {
         vect2[i] = *it;
         ++it;
     }
@@ -33,7 +41,7 @@ float decode_float(std::vector<uint8_t>::iterator& it){
 
 double decode_double(std::vector<uint8_t>::iterator& it){
     std::array<uint8_t, sizeof(double)> vect2;
-    for (int i=0; i < sizeof(double); i++) {
+    for (long unsigned int i=0; i < sizeof(double); i++) {
         vect2[i] = *it;
         ++it;
     }

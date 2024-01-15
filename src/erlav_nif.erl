@@ -3,12 +3,12 @@
 -export([
     erlav_init/1,
     erlav_encode/2,
-    erlav_decode/1,
+    erlav_decode/2,
     erlav_safe_encode/2,
     replace_keys/1
 ]).
 
--nifs([erlav_init/1, erlav_encode/2, erlav_decode/1]).
+-nifs([erlav_init/1, erlav_encode/2, erlav_decode/2]).
 
 -on_load(init/0).
 
@@ -36,7 +36,7 @@ not_loaded(Line) ->
 erlav_encode(_A, _B) ->
     not_loaded(?LINE).
 
-erlav_decode(_A) ->
+erlav_decode(_A, _B) ->
     not_loaded(?LINE).
 
 erlav_init(_A) ->

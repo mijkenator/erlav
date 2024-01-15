@@ -66,13 +66,45 @@ erlav_encode_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
 
 ERL_NIF_TERM
 erlav_decode_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+    ErlNifBinary sbin;
     ERL_NIF_TERM ret_map = enif_make_new_map(env);
+    int enc_ref = 0;
+
+    if (!enif_get_int(env, argv[0], &enc_ref)) {
+        return enif_make_badarg(env);
+    }
+
+    if (!enif_inspect_binary(env, argv[1], &sbin)) {
+        return ret_map;
+    }
+
+    std::vector<uint8_t> encdata(sbin.data, sbin.data + sbin.size);
+    std::cout << "encdata vector length: " <<  encdata.size() << "\r\n";
+    std::vector<uint8_t>::iterator it = encdata.begin();
+
+    ret_map = mkh_avro2::decode(env, erlav_encoders_map[enc_ref], it);
+
+    std::cout << "decode done\r\n";
+/*
+    int64_t ret1 = mkh_avro2::decodeLong(it);
+    std::cout << "value: " <<  ret1 << "\r\n";
+    int64_t ret2 = mkh_avro2::decodeLong(it);
+    std::cout << "value: " <<  ret2 << "\r\n";
+    int64_t ret3 = mkh_avro2::decodeLong(it);
+    std::cout << "value: " <<  ret3 << "\r\n";
+    int64_t ret4 = mkh_avro2::decodeLong(it);
+    std::cout << "value: " <<  ret4 << "\r\n";
+    int64_t ret5 = mkh_avro2::decodeLong(it);
+    std::cout << "value: " <<  ret5 << "\r\n";
+    int64_t ret6 = mkh_avro2::decodeLong(it);
+    std::cout << "value: " <<  ret6 << "\r\n";
+*/
 
     return ret_map;
 }
 
 ErlNifFunc nif_funcs[] = {{"erlav_init", 1, erlav_init_nif},
                           {"erlav_encode", 2, erlav_encode_nif},
-                          {"erlav_decode", 1, erlav_decode_nif}};
+                          {"erlav_decode", 2, erlav_decode_nif}};
 
 ERL_NIF_INIT(erlav_nif, nif_funcs, nullptr, nullptr, nullptr, nullptr);
