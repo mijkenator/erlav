@@ -7,6 +7,23 @@ namespace mkh_avro2 {
 
 ERL_NIF_TERM  decode(ErlNifEnv* env, SchemaItem* si, std::vector<uint8_t>::iterator& it) {
     ERL_NIF_TERM ret = enif_make_new_map(env);
+    ERL_NIF_TERM map_out;
+
+    for(SchemaItem* si_e : si->childItems){
+        std::cout << "Field: " << si_e->obj_name << "  | type: " << si_e->obj_type << " | scalar_type: " << si_e->scalar_type  << "\r\n";
+        if(si_e->obj_type == 0 && si_e->scalar_type > 0){ // decode simple scalar
+            ERL_NIF_TERM value;
+            ERL_NIF_TERM key;
+            unsigned char* key_data;
+            auto len = si_e->obj_name.length();
+            key_data = enif_make_new_binary(env, len, &key);
+            memcpy(key_data, si_e->obj_name.c_str(), len);
+            value = key;
+            if(enif_make_map_update(env, ret, key, value, &map_out)){
+                ret = map_out;
+            }
+        }
+    }
 
     return ret;
 }
