@@ -17,7 +17,8 @@
     all_tests/3,
     all_tests/0,
     long_run/1,
-    comp/1
+    comp/1,
+    decode_tests/0
 ]).
 
 erlav_perf_tst(Num) ->
@@ -613,3 +614,28 @@ comp(Schema,  N, Acc) ->
 %
 %array_map_perf_tst, equal: true, erltime: 380.2661,  cpptime2: 117.3047
 
+generare_rnd(SchemaId) ->
+    Pairs = [{<<"intField1">>, rand:uniform(99999999) }, {<<"floatField2">>, rand:uniform_real()}, {<<"intField3">>, rand:uniform(99999999)}, {<<"doubleField4">>, rand:uniform_real()}, {<<"intField5">>, rand:uniform(99999999)}, {<<"intField6">>, rand:uniform(99999999)}, {<<"intField7">>, rand:uniform(99999999)}],
+    Term = maps:from_list(Pairs),
+    erlav_nif:erlav_encode(SchemaId, Term).
+
+decode_tests() ->
+    SchemaId = erlav_nif:erlav_init(<<"test/prims.avsc">>),
+    Encs = [ generare_rnd(SchemaId)  || _ <- lists:seq(1, 10000)],
+
+    io:format("starting.... ~n"),
+
+    T1 = erlang:system_time(microsecond),
+    lists:foreach(fun(Encoded) -> 
+        erlav_nif:erlav_decode(SchemaId, Encoded)
+    end, Encs),
+    Total1 = erlang:system_time(microsecond) - T1,
+    io:format("Iterator time: ~p microseconds ~n", [Total1]),
+
+    T2 = erlang:system_time(microsecond),
+    lists:foreach(fun(Encoded) -> 
+        erlav_nif:erlav_decode_fast(SchemaId, Encoded)
+    end, Encs),
+    Total2 = erlang:system_time(microsecond) - T2,
+    io:format("Pointer time: ~p microseconds ~n", [Total2]),
+    ok.

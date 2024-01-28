@@ -10,22 +10,38 @@ ERL_NIF_TERM  decode(ErlNifEnv* env, SchemaItem* si, std::vector<uint8_t>::itera
     ERL_NIF_TERM map_out;
 
     for(SchemaItem* si_e : si->childItems){
-        std::cout << "Field: " << si_e->obj_name << "  | type: " << si_e->obj_type << " | scalar_type: " << si_e->scalar_type  << "\r\n";
-        if(si_e->obj_type == 0 && si_e->scalar_type > 0){ // decode simple scalar
+        //std::cout << "Field: " << si_e->obj_name << "  | type: " << si_e->obj_type << " | scalar_type: " << si_e->scalar_type  << "\r\n";
+        if(si_e->obj_type == 0 && si_e->scalar_type >= 0){ // decode simple scalar
             ERL_NIF_TERM value;
             ERL_NIF_TERM key;
             unsigned char* key_data;
             auto len = si_e->obj_name.length();
             key_data = enif_make_new_binary(env, len, &key);
             memcpy(key_data, si_e->obj_name.c_str(), len);
-            value = key;
-            if(enif_make_map_update(env, ret, key, value, &map_out)){
+            value = decode_scalar(env, si_e->scalar_type, it);
+            if(enif_make_map_put(env, ret, key, value, &map_out)){
                 ret = map_out;
             }
         }
     }
 
     return ret;
+}
+
+ERL_NIF_TERM decode_scalar(ErlNifEnv* env, int sctype, std::vector<uint8_t>::iterator& it) {
+    if((sctype == 1) || (sctype == 0)){
+        int64_t ret = decodeLong(it);
+        ErlNifSInt64 retn = ret;
+        return enif_make_int64(env, retn);
+    }else if(sctype == 2){ // double
+        double ret = decode_double(it);
+        return enif_make_double(env, ret);
+    }else if(sctype == 3){ // float
+        float ret = decode_float(it);
+        double retd = ret;
+        return enif_make_double(env, retd);
+    }
+    return enif_make_badarg(env);
 }
 
 int64_t decodeLong(std::vector<uint8_t>::iterator& it) {
@@ -66,5 +82,104 @@ double decode_double(std::vector<uint8_t>::iterator& it){
     return *ret;
 }
 
+//
+//  ------------------------ pointer functions
+//
+
+
+ERL_NIF_TERM  decode(ErlNifEnv* env, SchemaItem* si, uint8_t*& it) {
+    ERL_NIF_TERM ret = enif_make_new_map(env);
+    ERL_NIF_TERM map_out;
+
+    for(SchemaItem* si_e : si->childItems){
+        //std::cout << "Field: " << si_e->obj_name << "  | type: " << si_e->obj_type << " | scalar_type: " << si_e->scalar_type  << "\r\n";
+        if(si_e->obj_type == 0 && si_e->scalar_type >= 0){ // decode simple scalar
+            ERL_NIF_TERM value;
+            ERL_NIF_TERM key;
+            unsigned char* key_data;
+            auto len = si_e->obj_name.length();
+            key_data = enif_make_new_binary(env, len, &key);
+            memcpy(key_data, si_e->obj_name.c_str(), len);
+            value = decode_scalar(env, si_e->scalar_type, it);
+            if(enif_make_map_put(env, ret, key, value, &map_out)){
+                ret = map_out;
+            }
+        }
+    }
+
+    return ret;
+}
+
+ERL_NIF_TERM decode_scalar(ErlNifEnv* env, int sctype, uint8_t*& it) {
+    if((sctype == 1) || (sctype == 0)){
+        int64_t ret = decodeLong(it);
+        ErlNifSInt64 retn = ret;
+        return enif_make_int64(env, retn);
+    }else if(sctype == 2){ // double
+        double ret = decode_double(it);
+        return enif_make_double(env, ret);
+    }else if(sctype == 3){ // float
+        float ret = decode_float(it);
+        double retd = ret;
+        return enif_make_double(env, retd);
+    }
+    return enif_make_badarg(env);
+}
+
+int64_t decodeLong(uint8_t*& it) {
+    uint64_t encoded = 0;
+    int shift = 0;
+    uint8_t u;
+
+    do {
+        if (shift >= 64) {
+            throw std::invalid_argument("Invalid Avro varint");
+        }
+        u = *it;
+        ++it;
+        encoded |= static_cast<uint64_t>(u & 0x7f) << shift;
+        shift += 7;
+    } while (u & 0x80);
+
+    return decodeZigzag64(encoded);
+}
+
+int64_t decodeVarint(uint8_t*& it) {
+    uint64_t encoded = 0;
+    int shift = 0;
+    uint8_t u;
+
+    do {
+        if (shift >= 64) {
+            throw std::invalid_argument("Invalid Avro varint");
+        }
+        u = *it;
+        ++it;
+        encoded |= static_cast<uint64_t>(u & 0x7f) << shift;
+        shift += 7;
+    } while (u & 0x80);
+
+    return encoded;
+}
+
+float decode_float(uint8_t*& it){
+    std::array<uint8_t, sizeof(float)> vect2;
+    for (long unsigned int i=0; i < sizeof(float); i++) {
+        vect2[i] = *it;
+        ++it;
+    }
+    const float* ret = reinterpret_cast<const float*>(&vect2);
+    return *ret;
+}
+
+double decode_double(uint8_t*& it){
+    std::array<uint8_t, sizeof(double)> vect2;
+    for (long unsigned int i=0; i < sizeof(double); i++) {
+        vect2[i] = *it;
+        ++it;
+    }
+    const double* ret = reinterpret_cast<const double*>(&vect2);
+    return *ret;
+}
 
 }

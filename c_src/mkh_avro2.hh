@@ -45,6 +45,8 @@ int encodeenum(SchemaItem* si,
                ERL_NIF_TERM*,
                std::vector<uint8_t>*);
 size_t encodeInt32(int32_t, std::array<uint8_t, 5>& output) noexcept;
+size_t encodeVarint(int64_t, std::array<uint8_t, 10>& output) noexcept;
+size_t encodeVarint(int64_t, std::vector<uint8_t>&) noexcept;
 
 ERL_NIF_TERM
 encode(ErlNifEnv* env, SchemaItem* si, const ERL_NIF_TERM* input) {
@@ -478,6 +480,34 @@ encodeInt64(int64_t input, std::array<uint8_t, 10>& output) noexcept {
 
     output[bytesOut++] = v;
     return bytesOut;
+}
+
+size_t
+encodeVarint(int64_t val, std::array<uint8_t, 10>& output) noexcept {
+    // put values in an array of bytes with variable length encoding
+    const int mask = 0x7F;
+    auto v = val & mask;
+    size_t bytesOut = 0;
+    while (val >>= 7) {
+        output[bytesOut++] = (v | 0x80);
+        v = val & mask;
+    }
+
+    output[bytesOut++] = v;
+    return bytesOut;
+}
+
+size_t
+encodeVarint(int64_t val, std::vector<uint8_t>& ret) noexcept {
+    const int mask = 0x7F;
+    auto v = val & mask;
+    while (val >>= 7) {
+        ret.push_back( (v| 0x80) );
+        v = val & mask;
+    }
+
+    ret.push_back(v);
+    return 1;
 }
 
 size_t

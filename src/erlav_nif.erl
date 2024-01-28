@@ -4,11 +4,14 @@
     erlav_init/1,
     erlav_encode/2,
     erlav_decode/2,
+    erlav_decode_fast/2,
     erlav_safe_encode/2,
+    int_decode/1,
+    int_encode/1,
     replace_keys/1
 ]).
 
--nifs([erlav_init/1, erlav_encode/2, erlav_decode/2]).
+-nifs([erlav_init/1, erlav_encode/2, erlav_decode/2, erlav_decode_fast/2, int_encode/1, int_decode/1]).
 
 -on_load(init/0).
 
@@ -39,7 +42,15 @@ erlav_encode(_A, _B) ->
 erlav_decode(_A, _B) ->
     not_loaded(?LINE).
 
+erlav_decode_fast(_A, _B) ->
+    not_loaded(?LINE).
+
 erlav_init(_A) ->
+    not_loaded(?LINE).
+
+int_encode(_A) ->
+    not_loaded(?LINE).
+int_decode(_A) ->
     not_loaded(?LINE).
 
 erlav_safe_encode(SchemaId, Data) ->
