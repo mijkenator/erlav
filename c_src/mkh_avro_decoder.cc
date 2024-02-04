@@ -122,8 +122,41 @@ ERL_NIF_TERM decode_scalar(ErlNifEnv* env, int sctype, uint8_t*& it) {
         float ret = decode_float(it);
         double retd = ret;
         return enif_make_double(env, retd);
+    }else if(sctype == 4){ // boolean
+        return decode_boolean(env, it);
+    }else if(sctype == 5){ // string
+        return decode_string(env, it);
+    }else if(sctype == 6){ // bytes
+        return decode_string(env, it);
     }
     return enif_make_badarg(env);
+}
+
+ERL_NIF_TERM decode_boolean(ErlNifEnv* env, uint8_t*& it) {
+    std::string atom;
+    uint8_t bool_val = *it;
+    it++;
+    if(bool_val == 1){ //true
+        atom = "true";
+        return enif_make_atom_len(env, atom.c_str(), 4);
+    } else { //false
+        atom = "false";
+        return enif_make_atom_len(env, atom.c_str(), 5);
+    }
+}
+
+ERL_NIF_TERM decode_string(ErlNifEnv* env, uint8_t*& it) {
+    ERL_NIF_TERM str_ret;
+    
+    auto len = decodeLong(it);
+    std::cout << "decode string with length :" << len << "\r\n";
+
+    unsigned char* str_data;
+    str_data = enif_make_new_binary(env, len, &str_ret);
+    memcpy(str_data, it, len);
+    it += len;
+
+    return str_ret;
 }
 
 int64_t decodeLong(uint8_t*& it) {

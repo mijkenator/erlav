@@ -1,0 +1,9 @@
+{"type": "record", "name":"Interop", "namespace": "org.apache.avro",
+  "fields": [
+      {"name": "stringField1", "type": "string"},
+      {"name": "stringField2", "type": "string"},
+      {"name": "stringField3", "type": "string"},
+      {"name": "stringField4", "type": "string"}
+  ]
+}
+

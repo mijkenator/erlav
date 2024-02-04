@@ -18,6 +18,8 @@ float decode_float(uint8_t*& it);
 double decode_double(std::vector<uint8_t>::iterator& );
 double decode_double(uint8_t*& it);
 int64_t decodeVarint(uint8_t*& it);
+ERL_NIF_TERM decode_string(ErlNifEnv* env, uint8_t*& it);
+ERL_NIF_TERM decode_boolean(ErlNifEnv* env, uint8_t*& it);
 
 ERL_NIF_TERM decode_scalar(ErlNifEnv*, int , std::vector<uint8_t>::iterator&);
 ERL_NIF_TERM decode_scalar(ErlNifEnv*, int , uint8_t*&);
