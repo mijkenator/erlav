@@ -17,6 +17,34 @@ integer_test() ->
     end, Pairs),
     ok.
 
+integer_null1_test() ->
+    SchemaId = erlav_nif:erlav_init(<<"test/integer_null.avsc">>),
+    Pairs = [{<<"intField1">>, 111}, {<<"intField2">>, 22222}, {<<"intField3">>, 33333}, {<<"intField4">>, 4}, {<<"intField5">>, 555555555}, {<<"intField6">>, 6666}],
+    Term = maps:from_list(Pairs),
+    Encoded = erlav_nif:erlav_encode(SchemaId, Term),
+    ?debugFmt("Encoded: ~p ~n", [Encoded]),
+    Re1 = erlav_nif:erlav_decode_fast(SchemaId, Encoded),
+    ?debugFmt("decode result: ~p ~n", [Re1]),
+    lists:foreach(fun({Key, Value}) -> 
+        Value1 = maps:get(Key, Re1),
+        ?assertEqual(Value, Value1)
+    end, Pairs),
+    ok.
+
+integer_null2_test() ->
+    SchemaId = erlav_nif:erlav_init(<<"test/integer_null.avsc">>),
+    Pairs = [{<<"intField3">>, 33333}, {<<"intField5">>, 555555555}],
+    Term = maps:from_list(Pairs),
+    Encoded = erlav_nif:erlav_encode(SchemaId, Term),
+    ?debugFmt("Encoded: ~p ~n", [Encoded]),
+    Re1 = erlav_nif:erlav_decode_fast(SchemaId, Encoded),
+    ?debugFmt("decode result: ~p ~n", [Re1]),
+    lists:foreach(fun({Key, Value}) -> 
+        Value1 = maps:get(Key, Re1),
+        ?assertEqual(Value, Value1)
+    end, Pairs),
+    ok.
+
 prim_test() ->
     SchemaId = erlav_nif:erlav_init(<<"test/prims.avsc">>),
     Pairs = [{<<"intField1">>, 111}, {<<"floatField2">>, 22.22}, {<<"intField3">>, 33333}, {<<"doubleField4">>, 44.44}, {<<"intField5">>, 555555555}, {<<"intField6">>, 6666}, {<<"intField7">>, 7777777}],

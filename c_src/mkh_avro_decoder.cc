@@ -92,7 +92,7 @@ ERL_NIF_TERM  decode(ErlNifEnv* env, SchemaItem* si, uint8_t*& it) {
     ERL_NIF_TERM map_out;
 
     for(SchemaItem* si_e : si->childItems){
-        //std::cout << "Field: " << si_e->obj_name << "  | type: " << si_e->obj_type << " | scalar_type: " << si_e->scalar_type  << "\r\n";
+        std::cout << "Field: " << si_e->obj_name << "  | type: " << si_e->obj_type << " | scalar_type: " << si_e->scalar_type  << "\r\n";
         if(si_e->obj_type == 0 && si_e->scalar_type >= 0){ // decode simple scalar
             ERL_NIF_TERM value;
             ERL_NIF_TERM key;
@@ -104,10 +104,40 @@ ERL_NIF_TERM  decode(ErlNifEnv* env, SchemaItem* si, uint8_t*& it) {
             if(enif_make_map_put(env, ret, key, value, &map_out)){
                 ret = map_out;
             }
+        }else if(si_e->obj_type == 1){
+            std::cout << "UNION TYPE!!!" << "\r\n";
+            ERL_NIF_TERM value;
+            ERL_NIF_TERM key;
+            unsigned char* key_data;
+            auto len = si_e->obj_name.length();
+            key_data = enif_make_new_binary(env, len, &key);
+            memcpy(key_data, si_e->obj_name.c_str(), len);
+            if(si_e->childItems.size() == 1){
+                // just nullable scalar
+                value = decode_nullable_scalar(env, si_e->childItems[0]->scalar_type, it);
+            }else{
+                // real union
+                std::cout << "CHILDITEMS size: " << si_e->childItems.size() << "\r\n"; 
+            }
+            if(enif_make_map_put(env, ret, key, value, &map_out)){
+                ret = map_out;
+            }
         }
     }
 
     return ret;
+}
+
+ERL_NIF_TERM decode_nullable_scalar(ErlNifEnv* env, int sctype, uint8_t*& it) {
+    auto union_byte = *it;
+    it++;
+    if(union_byte == 0){
+        // return atom undefined
+        std::cout << "NULL value" << "\r\n";
+        return enif_make_atom(env, "undefined"); 
+    } else {
+        return decode_scalar(env, sctype, it);
+    }
 }
 
 ERL_NIF_TERM decode_scalar(ErlNifEnv* env, int sctype, uint8_t*& it) {

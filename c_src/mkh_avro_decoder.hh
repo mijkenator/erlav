@@ -23,6 +23,7 @@ ERL_NIF_TERM decode_boolean(ErlNifEnv* env, uint8_t*& it);
 
 ERL_NIF_TERM decode_scalar(ErlNifEnv*, int , std::vector<uint8_t>::iterator&);
 ERL_NIF_TERM decode_scalar(ErlNifEnv*, int , uint8_t*&);
+ERL_NIF_TERM decode_nullable_scalar(ErlNifEnv*, int, uint8_t*&);
 
 ERL_NIF_TERM  decode(ErlNifEnv*, SchemaItem*, std::vector<uint8_t>::iterator&);
 ERL_NIF_TERM  decode(ErlNifEnv*, SchemaItem*, uint8_t*&);
