@@ -118,6 +118,7 @@ ERL_NIF_TERM  decode(ErlNifEnv* env, SchemaItem* si, uint8_t*& it) {
             }else{
                 // real union
                 std::cout << "CHILDITEMS size: " << si_e->childItems.size() << "\r\n"; 
+                value = decode_union(env, si_e, it);
             }
             if(enif_make_map_put(env, ret, key, value, &map_out)){
                 ret = map_out;
@@ -126,6 +127,35 @@ ERL_NIF_TERM  decode(ErlNifEnv* env, SchemaItem* si, uint8_t*& it) {
     }
 
     return ret;
+}
+
+ERL_NIF_TERM decode_union(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
+    uint32_t childNumber = decodeInt32(it);
+    if(si->is_nullable == 1){
+        std::cout << "Child number: " << childNumber << "\r\n";
+        if(childNumber == 0){
+            return enif_make_atom(env, "undefined"); 
+        }else{
+            auto sctype = si->childItems[childNumber - 1]->scalar_type;
+            std::cout << "SCTYPE: " << sctype << "\r\n";
+            if(sctype >= 0){
+                std::cout << "DECODE SCALAR" << "\r\n";
+                return decode_scalar(env, sctype, it);
+            } else {
+                // nonscalar type
+            }
+        }
+    } else {
+        auto sctype = si->childItems[childNumber]->scalar_type;
+        std::cout << "SCTYPE: " << sctype << "\r\n";
+        if(sctype >= 0){
+            std::cout << "DECODE SCALAR" << "\r\n";
+            return decode_scalar(env, sctype, it);
+        } else {
+            // nonscalar type
+        }
+    }
+    return enif_make_atom(env, "undefined"); 
 }
 
 ERL_NIF_TERM decode_nullable_scalar(ErlNifEnv* env, int sctype, uint8_t*& it) {
@@ -205,6 +235,24 @@ int64_t decodeLong(uint8_t*& it) {
     } while (u & 0x80);
 
     return decodeZigzag64(encoded);
+}
+
+int32_t decodeInt32(uint8_t*& it) {
+    uint32_t encoded = 0;
+    int shift = 0;
+    uint8_t u;
+
+    do {
+        if (shift >= 32) {
+            throw std::invalid_argument("Invalid Avro varint");
+        }
+        u = *it;
+        ++it;
+        encoded |= static_cast<uint64_t>(u & 0x7f) << shift;
+        shift += 7;
+    } while (u & 0x80);
+
+    return decodeZigzag32(encoded);
 }
 
 int64_t decodeVarint(uint8_t*& it) {
