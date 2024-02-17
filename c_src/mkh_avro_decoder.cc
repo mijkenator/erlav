@@ -123,10 +123,65 @@ ERL_NIF_TERM  decode(ErlNifEnv* env, SchemaItem* si, uint8_t*& it) {
             if(enif_make_map_put(env, ret, key, value, &map_out)){
                 ret = map_out;
             }
+        } else if(si_e->obj_type == 2) {
+            std::cout << "ARRAY TYPE!!!!" << "\r\n";
+            ERL_NIF_TERM value;
+            ERL_NIF_TERM key;
+            unsigned char* key_data;
+            auto len = si_e->obj_name.length();
+            key_data = enif_make_new_binary(env, len, &key);
+            memcpy(key_data, si_e->obj_name.c_str(), len);
+            value = decode_array(env, si_e, it);
+            if(enif_make_map_put(env, ret, key, value, &map_out)){
+                ret = map_out;
+            }
         }
     }
 
     return ret;
+}
+
+ERL_NIF_TERM decodevalue(ErlNifEnv* env, SchemaItem* si, uint8_t*& it) {
+    switch (si->obj_type) {
+        case 0:
+            return decode_scalar(env, si->scalar_type, it);
+        case 1:
+            return decode_union(env, si, it);
+        case 2:
+            return decode_array(env, si, it);
+//        case 3:
+//            return encoderecord(si, env, val, ret);
+//        case 4:
+//            return encodemap(si, env, val, ret);
+//        case 5:
+//            return encodeenum(si, env, val, ret);
+        default:
+            std::cout << "ENCODE VALUE!!!\n\r";
+    }
+    return 0;
+}
+
+ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
+    uint32_t arrayLen = decodeLong(it);
+    std::vector<ERL_NIF_TERM> decoded_list;
+    decoded_list.reserve(arrayLen);
+    std::cout << "Array length --> " << arrayLen << " \r\n";
+    if (si->obj_field != "complex") {
+        auto st = get_scalar_type(si->obj_field);
+        std::cout << "simple array: type --> " << st << " \r\n";
+        for(uint64_t i=0; i < arrayLen; i++){
+            decoded_list.push_back(decode_scalar(env, st, it));
+        }
+        return enif_make_list_from_array(env, decoded_list.data(), arrayLen);
+
+    } else if ((si->obj_field == "complex") && si->array_type == 1) {
+        std::cout << "complex ARRAY \r\n";
+    } else {
+        // complex array - no support for union types yet
+        std::cout << "complex ARRAY uniom type \r\n";
+    }
+
+    return enif_make_atom(env, "undefined"); 
 }
 
 ERL_NIF_TERM decode_union(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
@@ -162,8 +217,6 @@ ERL_NIF_TERM decode_nullable_scalar(ErlNifEnv* env, int sctype, uint8_t*& it) {
     auto union_byte = *it;
     it++;
     if(union_byte == 0){
-        // return atom undefined
-        std::cout << "NULL value" << "\r\n";
         return enif_make_atom(env, "undefined"); 
     } else {
         return decode_scalar(env, sctype, it);
