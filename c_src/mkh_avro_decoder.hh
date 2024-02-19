@@ -29,6 +29,7 @@ ERL_NIF_TERM decode_nullable_scalar(ErlNifEnv*, int, uint8_t*&);
 ERL_NIF_TERM decode_union(ErlNifEnv*, SchemaItem*, uint8_t*&);
 ERL_NIF_TERM decodevalue(ErlNifEnv*, SchemaItem*, uint8_t*&);
 ERL_NIF_TERM decode_array(ErlNifEnv*, SchemaItem*, uint8_t*&);
+ERL_NIF_TERM decode_record(ErlNifEnv*, SchemaItem*, uint8_t*&);
 
 ERL_NIF_TERM  decode(ErlNifEnv*, SchemaItem*, std::vector<uint8_t>::iterator&);
 ERL_NIF_TERM  decode(ErlNifEnv*, SchemaItem*, uint8_t*&);

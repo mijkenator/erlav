@@ -114,7 +114,9 @@ ERL_NIF_TERM  decode(ErlNifEnv* env, SchemaItem* si, uint8_t*& it) {
             memcpy(key_data, si_e->obj_name.c_str(), len);
             if(si_e->childItems.size() == 1){
                 // just nullable scalar
-                value = decode_nullable_scalar(env, si_e->childItems[0]->scalar_type, it);
+                std::cout << "CHILDITEMS111 size: " << si_e->childItems.size() << "\r\n"; 
+                //value = decode_nullable_scalar(env, si_e->childItems[0]->scalar_type, it);
+                value = decode_union(env, si_e, it);
             }else{
                 // real union
                 std::cout << "CHILDITEMS size: " << si_e->childItems.size() << "\r\n"; 
@@ -135,6 +137,18 @@ ERL_NIF_TERM  decode(ErlNifEnv* env, SchemaItem* si, uint8_t*& it) {
             if(enif_make_map_put(env, ret, key, value, &map_out)){
                 ret = map_out;
             }
+        } else if(si_e->obj_type == 3) {
+            std::cout << "RECORD TYPE!!!!" << "\r\n";
+            ERL_NIF_TERM value;
+            ERL_NIF_TERM key;
+            unsigned char* key_data;
+            auto len = si_e->obj_name.length();
+            key_data = enif_make_new_binary(env, len, &key);
+            memcpy(key_data, si_e->obj_name.c_str(), len);
+            value = decode_record(env, si_e, it);
+            if(enif_make_map_put(env, ret, key, value, &map_out)){
+                ret = map_out;
+            }
         }
     }
 
@@ -149,8 +163,8 @@ ERL_NIF_TERM decodevalue(ErlNifEnv* env, SchemaItem* si, uint8_t*& it) {
             return decode_union(env, si, it);
         case 2:
             return decode_array(env, si, it);
-//        case 3:
-//            return encoderecord(si, env, val, ret);
+        case 3:
+            return decode_record(env, si, it);
 //        case 4:
 //            return encodemap(si, env, val, ret);
 //        case 5:
@@ -159,6 +173,11 @@ ERL_NIF_TERM decodevalue(ErlNifEnv* env, SchemaItem* si, uint8_t*& it) {
             std::cout << "ENCODE VALUE!!!\n\r";
     }
     return 0;
+}
+
+ERL_NIF_TERM decode_record(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
+    std::cout << "Decode record" << " \r\n";
+    return decode(env, si, it);
 }
 
 ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
@@ -197,7 +216,7 @@ ERL_NIF_TERM decode_union(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
                 std::cout << "DECODE SCALAR" << "\r\n";
                 return decode_scalar(env, sctype, it);
             } else {
-                // nonscalar type
+                return decodevalue(env, si->childItems[childNumber - 1], it);
             }
         }
     } else {
@@ -207,7 +226,7 @@ ERL_NIF_TERM decode_union(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
             std::cout << "DECODE SCALAR" << "\r\n";
             return decode_scalar(env, sctype, it);
         } else {
-            // nonscalar type
+            return decodevalue(env, si->childItems[childNumber], it);
         }
     }
     return enif_make_atom(env, "undefined"); 
