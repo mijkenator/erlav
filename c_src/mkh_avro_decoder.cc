@@ -191,10 +191,24 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
         for(uint64_t i=0; i < arrayLen; i++){
             decoded_list.push_back(decode_scalar(env, st, it));
         }
+        it++; // skip end of array, should be 0
         return enif_make_list_from_array(env, decoded_list.data(), arrayLen);
 
     } else if ((si->obj_field == "complex") && si->array_type == 1) {
         std::cout << "complex ARRAY \r\n";
+        for(uint64_t i=0; i < arrayLen; i++){
+            int64_t type_index = decodeLong(it);
+            std::cout << "Type index:" << std::to_string(type_index) << "\r\n";
+            std::string eletype = si->array_multi_type_reverse[type_index];
+            std::cout << "Type name:" << eletype << "\r\n";
+            if((eletype == "string")||(eletype == "long")||(eletype == "double")){
+                decoded_list.push_back(decode_scalar(env, get_scalar_type(eletype), it));
+            }else if(eletype == "array"){
+                decoded_list.push_back(decode_array(env, si->childItems[0], it));
+            }
+        }
+        it++; // skip end of array, should be 0
+        return enif_make_list_from_array(env, decoded_list.data(), arrayLen);
     } else {
         // complex array - no support for union types yet
         std::cout << "complex ARRAY uniom type \r\n";

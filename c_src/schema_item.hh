@@ -25,6 +25,7 @@ struct SchemaItem {
     std::vector<SchemaItem*> childItems;
     std::string obj_field = "complex";
     std::map<std::string, int> array_multi_type;
+    std::map<int, std::string> array_multi_type_reverse;
 
     void set_undefined_obj_type(int ot) {
         if (obj_type == -1) {
@@ -37,8 +38,10 @@ struct SchemaItem {
         for (auto it : atypes) {
             if (it.is_string()) {
                 array_multi_type[it] = index;
+                array_multi_type_reverse[index] = it;
             } else if (it.is_object() && it["type"] == "array") {
                 array_multi_type["array"] = index;
+                array_multi_type_reverse[index] = "array";
                 childItems = read_internal_types(it);
             }
             index++;
