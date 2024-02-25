@@ -51,8 +51,8 @@ complex2_array_test() ->
     Encoder1 = avro:make_simple_encoder(SchemaJSON1, []),
     Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
 
-    %Pairs = [{<<"arrayField">>, [1111, [1,2,3,4,5], 77]}],
-    Pairs = [{<<"arrayField">>, [1, [2], 3]}],
+    Pairs = [{<<"arrayField">>, [1111, [1,2,3,4,5], 77]}],
+    %Pairs = [{<<"arrayField">>, [1, [2], 3]}],
     Term = maps:from_list(Pairs),
     Encoded = erlav_nif:erlav_encode(SchemaId, Term),
     ?debugFmt("Encoded erlav: ~p ~n", [Encoded]),
@@ -68,4 +68,67 @@ complex2_array_test() ->
         Value1 = maps:get(Key, Re1),
         ?assertEqual(Value, Value1)
     end, Pairs),
+    ok.
+
+array_of_recs_test() ->
+    SchemaId = erlav_nif:erlav_init(<<"test/tschema_array_ofrecs.avsc">>),
+    Term = #{
+        <<"arrayField">> => [
+            #{
+                <<"rec1field">> => 111,
+                <<"rec2field">> => <<"str1">>,
+                <<"rec3field">> => 3333,
+                <<"rec4field">> => 1,
+                <<"rec5field">> => true,
+                <<"rec6field">> => 1.11,
+                <<"rec7field">> => 2.222
+             },
+            #{
+                <<"rec1field">> => 2111,
+                <<"rec2field">> => <<"2str1">>,
+                <<"rec3field">> => 23333,
+                <<"rec4field">> => 21,
+                <<"rec5field">> => true,
+                <<"rec6field">> => 21.11,
+                <<"rec7field">> => 22.222
+             }
+        ]
+    },
+    Encoded = erlav_nif:erlav_encode(SchemaId, Term),
+    ?debugFmt("Encoded: ~p ~n", [Encoded]),
+    Re1 = erlav_nif:erlav_decode_fast(SchemaId, Encoded),
+    ?debugFmt("Decoded result: ~n ~p ~n", [Re1]),
+    ?assert(true == tst_utils:compare_maps_deep(Term, Re1)),
+    ok.
+
+array_of_recs0_test() ->
+    SchemaId = erlav_nif:erlav_init(<<"test/tschema_array_ofrecs0.avsc">>),
+    Term = #{
+        <<"arrayField">> => [
+            #{
+                <<"rec1field">> => 2
+             }
+        ]
+    },
+    Encoded = erlav_nif:erlav_encode(SchemaId, Term),
+    ?debugFmt("Encoded: ~p ~n", [Encoded]),
+    Re1 = erlav_nif:erlav_decode_fast(SchemaId, Encoded),
+    ?debugFmt("Decoded result: ~n ~p ~n", [Re1]),
+    ?assert(true == tst_utils:compare_maps(Term, Re1)),
+    ok.
+
+array_of_recs1_test() ->
+    SchemaId = erlav_nif:erlav_init(<<"test/tschema_array_ofrecs1.avsc">>),
+    Term = #{
+        <<"arrayField">> => [
+            #{
+                <<"rec1field">> => 2
+             }
+        ]
+    },
+    Encoded = erlav_nif:erlav_encode(SchemaId, Term),
+    ?debugFmt("Encoded: ~p ~n", [Encoded]),
+    Re1 = erlav_nif:erlav_decode_fast(SchemaId, Encoded),
+    ?debugFmt("Decoded result: ~n ~p ~n", [Re1]),
+    ?assert(true == tst_utils:compare_maps(Term, Re1)),
     ok.

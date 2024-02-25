@@ -211,7 +211,37 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
         return enif_make_list_from_array(env, decoded_list.data(), arrayLen);
     } else {
         // complex array - no support for union types yet
-        std::cout << "complex ARRAY uniom type \r\n";
+        std::cout << "complex ARRAY uniom type " << si->array_type << "\r\n";
+        std::cout << "si->obj_type:" << std::to_string(si->obj_type) << "\r\n";
+        std::cout << "si->obj_field:" << si->obj_field << "\r\n";
+        std::cout << "si->obj_simple_type:" << std::to_string(si->obj_simple_type) << "\r\n";
+
+        auto child_len = si->childItems.size();
+        std::cout << "child len:" << child_len << "\r\n";
+        if(child_len == 1){
+            // array of 1 complex type
+            for(uint64_t i=0; i < arrayLen; i++){
+                decoded_list.push_back(decode(env, si->childItems[0], it));
+            }
+            it++; // skip end of array, should be 0
+            return enif_make_list_from_array(env, decoded_list.data(), arrayLen);
+        }else{
+            // complex array multiple types
+        } 
+
+        //for(uint64_t i=0; i < arrayLen; i++){
+            //int64_t type_index = decodeLong(it);
+            //std::cout << "Type index:" << std::to_string(type_index) << "\r\n";
+            //std::string eletype = si->array_multi_type_reverse[type_index];
+            //std::cout << "Type name:" << eletype << "\r\n";
+            /*if((eletype == "string")||(eletype == "long")||(eletype == "double")){
+                decoded_list.push_back(decode_scalar(env, get_scalar_type(eletype), it));
+            }else if(eletype == "array"){
+                decoded_list.push_back(decode_array(env, si->childItems[0], it));
+            }*/
+        //}
+        //it++; // skip end of array, should be 0
+        //return enif_make_list_from_array(env, decoded_list.data(), arrayLen);
     }
 
     return enif_make_atom(env, "undefined"); 
