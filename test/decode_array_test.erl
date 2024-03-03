@@ -132,3 +132,72 @@ array_of_recs1_test() ->
     ?debugFmt("Decoded result: ~n ~p ~n", [Re1]),
     ?assert(true == tst_utils:compare_maps(Term, Re1)),
     ok.
+
+array_of_recs2_test() ->
+    SchemaId = erlav_nif:erlav_init(<<"test/tschema_array_ofrecs_nullable.avsc">>),
+    Term = #{
+        <<"arrayField">> => [
+            #{
+                <<"rec1field">> => 2,
+                <<"rec3field">> => 4
+             },
+            #{
+                <<"rec1field">> => 22,
+                <<"rec3field">> => 34
+             }
+        ]
+    },
+    Encoded = erlav_nif:erlav_encode(SchemaId, Term),
+    ?debugFmt("Encoded: ~p ~n", [Encoded]),
+    Re1 = erlav_nif:erlav_decode_fast(SchemaId, Encoded),
+    ?debugFmt("Decoded result: ~n ~p ~n", [Re1]),
+    ?assert(true == tst_utils:compare_maps(Term, Re1)),
+    ok.
+
+array_of_arr3_test() ->
+    SchemaId = erlav_nif:erlav_init(<<"test/array_array_array.avsc">>),
+    {ok, SchemaJSON1} = file:read_file("test/array_array_array.avsc"),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    %Term = #{
+    %    <<"arrayField">> => [
+    %        [ [1,2,3], [4,5,6], [7,8,9] ],
+    %        [ [11,22,33], [14,15,16], [117,118,119] ]
+    %    ]
+    %},
+    Term = #{
+        <<"arrayField">> => [
+            [ [1,1,1] ]
+        ]
+    },
+    Encoded = erlav_nif:erlav_encode(SchemaId, Term),
+    ?debugFmt("Encoded: ~p ~n", [Encoded]),
+    Re1 = erlav_nif:erlav_decode_fast(SchemaId, Encoded),
+    ?debugFmt("Decoded result: ~n ~p ~n", [Re1]),
+    Re2 = Decoder(Encoded),
+    ?debugFmt("Erlavro Decoded result: ~n ~p ~n", [Re2]),
+    ?assert(true == tst_utils:compare_maps(Term, Re1)),
+    ok.
+
+array_of_arr4_test() ->
+    SchemaId = erlav_nif:erlav_init(<<"test/array_array.avsc">>),
+    {ok, SchemaJSON1} = file:read_file("test/array_array.avsc"),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    %Term = #{
+    %    <<"arrayField">> => [
+    %        [ [1,2,3], [4,5,6], [7,8,9] ],
+    %        [ [11,22,33], [14,15,16], [117,118,119] ]
+    %    ]
+    %},
+    Term = #{
+        <<"arrayField">> => [
+            [1,1,1]
+        ]
+    },
+    Encoded = erlav_nif:erlav_encode(SchemaId, Term),
+    ?debugFmt("Encoded: ~p ~n", [Encoded]),
+    Re1 = erlav_nif:erlav_decode_fast(SchemaId, Encoded),
+    ?debugFmt("Decoded result: ~n ~p ~n", [Re1]),
+    Re2 = Decoder(Encoded),
+    ?debugFmt("Erlavro Decoded result: ~n ~p ~n", [Re2]),
+    ?assert(true == tst_utils:compare_maps(Term, Re1)),
+    ok.
