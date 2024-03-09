@@ -90,6 +90,7 @@ double decode_double(std::vector<uint8_t>::iterator& it){
 ERL_NIF_TERM  decode(ErlNifEnv* env, SchemaItem* si, uint8_t*& it) {
     ERL_NIF_TERM ret = enif_make_new_map(env);
     ERL_NIF_TERM map_out;
+    std::cout << "decode funcs!!!!!" << "\r\n";
 
     for(SchemaItem* si_e : si->childItems){
         std::cout << "Field: " << si_e->obj_name << "  | type: " << si_e->obj_type << " | scalar_type: " << si_e->scalar_type  << "\r\n";
@@ -211,14 +212,28 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
         return enif_make_list_from_array(env, decoded_list.data(), arrayLen);
     } else {
         // complex array - no support for union types yet
-        std::cout << "complex ARRAY uniom type " << si->array_type << "\r\n";
+        std::cout << "complex ARRAY union type " << si->array_type << "\r\n";
         std::cout << "si->obj_type:" << std::to_string(si->obj_type) << "\r\n";
+        std::cout << "si->scalar_type:" << std::to_string(si->scalar_type) << "\r\n";
         std::cout << "si->obj_field:" << si->obj_field << "\r\n";
         std::cout << "si->obj_simple_type:" << std::to_string(si->obj_simple_type) << "\r\n";
-
+        std::cout << "si->array_type:" << std::to_string(si->array_type) << "\r\n";
+        
         auto child_len = si->childItems.size();
         std::cout << "child len:" << child_len << "\r\n";
-        if(child_len == 1){
+        std::cout << "child scalar_type: " << std::to_string(si->childItems[0]->scalar_type) << "\r\n";
+        std::cout << "child obj_field: " << si->childItems[0]->obj_field << "\r\n";
+
+        if((child_len == 1) && (si->childItems[0]->scalar_type > 0) && (si->childItems[0]->obj_field != "complex")){
+            std::cout << "lalalal!!!!!!!!!!"  << "\r\n";
+            // array of simple arrays
+            for(uint64_t i=0; i < arrayLen; i++){
+                decoded_list.push_back(decode_array(env, si->childItems[0], it));
+            }
+            it++; // skip end of array, should be 0
+            return enif_make_list_from_array(env, decoded_list.data(), arrayLen);
+
+        }else if(child_len == 1){
             // array of 1 complex type
             for(uint64_t i=0; i < arrayLen; i++){
                 decoded_list.push_back(decode(env, si->childItems[0], it));
@@ -227,6 +242,7 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
             return enif_make_list_from_array(env, decoded_list.data(), arrayLen);
         }else{
             // complex array multiple types
+            std::cout << "MUHAHAHA"  << "\r\n";
         } 
 
         //for(uint64_t i=0; i < arrayLen; i++){

@@ -190,7 +190,7 @@ array_of_arr4_test() ->
     %},
     Term = #{
         <<"arrayField">> => [
-            [1,1,1]
+            [1,1,1], [2,3,4], [44], [9,8,7]
         ]
     },
     Encoded = erlav_nif:erlav_encode(SchemaId, Term),
