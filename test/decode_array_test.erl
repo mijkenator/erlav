@@ -182,12 +182,6 @@ array_of_arr4_test() ->
     SchemaId = erlav_nif:erlav_init(<<"test/array_array.avsc">>),
     {ok, SchemaJSON1} = file:read_file("test/array_array.avsc"),
     Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
-    %Term = #{
-    %    <<"arrayField">> => [
-    %        [ [1,2,3], [4,5,6], [7,8,9] ],
-    %        [ [11,22,33], [14,15,16], [117,118,119] ]
-    %    ]
-    %},
     Term = #{
         <<"arrayField">> => [
             [1,1,1], [2,3,4], [44], [9,8,7]
@@ -200,4 +194,26 @@ array_of_arr4_test() ->
     Re2 = Decoder(Encoded),
     ?debugFmt("Erlavro Decoded result: ~n ~p ~n", [Re2]),
     ?assert(true == tst_utils:compare_maps(Term, Re1)),
+    
+    Term1 = #{
+        <<"arrayField">> => [
+            [1,2,3], [4,5,6], [7,8,9], [0], [0], [1,1,1,1,1,1], [5]
+        ]
+    },
+    Encoded1 = erlav_nif:erlav_encode(SchemaId, Term1),
+    ?debugFmt("Encoded: ~p ~n", [Encoded1]),
+    Re3 = erlav_nif:erlav_decode_fast(SchemaId, Encoded1),
+    ?debugFmt("Decoded result: ~n ~p ~n", [Re3]),
+    Re4 = Decoder(Encoded1),
+    ?debugFmt("Erlavro Decoded result: ~n ~p ~n", [Re4]),
+    ?assert(true == tst_utils:compare_maps(Term1, Re3)),
+
+    ok.
+
+%
+% test for array of nullable arrays
+%
+array_of_arr5_test() ->
+    % not implemened yet
+    ?assert(true == false),
     ok.
