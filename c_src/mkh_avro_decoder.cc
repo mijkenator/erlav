@@ -114,7 +114,7 @@ ERL_NIF_TERM  decode(ErlNifEnv* env, SchemaItem* si, uint8_t*& it) {
             key_data = enif_make_new_binary(env, len, &key);
             memcpy(key_data, si_e->obj_name.c_str(), len);
             if(si_e->childItems.size() == 1){
-                // just nullable scalar
+                // just nullable scalar OR nullable array,record, map....
                 std::cout << "CHILDITEMS111 size: " << si_e->childItems.size() << "\r\n"; 
                 //value = decode_nullable_scalar(env, si_e->childItems[0]->scalar_type, it);
                 value = decode_union(env, si_e, it);
@@ -150,6 +150,18 @@ ERL_NIF_TERM  decode(ErlNifEnv* env, SchemaItem* si, uint8_t*& it) {
             if(enif_make_map_put(env, ret, key, value, &map_out)){
                 ret = map_out;
             }
+        } else if(si_e->obj_type == 4) {
+            std::cout << "MAP TYPE!!!!" << "\r\n";
+            ERL_NIF_TERM value;
+            ERL_NIF_TERM key;
+            unsigned char* key_data;
+            auto len = si_e->obj_name.length();
+            key_data = enif_make_new_binary(env, len, &key);
+            memcpy(key_data, si_e->obj_name.c_str(), len);
+            value = decode_map(env, si_e, it);
+            if(enif_make_map_put(env, ret, key, value, &map_out)){
+                ret = map_out;
+            }
         }
     }
 
@@ -179,6 +191,31 @@ ERL_NIF_TERM decodevalue(ErlNifEnv* env, SchemaItem* si, uint8_t*& it) {
 ERL_NIF_TERM decode_record(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
     std::cout << "Decode record" << " \r\n";
     return decode(env, si, it);
+}
+
+ERL_NIF_TERM decode_map(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
+    ERL_NIF_TERM ret = enif_make_new_map(env);
+    ERL_NIF_TERM map_out;
+    uint32_t mapLen = decodeLong(it);
+    std::cout << "MAP length --> " << mapLen << " \r\n";
+        std::cout << "si->obj_type:" << std::to_string(si->obj_type) << "\r\n";
+        std::cout << "si->scalar_type:" << std::to_string(si->scalar_type) << "\r\n";
+        std::cout << "si->obj_field:" << si->obj_field << "\r\n";
+        std::cout << "si->obj_simple_type:" << std::to_string(si->obj_simple_type) << "\r\n";
+        std::cout << "si->array_type:" << std::to_string(si->array_type) << "\r\n";
+        auto child_len = si->childItems.size();
+        std::cout << "child len:" << child_len << "\r\n";
+    if (si->obj_field != "complex") { // map of scalars
+        for(uint64_t i=0; i < mapLen; i++){
+            ERL_NIF_TERM map_key = decode_scalar(env, 5, it); // map keys always strings, (scalar_type = 6)
+            ERL_NIF_TERM value = decode_scalar(env, si->scalar_type, it);
+            if(enif_make_map_put(env, ret, map_key, value, &map_out)){
+                ret = map_out;
+            }
+        }
+    }
+
+    return ret; 
 }
 
 ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
@@ -282,7 +319,13 @@ ERL_NIF_TERM decode_union(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
         }else{
             auto sctype = si->childItems[childNumber - 1]->scalar_type;
             std::cout << "SCTYPE: " << sctype << "\r\n";
-            if(sctype >= 0){
+            /*std::cout << "complex ARRAY union type " << si->childItems[childNumber - 1]->array_type << "\r\n";
+            std::cout << "si->obj_type:" << std::to_string(si->childItems[childNumber - 1]->obj_type) << "\r\n";
+            std::cout << "si->scalar_type:" << std::to_string(si->childItems[childNumber - 1]->scalar_type) << "\r\n";
+            std::cout << "si->obj_field:" << si->childItems[childNumber - 1]->obj_field << "\r\n";
+            std::cout << "si->obj_simple_type:" << std::to_string(si->childItems[childNumber - 1]->obj_simple_type) << "\r\n";
+            std::cout << "si->array_type:" << std::to_string(si->childItems[childNumber - 1]->array_type) << "\r\n"; */
+            if(sctype >= 0 && si->childItems[childNumber - 1]->obj_type == 0){
                 std::cout << "DECODE SCALAR" << "\r\n";
                 return decode_scalar(env, sctype, it);
             } else {
@@ -292,7 +335,7 @@ ERL_NIF_TERM decode_union(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
     } else {
         auto sctype = si->childItems[childNumber]->scalar_type;
         std::cout << "SCTYPE: " << sctype << "\r\n";
-        if(sctype >= 0){
+        if(sctype >= 0  && si->childItems[childNumber - 1]->obj_type == 0){
             std::cout << "DECODE SCALAR" << "\r\n";
             return decode_scalar(env, sctype, it);
         } else {

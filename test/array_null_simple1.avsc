@@ -1,0 +1,7 @@
+{"type": "record", "name":"Interop", "namespace": "erlav.test.array_array",
+  "fields": [
+      {"name": "arrayField", "type": ["null", {"type": "array", "items": "long"}]},
+      {"name": "endlf", "type": "long"}
+  ]
+}
+
