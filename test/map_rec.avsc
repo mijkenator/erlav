@@ -1,0 +1,27 @@
+{
+  "namespace": "rtb.gateway.request",
+  "type": "record",
+  "name": "GatewayRequest",
+
+  "fields": [
+    {
+        "name": "key",
+        "type": ["null", {
+            "name": "filtered_ssp_result_map",
+            "type": "map",
+            "values": {
+                "type": "record",
+                "name": "internal_rec",
+                "fields": [
+                    {"name": "f1", "type": "string"},
+                    {"name": "f2", "type": ["null", "long"], "default": null}
+                ]
+            }
+        }],
+        "default": null
+    }
+
+  ]
+}
+
+

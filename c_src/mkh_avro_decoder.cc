@@ -178,12 +178,12 @@ ERL_NIF_TERM decodevalue(ErlNifEnv* env, SchemaItem* si, uint8_t*& it) {
             return decode_array(env, si, it);
         case 3:
             return decode_record(env, si, it);
-//        case 4:
+        case 4:
+            return decode_map(env, si, it);
+//        case 5: // enym
 //            return encodemap(si, env, val, ret);
-//        case 5:
-//            return encodeenum(si, env, val, ret);
         default:
-            std::cout << "ENCODE VALUE!!!\n\r";
+            std::cout << "DECODE VALUE!!!" << std::to_string(si->obj_type) << "\n\r";
     }
     return 0;
 }
@@ -198,13 +198,8 @@ ERL_NIF_TERM decode_map(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
     ERL_NIF_TERM map_out;
     uint32_t mapLen = decodeLong(it);
     std::cout << "MAP length --> " << mapLen << " \r\n";
-        std::cout << "si->obj_type:" << std::to_string(si->obj_type) << "\r\n";
-        std::cout << "si->scalar_type:" << std::to_string(si->scalar_type) << "\r\n";
-        std::cout << "si->obj_field:" << si->obj_field << "\r\n";
-        std::cout << "si->obj_simple_type:" << std::to_string(si->obj_simple_type) << "\r\n";
-        std::cout << "si->array_type:" << std::to_string(si->array_type) << "\r\n";
-        auto child_len = si->childItems.size();
-        std::cout << "child len:" << child_len << "\r\n";
+    auto child_len = si->childItems.size();
+     std::cout << "child len:" << child_len << "\r\n";
     if (si->obj_field != "complex") { // map of scalars
         for(uint64_t i=0; i < mapLen; i++){
             ERL_NIF_TERM map_key = decode_scalar(env, 5, it); // map keys always strings, (scalar_type = 6)
@@ -213,6 +208,15 @@ ERL_NIF_TERM decode_map(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
                 ret = map_out;
             }
         }
+    }else{
+        for(uint64_t i=0; i < mapLen; i++){
+            ERL_NIF_TERM map_key = decode_scalar(env, 5, it); // map keys always strings, (scalar_type = 6)
+            ERL_NIF_TERM value = decodevalue(env, si->childItems[0], it);
+            if(enif_make_map_put(env, ret, map_key, value, &map_out)){
+                ret = map_out;
+            }
+        }
+
     }
 
     return ret; 
