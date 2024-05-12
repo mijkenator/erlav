@@ -95,3 +95,34 @@ m5_test() ->
     ?debugFmt("decode result: ~p ~n", [Re1]),
     ?assert(true == tst_utils:compare_maps_deep(Term, Re1)),
     ok.
+
+% map of arrays
+m6_test() ->
+    SchemaId = erlav_nif:erlav_init(<<"test/map_arr_extra.avsc">>),
+    Term = #{
+        <<"key">> => 
+            #{
+                <<"f1">> => [1]
+             },
+        <<"key1">> => 
+            #{
+                <<"f2">> => [2]
+             }
+    },
+    Encoded = erlav_nif:erlav_encode(SchemaId, Term),
+    ?debugFmt("Encoded: ~p ~n", [Encoded]),
+    
+    {ok, SchemaJSON1} = file:read_file("test/map_arr_extra.avsc"),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    M = to_map(Decoder(Encoded)),
+    ?debugFmt("Decoded result: ~p ~n", [M]),
+    ?debugFmt("============================= ~n ~n", []),
+
+    Re1 = erlav_nif:erlav_decode_fast(SchemaId, Encoded),
+    ?debugFmt("decode result: ~p ~n", [Re1]),
+    ?assert(true == tst_utils:compare_maps(Term, Re1)),
+    ok.
+
+to_map([{_,_}|_] = L) ->
+    maps:from_list([{K, to_map(V)} || {K, V} <- L]);
+to_map(V) -> V.
