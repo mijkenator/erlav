@@ -173,7 +173,9 @@ encodemap(SchemaItem* si,
                         si->childItems[0], env, &amap_iter->second, ret);
                 }
             }
-            ret->push_back(0);
+            if(len > 0){
+                ret->push_back(0);
+            }
             return 0;
         }
     }

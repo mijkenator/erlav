@@ -3,6 +3,7 @@
 -include_lib("eunit/include/eunit.hrl").
 
 main_test() ->
+    ?assert(true == false),
     SchemaId = erlav_nif:erlav_init(<<"test/opnrtb_test1.avsc">>),
     {ok, Terms} = file:consult("test/opnrtb_test1.data"),
 
@@ -16,6 +17,7 @@ main_test() ->
     end, Terms).
 
 ev7_debug_test() ->
+    ?assert(true == false),
     SchemaId = erlav_nif:erlav_init(<<"test/opnrtb_test1.avsc">>),
     Term = #{
                 <<"event">> => <<"event7">>,

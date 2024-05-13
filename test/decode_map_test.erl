@@ -98,6 +98,7 @@ m5_test() ->
 
 % map of arrays
 m6_test() ->
+    ?assert(true == false),
     SchemaId = erlav_nif:erlav_init(<<"test/map_arr_extra.avsc">>),
     Term = #{
         <<"key">> => 

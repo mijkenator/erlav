@@ -262,6 +262,76 @@ map_test() ->
     ?assertEqual(TRet4, #{<<"mapField">> => [{<<"aaa">>,3},{<<"bbb">>,2},{<<"ccc">>,1}]}),
     ok.
 
+empty_map_arr_test() ->
+    {ok, SchemaJSON1} = file:read_file("test/map_arr.avsc"),
+    Encoder1 = avro:make_simple_encoder(SchemaJSON1, []),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    Term1 = #{
+              <<"key">> => 
+              #{
+                <<"a">> => [1,1,1,1]
+                }
+    },
+    SchemaId = erlav_nif:erlav_init(<<"test/map_arr.avsc">>),
+    Re2 = erlav_nif:erlav_encode(SchemaId, Term1),
+    ?debugFmt("Erlav encoded: ~p ~n", [Re2]),
+    R1 = iolist_to_binary(Encoder1(Term1)),
+    ?debugFmt("Erlavro encoded: ~p ~n", [R1]),
+
+    RTerm = maps:from_list(Decoder(Re2)),
+    ?assertEqual(RTerm, #{<<"key">> => [{<<"a">>,[1,1,1,1]}]  }),
+
+
+    Term2 = #{
+              <<"key">> => #{}
+    },
+    Re22 = erlav_nif:erlav_encode(SchemaId, Term2),
+    ?debugFmt("Erlav encoded: ~p ~n", [Re22]),
+    R21 = iolist_to_binary(Encoder1(Term2)),
+    ?debugFmt("Erlavro encoded: ~p ~n", [R21]),
+
+    RTerm2 = maps:from_list(Decoder(Re22)),
+    ?assertEqual(RTerm2, #{<<"key">> => []  }),
+    ok.
+
+empty_map_test() ->
+    {ok, SchemaJSON1} = file:read_file("test/tschema_map.avsc"),
+    Encoder1 = avro:make_simple_encoder(SchemaJSON1, []),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    Term1 = #{
+              <<"mapField">> => 
+              #{
+                }
+    },
+    SchemaId = erlav_nif:erlav_init(<<"test/tschema_map.avsc">>),
+    Re2 = erlav_nif:erlav_encode(SchemaId, Term1),
+    ?debugFmt("Erlav encoded: ~p ~n", [Re2]),
+    R1 = iolist_to_binary(Encoder1(Term1)),
+    ?debugFmt("Erlavro encoded: ~p ~n", [R1]),
+
+    RTerm = maps:from_list(Decoder(Re2)),
+    ?assertEqual(RTerm, #{<<"mapField">> => []}),
+    ok.
+
+empty_map_null_test() ->
+    {ok, SchemaJSON1} = file:read_file("test/map_int_null.avsc"),
+    Encoder1 = avro:make_simple_encoder(SchemaJSON1, []),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    Term1 = #{
+              <<"mapField">> => 
+              #{
+                }
+    },
+    SchemaId = erlav_nif:erlav_init(<<"test/map_int_null.avsc">>),
+    Re2 = erlav_nif:erlav_encode(SchemaId, Term1),
+    ?debugFmt("Erlav encoded: ~p ~n", [Re2]),
+    R1 = iolist_to_binary(Encoder1(Term1)),
+    ?debugFmt("Erlavro encoded: ~p ~n", [R1]),
+
+    RTerm = maps:from_list(Decoder(Re2)),
+    ?assertEqual(RTerm, #{<<"mapField">> => []}),
+    ok.
+
 map_null_test() ->
     {ok, SchemaJSON1} = file:read_file("test/map_int_null.avsc"),
     Encoder1 = avro:make_simple_encoder(SchemaJSON1, []),
