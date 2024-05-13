@@ -276,7 +276,9 @@ encodearray(SchemaItem* si,
                 }
             }
         }
-        ret->push_back(0);
+        if(len > 0){
+            ret->push_back(0);
+        }
         // std::cout << "close array \r\n";
         return 0;
     }

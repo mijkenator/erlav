@@ -129,6 +129,9 @@ array_test() ->
     Term5 = #{
         <<"arrayField">> => [10000]
     },
+    Term6 = #{
+        <<"arrayField">> => []
+    },
     A1 = maps:get(<<"arrayField">>,  maps:from_list(Decoder(erlav_nif:erlav_encode(SchemaId, Term1)))),
     ?assertEqual([1], A1),
     ?assertEqual(Term1, maps:from_list(Decoder(erlav_nif:erlav_encode(SchemaId, Term1)))),
@@ -136,6 +139,24 @@ array_test() ->
     ?assertEqual(Term3, maps:from_list(Decoder(erlav_nif:erlav_encode(SchemaId, Term3)))),
     ?assertEqual(Term4, maps:from_list(Decoder(erlav_nif:erlav_encode(SchemaId, Term4)))),
     ?assertEqual(Term5, maps:from_list(Decoder(erlav_nif:erlav_encode(SchemaId, Term5)))),
+    ?assertEqual(Term6, maps:from_list(Decoder(erlav_nif:erlav_encode(SchemaId, Term6)))),
+
+    ok.
+
+array_empty_test() ->
+    {ok, SchemaJSON1} = file:read_file("test/tschema_array.avsc"),
+    Encoder1 = avro:make_simple_encoder(SchemaJSON1, []),
+    Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    SchemaId = erlav_nif:erlav_init(<<"test/tschema_array.avsc">>),
+    Term1 = #{
+        <<"arrayField">> => []
+    },
+    E1 = erlav_nif:erlav_encode(SchemaId, Term1),
+    E2 = iolist_to_binary(Encoder1(Term1)),
+    ?debugFmt("Erlang encoded: ~p ~n", [E2]),
+    ?debugFmt("Erlav encoded: ~p ~n", [E1]),
+
+    ?assertEqual(Term1, maps:from_list(Decoder(erlav_nif:erlav_encode(SchemaId, Term1)))),
 
     ok.
 
