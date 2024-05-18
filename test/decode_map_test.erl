@@ -98,7 +98,7 @@ m5_test() ->
 
 % map of arrays
 m6_test() ->
-    ?assert(true == false),
+    %?assert(true == false),
     SchemaId = erlav_nif:erlav_init(<<"test/map_arr_extra.avsc">>),
     Term = #{
         <<"key">> => 
@@ -111,10 +111,13 @@ m6_test() ->
              }
     },
     Encoded = erlav_nif:erlav_encode(SchemaId, Term),
-    ?debugFmt("Encoded: ~p ~n", [Encoded]),
+    ?debugFmt("Encoded1: ~p ~n", [Encoded]),
     
     {ok, SchemaJSON1} = file:read_file("test/map_arr_extra.avsc"),
     Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    Encoder  = avro:make_simple_encoder(SchemaJSON1, []),
+    E2 = iolist_to_binary(Encoder(Term)),
+    ?debugFmt("Encoded2: ~p ~n", [E2]),
     M = to_map(Decoder(Encoded)),
     ?debugFmt("Decoded result: ~p ~n", [M]),
     ?debugFmt("============================= ~n ~n", []),

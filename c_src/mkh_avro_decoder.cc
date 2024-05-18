@@ -218,6 +218,9 @@ ERL_NIF_TERM decode_map(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
         }
 
     }
+    if(mapLen > 0){
+        it++;
+    }
 
     return ret; 
 }
@@ -227,15 +230,15 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
     std::vector<ERL_NIF_TERM> decoded_list;
     decoded_list.reserve(arrayLen);
     std::cout << "DA Array length --> " << arrayLen << " \r\n";
-        std::cout << "complex ARRAY union type " << si->array_type << "\r\n";
-        std::cout << "si->obj_type:" << std::to_string(si->obj_type) << "\r\n";
-        std::cout << "si->scalar_type:" << std::to_string(si->scalar_type) << "\r\n";
-        std::cout << "si->obj_field:" << si->obj_field << "\r\n";
-        std::cout << "si->obj_simple_type:" << std::to_string(si->obj_simple_type) << "\r\n";
-        std::cout << "si->array_type:" << std::to_string(si->array_type) << "\r\n";
-        auto child_len = si->childItems.size();
-        std::cout << "child len:" << child_len << "\r\n";
-        std::cout << "----------------------------------- \r\n";
+    std::cout << "complex ARRAY union type " << si->array_type << "\r\n";
+    std::cout << "si->obj_type:" << std::to_string(si->obj_type) << "\r\n";
+    std::cout << "si->scalar_type:" << std::to_string(si->scalar_type) << "\r\n";
+    std::cout << "si->obj_field:" << si->obj_field << "\r\n";
+    std::cout << "si->obj_simple_type:" << std::to_string(si->obj_simple_type) << "\r\n";
+    std::cout << "si->array_type:" << std::to_string(si->array_type) << "\r\n";
+    auto child_len = si->childItems.size();
+    std::cout << "child len:" << child_len << "\r\n";
+    std::cout << "----------------------------------- \r\n";
 
     if (si->obj_field != "complex") {
         auto st = get_scalar_type(si->obj_field);

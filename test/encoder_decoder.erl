@@ -3,7 +3,6 @@
 -include_lib("eunit/include/eunit.hrl").
 
 main_test() ->
-    ?assert(true == false),
     SchemaId = erlav_nif:erlav_init(<<"test/opnrtb_test1.avsc">>),
     {ok, Terms} = file:consult("test/opnrtb_test1.data"),
 
@@ -12,12 +11,11 @@ main_test() ->
         ?debugFmt("~p ~n", [Term1]),
         Encoded = erlav_nif:erlav_safe_encode(SchemaId, Term1),
         M = erlav_nif:erlav_decode_fast(SchemaId, Encoded),
-        tst_utils:compare_maps(Term1, M),
+        tst_utils:compare_maps_extra_fields(Term1, M),
         ?debugFmt("=============== /struct  ===================  ~n~n", [])
     end, Terms).
 
 ev7_debug_test() ->
-    ?assert(true == false),
     SchemaId = erlav_nif:erlav_init(<<"test/opnrtb_test1.avsc">>),
     Term = #{
                 <<"event">> => <<"event7">>,

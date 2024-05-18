@@ -14,7 +14,7 @@ ortb1_test() ->
     lists:foreach(fun(Term1) -> 
         Re2 = erlav_nif:erlav_encode(SchemaId, Term1),
         M = to_map(Decoder(Re2)),
-        compare_maps(Term1, M)
+        tst_utils:compare_maps_extra_fields(Term1, M)
     end, Terms).
 
 ortb2_test() ->
@@ -29,7 +29,7 @@ ortb2_test() ->
     lists:foreach(fun(Term1) -> 
         Re2 = erlav_nif:erlav_safe_encode(SchemaId, Term1),
         M = to_map(Decoder(Re2)),
-        compare_maps(Term1, M)
+        tst_utils:compare_maps_extra_fields(Term1, M)
     end, Terms).
 
 compare_maps(M1, M2) ->

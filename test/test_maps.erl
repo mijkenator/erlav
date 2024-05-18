@@ -18,6 +18,8 @@ term1_test() ->
     SchemaId = erlav_nif:erlav_init(<<"test/opnrtb_test1.avsc">>),
     Re1 = erlav_nif:erlav_safe_encode(SchemaId, Map1),
     ?debugFmt("Encde result: ~p ~n", [Re1]),
+    %M = erlav_nif:erlav_decode_fast(SchemaId, Re1),
+    %tst_utils:compare_maps(Term1, M),
     ok.
 
 term2_test() ->
