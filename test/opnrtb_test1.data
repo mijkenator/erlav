@@ -876,18 +876,17 @@
                               <<"impression_responses">> =>
                                   [#{
                                     <<"ext">> =>
-                                         #{<<"advertiser_id">> => 3168,
-                                           <<"bidder_bid_price">> => 1000000,
-                                           <<"bidder_id">> => 1,
-                                           <<"buyer_id">> => 187,
-                                           <<"avertiser_id">> => 187,
-                                           <<"creative_group_lookup_id">> =>
-                                               <<"a59984">>,
-                                           <<"dsp_id">> => 1,
-                                           <<"deal_id">> => 1,
-                                           <<"flight_id">> => 246135},
-                                     <<"id">> =>
-                                         <<"48bbc85e-ee4d-11ec-b93d-6af06fae0b66:1">>,
+                                             #{
+                                               <<"bidder_bid_price">> => 1000000,
+                                               <<"bidder_id">> => 1,
+                                               <<"buyer_id">> => 187,
+                                               <<"advertiser_id">> => 187,
+                                               <<"creative_group_lookup_id">> => <<"a59984">>,
+                                               <<"dsp_id">> => 1,
+                                               <<"deal_id">> => <<"1">>,
+                                               <<"flight_id">> => 246135
+                                               },
+                                     <<"id">> => <<"48bbc85e-ee4d-11ec-b93d-6af06fae0b66:1">>,
                                      <<"impid">> => <<"1">>,
                                      <<"price">> => 0.994
                                    }],

@@ -667,45 +667,28 @@
                                                                     },
                                                                     {
                                                                         "name": "ext",
-                                                                        "type": {
+                                                                        "type": ["null", {
                                                                             "type": "record",
                                                                             "name": "impression_responses_ext",
                                                                             "fields":[
-                                                                                {
-                                                                                    "name": "bidder_id",
-                                                                                    "type": "long"
-                                                                                },
-                                                                                {
-                                                                                    "name": "dsp_id",
-                                                                                    "type": "long"
-                                                                                },
-                                                                                {
-                                                                                    "name": "buyer_id",
-                                                                                    "type": "long"
-                                                                                },
-                                                                                {
-                                                                                    "name": "advertiser_id",
-                                                                                    "type": "long"
-                                                                                },
-                                                                                {
-                                                                                    "name": "flight_id",
-                                                                                    "type": "long"
-                                                                                },
-                                                                                {
-                                                                                    "name": "creative_group_lookup_id",
+                                                                                {"name": "bidder_id", "type": "long"},
+                                                                                {"name": "dsp_id","type": "long"},
+                                                                                {"name": "buyer_id","type": "long"},
+                                                                                {"name": "advertiser_id","type": "long"},
+                                                                                {"name": "flight_id", "type":"long"},
+                                                                                {"name": "creative_group_lookup_id",
                                                                                     "type": ["string","long"]
                                                                                 },
-                                                                                {
-                                                                                    "name": "deal_id",
+                                                                                {"name": "deal_id",
                                                                                     "type": ["null", "string"],
                                                                                     "default": null
                                                                                 },
-                                                                                {
-                                                                                    "name": "bidder_bid_price",
+                                                                                {"name": "bidder_bid_price",
                                                                                     "type": ["long","float"]
                                                                                 }
                                                                             ]
-                                                                        }
+                                                                        }],
+                                                                        "default": null
                                                                     }
                                                                 ]                                                        
                                                                 

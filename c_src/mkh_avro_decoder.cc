@@ -320,7 +320,7 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
 ERL_NIF_TERM decode_union(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
     uint32_t childNumber = decodeInt32(it);
     if(si->is_nullable == 1){
-        std::cout << "Child number: " << childNumber << "\r\n";
+        std::cout << "Nullable Child number: " << childNumber << "\r\n";
         if(childNumber == 0){
             return enif_make_atom(env, "undefined"); 
         }else{
@@ -340,9 +340,10 @@ ERL_NIF_TERM decode_union(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
             }
         }
     } else {
+        std::cout << "NOT Nullable Child number: " << childNumber << "\r\n";
         auto sctype = si->childItems[childNumber]->scalar_type;
         std::cout << "SCTYPE: " << sctype << "\r\n";
-        if(sctype >= 0  && si->childItems[childNumber - 1]->obj_type == 0){
+        if(sctype >= 0  && si->childItems[childNumber]->obj_type == 0){
             std::cout << "DECODE SCALAR" << "\r\n";
             return decode_scalar(env, sctype, it);
         } else {

@@ -1,0 +1,7 @@
+{"type": "record", "name":"Interop", "namespace": "org.apache.avro",
+  "fields": [
+        {"name": "creative_group_lookup_id", "type": ["string","long"]},
+        {"name": "bidder_bid_price", "type": ["long","float"]}
+  ]
+}
+
