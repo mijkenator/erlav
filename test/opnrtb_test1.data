@@ -490,9 +490,6 @@
 
 #{
     <<"event">> => <<"event16">>,
-    <<"bid_active_bidder">> => true,
-    <<"bid_active_datacenter">> => true,                                                                  
-    <<"bid_active_exchange">> => true,                                                                    
     <<"bid_request">> =>    
 		#{<<"app">> =>                                                                                    
 			 #{<<"bundle">> => <<"74519">>,                                                              

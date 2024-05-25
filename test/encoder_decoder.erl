@@ -84,9 +84,9 @@ ev16_test() ->
     M0 = tst_utils:to_map(Decoder(Encoded)),
     ?debugFmt("Decoded erlavro: ~p ~n", [M0]),
 
-    %M = erlav_nif:erlav_decode_fast(SchemaId, Encoded),
-    %?debugFmt("Decoded erlav: ~p ~n", [M]),
-    %tst_utils:compare_maps(Term, M),
+    M = erlav_nif:erlav_decode_fast(SchemaId, Encoded),
+    ?debugFmt("Decoded erlav: ~p ~n", [M]),
+    tst_utils:compare_maps(Term, M),
     ok.
 
 crash_test() ->
@@ -112,7 +112,7 @@ crash_test() ->
 
     M = erlav_nif:erlav_decode_fast(SchemaId, Encoded),
     ?debugFmt("Decoded erlav: ~p ~n", [M]),
-    %tst_utils:compare_maps(Term, M),
+    tst_utils:compare_maps(Term, M),
     ok.
 
 crash2_test() ->
@@ -132,5 +132,5 @@ crash2_test() ->
 
     M = erlav_nif:erlav_decode_fast(SchemaId, Encoded),
     ?debugFmt("Decoded erlav: ~p ~n", [M]),
-    %tst_utils:compare_maps(Term, M),
+    tst_utils:compare_maps(Term, M),
     ok.
