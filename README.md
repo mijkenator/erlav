@@ -23,7 +23,13 @@ Term = #{
         <<"stringField">> => <<"asdadasdasdasd3453534dfgdgd123456789">>,
         <<"bytesField">> => <<1,99,57,127,0,56>>
 },
-Ret = erlav_nif:erlav_encode(SchemaId, Term)
+
+% Encode Term to avro format
+Ret = erlav_nif:erlav_encode(SchemaId, Term),
+
+% Decode data in avro format to erlang term
+DecodedTerm = erlav_nif:erlav_decode_fast(SchemaId, Ret)
+
 ```
 
 
