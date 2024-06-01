@@ -1,7 +1,7 @@
 erlav
 =====
 
-High performance avro encoding NIF-based library
+High performance avro encoding/decoding NIF-based library
 
 Build
 -----
