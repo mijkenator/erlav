@@ -1,0 +1,34 @@
+{
+  "namespace": "rtb.gateway.request",
+  "type": "record",
+  "name": "GatewayRequest",
+
+  "fields": [
+    {
+        "name": "key",
+        "type": ["null", {
+            "name": "filtered_ssp_result_map",
+            "type": "map",
+            "values": {
+                "type": "array",
+                "items": "long"
+            }
+        }],
+        "default": null
+    },
+    {
+        "name": "key1",
+        "type": ["null", {
+            "name": "filtered_ssp_result_map1",
+            "type": "map",
+            "values": {
+                "type": "array",
+                "items": "long"
+            }
+        }],
+        "default": null
+    }
+
+  ]
+}
+
