@@ -235,39 +235,58 @@ encodearray(SchemaItem* si,
             auto st = get_scalar_type(si->obj_field);
             for (uint32_t i = 0; i < len; i++) {
                 if (enif_get_list_cell(env, *val, &elem, val)) {
-                    encodescalar(st, env, &elem, ret);
+                    if(encodescalar(st, env, &elem, ret) > 0) {
+                        return 8; // encode scalar failed
+                    }
                 }
             }
         } else if ((si->obj_field == "complex") && si->array_type == 1) {
-            // std::cout << "complex A1 \r\n";
+            //std::cout << "complex A1 \r\n";
             for (uint32_t i = 0; i < len; i++) {
                 if (enif_get_list_cell(env, *val, &elem, val)) {
                     if (enif_is_binary(env, elem)) {
-                        int typeindex = si->array_multi_type.at("string");
-                        encode_int(env, typeindex, ret);
-                        encode_string(env, &elem, ret);
+                        try {
+                            int typeindex = si->array_multi_type.at("string");
+                            encode_int(env, typeindex, ret);
+                            encode_string(env, &elem, ret);
+                        } catch (...){
+                            return 8;
+                        }
                     } else if (enif_is_number(env, elem)) {
                         long i64;
                         double dbl;
+                        //std::cout << "complex A1 1.0.0 \r\n";
                         if (enif_get_int64(env, elem, &i64)) {
                             // longs
-                            int typeindex = si->array_multi_type.at("long");
-                            encode_int(env, typeindex, ret);
-                            encode_long(env, &elem, ret);
+                            try {
+                                int typeindex = si->array_multi_type.at("long");
+                                encode_int(env, typeindex, ret);
+                                encode_long(env, &elem, ret);
+                            } catch (...){
+                                return 8;
+                            }
                         } else if (enif_get_double(env, elem, &dbl)) {
-                            int typeindex = si->array_multi_type.at("double");
-                            encode_int(env, typeindex, ret);
-                            encode_double(env, &elem, ret);
+                            try {
+                                int typeindex = si->array_multi_type.at("double");
+                                encode_int(env, typeindex, ret);
+                                encode_double(env, &elem, ret);
+                            } catch (...){
+                                return 8;
+                            }
+                        } else {
+                            return 8;
                         }
-
                     } else if (enif_is_list(env, elem)) {
                         int typeindex = si->array_multi_type.at("array");
                         encode_int(env, typeindex, ret);
                         encodearray(si->childItems[0], env, &elem, ret);
+                    } else {
+                        return 8;
                     }
+                } else {
+                    return 8;
                 }
             }
-
         } else {
             // complex array - no support for union types yet
             for (uint32_t i = 0; i < len; i++) {

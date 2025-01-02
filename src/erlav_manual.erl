@@ -229,6 +229,31 @@ man_tst(11) ->
     io:format("2.Erl ret: ~p ~n", [ iolist_to_binary(Encoder(Term1)) ]),
     T2 = Decoder(Ret),
     io:format("3.C++ decoded ret: ~p ~n", [T2]),
+    ok;
+man_tst(12) ->
+    io:format("~n ------------------------------------ ~n", []),
+    Sid = erlav_nif:erlav_init(<<"test/array_simple.avsc">>),
+    %{ok, SchemaJSON1} = file:read_file("test/array_simple.avsc"),
+    %Encoder  = avro:make_simple_encoder(SchemaJSON1, []),
+    %Decoder  = avro:make_simple_decoder(SchemaJSON1, []),
+    Term1 = #{
+        <<"arrayField">> => [<<"2">>]
+    },
+    Ret = erlav_nif:erlav_encode(Sid, Term1),
+    io:format("1.ERLAV2 ret: ~p ~n", [Ret]),
+    Re1 = erlav_nif:erlav_decode_fast(Sid, Ret),
+    io:format("decode result: ~p ~n", [Re1]),
+    ok;
+man_tst(13) ->
+    io:format("~n ------------------------------------ ~n", []),
+    Sid = erlav_nif:erlav_init(<<"test/array_multi_type.avsc">>),
+    Term1 = #{
+        <<"arrayField">> => [1,1,1,1,1,2.2]
+    },
+    Ret = erlav_nif:erlav_encode(Sid, Term1),
+    io:format("1.ERLAV2 ret: ~p ~n", [Ret]),
+    Re1 = erlav_nif:erlav_decode_fast(Sid, Ret),
+    io:format("decode result: ~p ~n", [Re1]),
     ok.
 
 ctst(Term1) ->

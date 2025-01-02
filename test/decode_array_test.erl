@@ -321,3 +321,53 @@ array_of_arr8_test() ->
     ?assert(true == tst_utils:compare_maps(Term1, Re3)),
 
     ok.
+
+array_bad_type_test() ->
+    SchemaId = erlav_nif:erlav_init(<<"test/array_simple.avsc">>),
+    
+    Pairs = [{<<"arrayField">>, [<<"2">>]}],
+    Term = maps:from_list(Pairs),
+
+    Msg = erlav_nif:erlav_encode(SchemaId, Term),
+    ?debugFmt("Encoded: ~p ~n", [Msg]),
+    ?assert({error, "Rec:Interop field:arrayField", 8} == Msg),
+
+    ok.
+
+array_bad_type1_test() ->
+    SchemaId = erlav_nif:erlav_init(<<"test/array_simple1.avsc">>),
+    
+    Pairs = [{<<"arrayField">>, [<<"2">>]}],
+    Term = maps:from_list(Pairs),
+
+    Msg = erlav_nif:erlav_encode(SchemaId, Term),
+    ?debugFmt("Encoded: ~p ~n", [Msg]),
+    ?assert({error, "Rec:Interop field:arrayField", 8} == Msg),
+
+    Msg1 = erlav_nif:erlav_encode(SchemaId, maps:from_list([{<<"arrayField">>, [2, <<"2">>]}])),
+    ?debugFmt("Encoded: ~p ~n", [Msg1]),
+    ?assert({error, "Rec:Interop field:arrayField", 8} == Msg1),
+
+    ok.
+
+array_bad_type2_test() ->
+    SchemaId = erlav_nif:erlav_init(<<"test/tschema_array_str.avsc">>),
+    
+    Pairs = [{<<"arrayField">>, [2]}],
+    Term = maps:from_list(Pairs),
+
+    Msg = erlav_nif:erlav_encode(SchemaId, Term),
+    ?debugFmt("Encoded: ~p ~n", [Msg]),
+    ?assert({error, "Rec:Interop field:arrayField", 8} == Msg),
+
+    ok.
+
+complex_array_bad_type_test() ->
+    SchemaId = erlav_nif:erlav_init(<<"test/array_multi_type.avsc">>),
+    Pairs = [{<<"arrayField">>, [2.2]}],
+    Term = maps:from_list(Pairs),
+    Encoded = erlav_nif:erlav_encode(SchemaId, Term),
+    ?debugFmt("Encoded: ~p ~n", [Encoded]),
+
+    ?assert({error, "Rec:Interop field:arrayField", 8} == Encoded),
+    ok.

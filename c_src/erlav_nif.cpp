@@ -58,6 +58,13 @@ erlav_encode_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
             enif_make_string(env, &(ae.message[0]), ERL_NIF_LATIN1);
         ERL_NIF_TERM t3 = enif_make_int(env, ae.code);
         return enif_make_tuple3(env, t1, t2, t3);
+    } catch (std::out_of_range const& ofr) {
+        ERL_NIF_TERM t1 = enif_make_atom(env, "error");
+        std::string wstr = ofr.what();
+        ERL_NIF_TERM t2 =
+            enif_make_string(env, wstr.c_str(), ERL_NIF_LATIN1);
+        ERL_NIF_TERM t3 = enif_make_int(env, 99);
+        return enif_make_tuple3(env, t1, t2, t3);
     } catch (...) {
         return enif_make_int(env, -1);
     }
