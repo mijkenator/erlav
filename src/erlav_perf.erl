@@ -523,17 +523,36 @@ all_tests() -> all_tests(10000, 50, null).
 
 all_tests(NumIterations, StrLen, IsNullable) ->
     Funs = [erlav_perf_tst2, erlav_perf_tst3, map_perf_tst1, map_perf_tst2, array_int_perf_tst, array_str_perf_tst, array_map_perf_tst],
-    Report = lists:map(fun(FName) -> 
+    Report = lists:map(fun(FName) ->
         {IsSame, ErlTime, CppTime2} = apply(erlav_perf, FName, [NumIterations, StrLen, IsNullable]),
         io:format("~p, equal: ~p, erltime: ~p, cpptime2: ~p ~n~n", [FName, IsSame, ErlTime,  CppTime2]),
         {IsSame, ErlTime,  CppTime2}
     end, Funs),
     Ret = lists:zip(Funs, Report),
-    lists:foreach(fun({Test, {IsSameR, ErlTimeR,  CppTime2R}}) ->
-        io:format("~p, equal: ~p, erltime: ~p,  cpptime2: ~p  ~n~n", [Test, IsSameR, ErlTimeR,  CppTime2R])
-    end, Ret).
+    print_summary_table(Ret).
 
-long_run(Num) -> 
+print_summary_table(Ret) ->
+    Sep = "+" ++ lists:duplicate(24, $-) ++ "+"
+       ++ lists:duplicate(9, $-) ++ "+"
+       ++ lists:duplicate(14, $-) ++ "+"
+       ++ lists:duplicate(14, $-) ++ "+"
+       ++ lists:duplicate(10, $-) ++ "+",
+    io:format("~n~s~n", [Sep]),
+    io:format("| ~-22s | ~-7s | ~-12s | ~-12s | ~-8s |~n",
+              ["Test", "Equal", "Erlavro us", "Erlav us", "Speedup"]),
+    io:format("~s~n", [Sep]),
+    lists:foreach(fun({Test, {IsSame, ErlTime, CppTime}}) ->
+        Speedup = case CppTime > 0 of
+            false -> 0.0;
+            true  -> ErlTime / CppTime
+        end,
+        Name = atom_to_list(Test),
+        io:format("| ~-22s | ~-7s | ~12.2f | ~12.2f | ~7.2fx |~n",
+                  [Name, atom_to_list(IsSame), ErlTime, CppTime, Speedup])
+    end, Ret),
+    io:format("~s~n", [Sep]).
+
+long_run(Num) ->
     SchemaId1 = erlav_nif:erlav_init(<<"test/opnrtb.avsc">>),
     {ok, [Term1]} = file:consult("test/field_test.data"),
     long_run(SchemaId1, Term1, Num, 0).
