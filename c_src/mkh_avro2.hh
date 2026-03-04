@@ -637,9 +637,8 @@ encode_double(ErlNifEnv* env, ERL_NIF_TERM* input, std::vector<uint8_t>* ret) {
     return 0;
 }
 
-int
-encode_string(ErlNifEnv* env, ERL_NIF_TERM* input, std::vector<uint8_t>* ret) {
-    std::array<uint8_t, 10> output;
+inline int
+encode_binary_data(ErlNifEnv* env, ERL_NIF_TERM* input, std::vector<uint8_t>* ret) {
     ErlNifBinary sbin;
 
     if (!enif_inspect_binary(env, *input, &sbin)) {
@@ -647,32 +646,32 @@ encode_string(ErlNifEnv* env, ERL_NIF_TERM* input, std::vector<uint8_t>* ret) {
     }
 
     auto len = sbin.size;
-    auto len2 = encodeInt64(len, output);
     auto offset = ret->size();
-    ret->resize(offset + len2 + len);
-    memcpy(ret->data() + offset, output.data(), len2);
-    memcpy(ret->data() + offset + len2, sbin.data, len);
+
+    if (len < 64) {
+        // Fast path: zigzag of non-negative len = len * 2, fits in 1 byte
+        ret->resize(offset + 1 + len);
+        ret->data()[offset] = static_cast<uint8_t>(len << 1);
+        memcpy(ret->data() + offset + 1, sbin.data, len);
+    } else {
+        std::array<uint8_t, 10> output;
+        auto len2 = encodeInt64(len, output);
+        ret->resize(offset + len2 + len);
+        memcpy(ret->data() + offset, output.data(), len2);
+        memcpy(ret->data() + offset + len2, sbin.data, len);
+    }
 
     return 0;
 }
 
 int
+encode_string(ErlNifEnv* env, ERL_NIF_TERM* input, std::vector<uint8_t>* ret) {
+    return encode_binary_data(env, input, ret);
+}
+
+int
 encode_bytes(ErlNifEnv* env, ERL_NIF_TERM* input, std::vector<uint8_t>* ret) {
-    std::array<uint8_t, 10> output;
-    ErlNifBinary sbin;
-
-    if (!enif_inspect_binary(env, *input, &sbin)) {
-        return 5;
-    }
-
-    auto len = sbin.size;
-    auto len2 = encodeInt64(len, output);
-    auto offset = ret->size();
-    ret->resize(offset + len2 + len);
-    memcpy(ret->data() + offset, output.data(), len2);
-    memcpy(ret->data() + offset + len2, sbin.data, len);
-
-    return 0;
+    return encode_binary_data(env, input, ret);
 }
 
 int

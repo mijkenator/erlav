@@ -53,13 +53,12 @@ erlav_perf:all_tests().
 +------------------------+---------+--------------+--------------+----------+
 | Test                   | Equal   | Erlavro us   | Erlav us     | Speedup  |
 +------------------------+---------+--------------+--------------+----------+
-| erlav_perf_tst2        | true    |       857.25 |        94.21 |    9.10x |
-| erlav_perf_tst3        | true    |      1798.55 |       177.38 |   10.14x |
-| map_perf_tst1          | true    |       842.50 |       222.81 |    3.78x |
-| map_perf_tst2          | true    |       217.18 |        46.58 |    4.66x |
-| array_int_perf_tst     | true    |        34.83 |         3.81 |    9.13x |
-| array_str_perf_tst     | true    |      4012.83 |      1028.46 |    3.90x |
-| array_map_perf_tst     | true    |       448.40 |       105.78 |    4.24x |
+| erlav_perf_tst2        | true    |       846.50 |        94.80 |    8.93x |
+| erlav_perf_tst3        | true    |      1803.85 |       172.40 |   10.46x |
+| map_perf_tst1          | true    |       688.17 |       231.59 |    2.97x |
+| map_perf_tst2          | true    |       207.22 |        45.85 |    4.52x |
+| array_int_perf_tst     | true    |        23.54 |         4.10 |    5.74x |
+| array_str_perf_tst     | true    |       181.06 |        31.90 |    5.68x |
+| array_map_perf_tst     | true    |       512.89 |       119.24 |    4.30x |
 +------------------------+---------+--------------+--------------+----------+
-
 ```
