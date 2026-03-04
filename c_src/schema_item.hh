@@ -2,6 +2,7 @@
 #include <vector>
 #include <map>
 #include <iostream>
+#include <erl_nif.h>
 #include "include/json.hpp"
 
 using json = nlohmann::json;
@@ -26,6 +27,27 @@ struct SchemaItem {
     std::string obj_field = "complex";
     std::map<std::string, int> array_multi_type;
     std::map<int, std::string> array_multi_type_reverse;
+    ErlNifEnv* key_env = nullptr;
+    std::vector<ERL_NIF_TERM> cached_keys;
+
+    // Build binary key terms once in a process-independent env.
+    // Called after schema construction; recurses into all children.
+    void init_keys() {
+        if (obj_type == 3 && !childItems.empty()) {
+            key_env = enif_alloc_env();
+            cached_keys.resize(childItems.size());
+            for (size_t i = 0; i < childItems.size(); i++) {
+                const auto& name = childItems[i]->obj_name;
+                auto len = name.size();
+                unsigned char* data =
+                    enif_make_new_binary(key_env, len, &cached_keys[i]);
+                memcpy(data, name.c_str(), len);
+            }
+        }
+        for (auto* child : childItems) {
+            child->init_keys();
+        }
+    }
 
     void set_undefined_obj_type(int ot) {
         if (obj_type == -1) {

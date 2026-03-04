@@ -191,17 +191,9 @@ encoderecord(SchemaItem* si,
         return 9;
     }
 
-    // Pre-build all field name keys at once to avoid per-field heap allocation.
-    // enif_make_new_binary allocates on the NIF env heap (GC-managed),
-    // which is cheaper than enif_alloc_binary per iteration.
     auto nfields = si->childItems.size();
-    std::vector<ERL_NIF_TERM> keys(nfields);
-    for (size_t i = 0; i < nfields; i++) {
-        const auto& name = si->childItems[i]->obj_name;
-        auto len = name.size();
-        unsigned char* key_data = enif_make_new_binary(env, len, &keys[i]);
-        memcpy(key_data, name.c_str(), len);
-    }
+    // Use pre-built keys from schema init (process-independent env)
+    const auto& keys = si->cached_keys;
 
     for (size_t i = 0; i < nfields; i++) {
         auto* it = si->childItems[i];
@@ -462,6 +454,7 @@ read_schema(std::string schemaName) {
     json data = json::parse(f);
     resolve_user_types(data);
     si = new SchemaItem(data["name"], data["fields"], 3);
+    si->init_keys();
     return si;
 }
 
