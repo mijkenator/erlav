@@ -648,8 +648,10 @@ encode_string(ErlNifEnv* env, ERL_NIF_TERM* input, std::vector<uint8_t>* ret) {
 
     auto len = sbin.size;
     auto len2 = encodeInt64(len, output);
-    ret->insert(ret->end(), output.data(), output.data() + len2);
-    ret->insert(ret->end(), sbin.data, sbin.data + len);
+    auto offset = ret->size();
+    ret->resize(offset + len2 + len);
+    memcpy(ret->data() + offset, output.data(), len2);
+    memcpy(ret->data() + offset + len2, sbin.data, len);
 
     return 0;
 }
@@ -665,8 +667,10 @@ encode_bytes(ErlNifEnv* env, ERL_NIF_TERM* input, std::vector<uint8_t>* ret) {
 
     auto len = sbin.size;
     auto len2 = encodeInt64(len, output);
-    ret->insert(ret->end(), output.data(), output.data() + len2);
-    ret->insert(ret->end(), sbin.data, sbin.data + len);
+    auto offset = ret->size();
+    ret->resize(offset + len2 + len);
+    memcpy(ret->data() + offset, output.data(), len2);
+    memcpy(ret->data() + offset + len2, sbin.data, len);
 
     return 0;
 }
