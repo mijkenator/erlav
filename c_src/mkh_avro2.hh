@@ -188,26 +188,29 @@ encoderecord(SchemaItem* si,
              ErlNifEnv* env,
              const ERL_NIF_TERM* input,
              std::vector<uint8_t>* ret) {
-    int len;
-    ERL_NIF_TERM key;
     ERL_NIF_TERM val;
-    ErlNifBinary bin;
 
     if (!enif_is_map(env, *input)) {
         return 9;
     }
 
-    for (auto it : si->childItems) {
-        len = it->obj_name.size();
-        enif_alloc_binary(len, &bin);
-        const auto* p = reinterpret_cast<const uint8_t*>(it->obj_name.c_str());
-        memcpy(bin.data, p, len);
-        key = enif_make_binary(env, &bin);
+    // Pre-build all field name keys at once to avoid per-field heap allocation.
+    // enif_make_new_binary allocates on the NIF env heap (GC-managed),
+    // which is cheaper than enif_alloc_binary per iteration.
+    auto nfields = si->childItems.size();
+    std::vector<ERL_NIF_TERM> keys(nfields);
+    for (size_t i = 0; i < nfields; i++) {
+        const auto& name = si->childItems[i]->obj_name;
+        auto len = name.size();
+        unsigned char* key_data = enif_make_new_binary(env, len, &keys[i]);
+        memcpy(key_data, name.c_str(), len);
+    }
 
-        if (enif_get_map_value(env, *input, key, &val)) {
+    for (size_t i = 0; i < nfields; i++) {
+        auto* it = si->childItems[i];
+        if (enif_get_map_value(env, *input, keys[i], &val)) {
             int encodeCode = encodevalue(it, env, &val, ret);
             if (encodeCode != 0) {
-                // throw encodeCode;
                 throw mkh_avro::AvroException("Rec:" + si->obj_name +
                                                   " field:" + it->obj_name,
                                               encodeCode);
