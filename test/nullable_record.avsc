@@ -1,0 +1,9 @@
+{"type": "record", "name":"Interop", "namespace": "org.apache.avro",
+  "fields": [
+      {"name": "id", "type": "int"},
+      {"name": "sub", "type": ["null", {"type": "record", "name": "SubRec", "fields": [
+          {"name": "val", "type": "int"},
+          {"name": "name", "type": "string"}
+      ]}], "default": null}
+  ]
+}

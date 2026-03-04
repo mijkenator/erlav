@@ -1,0 +1,14 @@
+{"type": "record", "name":"Interop", "namespace": "org.apache.avro",
+  "fields": [
+      {"name": "level1", "type": {"type": "record", "name": "Level1", "fields": [
+          {"name": "val1", "type": "int"},
+          {"name": "level2", "type": {"type": "record", "name": "Level2", "fields": [
+              {"name": "val2", "type": "int"},
+              {"name": "level3", "type": {"type": "record", "name": "Level3", "fields": [
+                  {"name": "val3", "type": "int"},
+                  {"name": "name", "type": "string"}
+              ]}}
+          ]}}
+      ]}}
+  ]
+}

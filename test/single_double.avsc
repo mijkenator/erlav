@@ -1,0 +1,5 @@
+{"type": "record", "name":"Interop", "namespace": "org.apache.avro",
+  "fields": [
+      {"name": "f", "type": "double"}
+  ]
+}
