@@ -320,12 +320,15 @@ encodeunion(SchemaItem* si,
         for (auto iter = si->childItems.begin(); iter != si->childItems.end();
              ++iter) {
             int index = std::distance(si->childItems.begin(), iter);
+            auto saved_size = ret->size();
             auto ret_code = encodevalue(*iter, env, val, ret);
             if (ret_code == 0) {
                 encodeInt32(index + si->is_nullable, output);
                 ret->at(union_index) = output[0];
                 return ret_code;
             }
+            // Roll back partial bytes from the failed branch
+            ret->resize(saved_size);
         }
         if (si->is_nullable == 1) {
             return 0;
