@@ -2,6 +2,7 @@
 #include <vector>
 #include <map>
 #include <iostream>
+#include <erl_nif.h>
 #include "include/json.hpp"
 
 using json = nlohmann::json;
@@ -26,6 +27,39 @@ struct SchemaItem {
     std::string obj_field = "complex";
     std::map<std::string, int> array_multi_type;
     std::map<int, std::string> array_multi_type_reverse;
+    ErlNifEnv* key_env = nullptr; // Only set on root object for cleanup
+    std::vector<ERL_NIF_TERM> cached_keys;
+
+    // Destructor to clean up the shared environment if this is the root object
+    ~SchemaItem() {
+        if (key_env != nullptr) {
+            enif_free_env(key_env);
+        }
+    }
+
+    // Build binary key terms once in a process-independent env.
+    // Called after schema construction; recurses into all children.
+    void init_keys() {
+        key_env = enif_alloc_env(); // Root object owns the environment
+        init_keys_with_env(key_env);
+    }
+
+    // Internal recursive function that uses a shared environment
+    void init_keys_with_env(ErlNifEnv* shared_env) {
+        if (obj_type == 3 && !childItems.empty()) {
+            cached_keys.resize(childItems.size());
+            for (size_t i = 0; i < childItems.size(); i++) {
+                const auto& name = childItems[i]->obj_name;
+                auto len = name.size();
+                unsigned char* data =
+                    enif_make_new_binary(shared_env, len, &cached_keys[i]);
+                memcpy(data, name.c_str(), len);
+            }
+        }
+        for (auto* child : childItems) {
+            child->init_keys_with_env(shared_env);
+        }
+    }
 
     void set_undefined_obj_type(int ot) {
         if (obj_type == -1) {

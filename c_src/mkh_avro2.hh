@@ -124,63 +124,60 @@ encodemap(SchemaItem* si,
     ERL_NIF_TERM key;
     ERL_NIF_TERM val;
     ErlNifBinary sbin;
-    unsigned int len;
-    std::string mapkey;
-    std::map<std::string, ERL_NIF_TERM> amap;
-    std::map<std::string, ERL_NIF_TERM>::iterator amap_iter;
+    size_t map_size;
 
-    if (enif_is_map(env, *input)) {
-        if (enif_map_iterator_create(
-                env, *input, &iter, ERL_NIF_MAP_ITERATOR_HEAD)) {
-            do {
-                if (!enif_map_iterator_get_pair(env, &iter, &key, &val)) {
-                    continue;
-                }
-                if (!enif_inspect_binary(env, key, &sbin)) {
-                    continue;
-                }
-                mapkey.assign((const char*) sbin.data, sbin.size);
-                amap.insert(std::pair<std::string, ERL_NIF_TERM>(mapkey, val));
-            } while (enif_map_iterator_next(env, &iter));
-
-            len = amap.size();
-            encode_long_fast(env, len, ret);
-
-            if (si->obj_field != "complex") { // map of scalar types
-                auto st = get_scalar_type(si->obj_field);
-                for (amap_iter = amap.begin(); amap_iter != amap.end();
-                     amap_iter++) {
-                    // insert key-lenght && key data
-                    auto len3 = amap_iter->first.size();
-                    encode_long_fast(env, len3, ret);
-                    ret->insert(ret->end(),
-                                amap_iter->first.data(),
-                                amap_iter->first.data() + len3);
-                    // encode value
-                    encodescalar(st, env, &amap_iter->second, ret);
-                }
-            } else { // map of complex types
-                for (amap_iter = amap.begin(); amap_iter != amap.end();
-                     amap_iter++) {
-                    // insert key-lenght && key data
-                    auto len3 = amap_iter->first.size();
-                    encode_long_fast(env, len3, ret);
-                    ret->insert(ret->end(),
-                                amap_iter->first.data(),
-                                amap_iter->first.data() + len3);
-                    // encode value
-                    encodevalue(
-                        si->childItems[0], env, &amap_iter->second, ret);
-                }
-            }
-            if(len > 0){
-                ret->push_back(0);
-            }
-            return 0;
-        }
+    if (!enif_is_map(env, *input)) {
+        return 10;
     }
 
-    return 10;
+    if (!enif_get_map_size(env, *input, &map_size)) {
+        return 10;
+    }
+
+    if (!enif_map_iterator_create(
+            env, *input, &iter, ERL_NIF_MAP_ITERATOR_HEAD)) {
+        return 10;
+    }
+
+    encode_long_fast(env, static_cast<int64_t>(map_size), ret);
+
+    if (si->obj_field != "complex") { // map of scalar types
+        auto st = get_scalar_type(si->obj_field);
+        do {
+            if (!enif_map_iterator_get_pair(env, &iter, &key, &val)) {
+                continue;
+            }
+            if (!enif_inspect_binary(env, key, &sbin)) {
+                continue;
+            }
+            // encode key: length-prefixed string
+            encode_long_fast(env, static_cast<int64_t>(sbin.size), ret);
+            ret->insert(ret->end(), sbin.data, sbin.data + sbin.size);
+            // encode value
+            encodescalar(st, env, &val, ret);
+        } while (enif_map_iterator_next(env, &iter));
+    } else { // map of complex types
+        do {
+            if (!enif_map_iterator_get_pair(env, &iter, &key, &val)) {
+                continue;
+            }
+            if (!enif_inspect_binary(env, key, &sbin)) {
+                continue;
+            }
+            // encode key: length-prefixed string
+            encode_long_fast(env, static_cast<int64_t>(sbin.size), ret);
+            ret->insert(ret->end(), sbin.data, sbin.data + sbin.size);
+            // encode value
+            encodevalue(si->childItems[0], env, &val, ret);
+        } while (enif_map_iterator_next(env, &iter));
+    }
+
+    enif_map_iterator_destroy(env, &iter);
+
+    if (map_size > 0) {
+        ret->push_back(0);
+    }
+    return 0;
 }
 
 int
@@ -188,26 +185,21 @@ encoderecord(SchemaItem* si,
              ErlNifEnv* env,
              const ERL_NIF_TERM* input,
              std::vector<uint8_t>* ret) {
-    int len;
-    ERL_NIF_TERM key;
     ERL_NIF_TERM val;
-    ErlNifBinary bin;
 
     if (!enif_is_map(env, *input)) {
         return 9;
     }
 
-    for (auto it : si->childItems) {
-        len = it->obj_name.size();
-        enif_alloc_binary(len, &bin);
-        const auto* p = reinterpret_cast<const uint8_t*>(it->obj_name.c_str());
-        memcpy(bin.data, p, len);
-        key = enif_make_binary(env, &bin);
+    auto nfields = si->childItems.size();
+    // Use pre-built keys from schema init (process-independent env)
+    const auto& keys = si->cached_keys;
 
-        if (enif_get_map_value(env, *input, key, &val)) {
+    for (size_t i = 0; i < nfields; i++) {
+        auto* it = si->childItems[i];
+        if (enif_get_map_value(env, *input, keys[i], &val)) {
             int encodeCode = encodevalue(it, env, &val, ret);
             if (encodeCode != 0) {
-                // throw encodeCode;
                 throw mkh_avro::AvroException("Rec:" + si->obj_name +
                                                   " field:" + it->obj_name,
                                               encodeCode);
@@ -320,12 +312,15 @@ encodeunion(SchemaItem* si,
         for (auto iter = si->childItems.begin(); iter != si->childItems.end();
              ++iter) {
             int index = std::distance(si->childItems.begin(), iter);
+            auto saved_size = ret->size();
             auto ret_code = encodevalue(*iter, env, val, ret);
             if (ret_code == 0) {
                 encodeInt32(index + si->is_nullable, output);
                 ret->at(union_index) = output[0];
                 return ret_code;
             }
+            // Roll back partial bytes from the failed branch
+            ret->resize(saved_size);
         }
         if (si->is_nullable == 1) {
             return 0;
@@ -459,6 +454,7 @@ read_schema(std::string schemaName) {
     json data = json::parse(f);
     resolve_user_types(data);
     si = new SchemaItem(data["name"], data["fields"], 3);
+    si->init_keys();
     return si;
 }
 
@@ -634,9 +630,8 @@ encode_double(ErlNifEnv* env, ERL_NIF_TERM* input, std::vector<uint8_t>* ret) {
     return 0;
 }
 
-int
-encode_string(ErlNifEnv* env, ERL_NIF_TERM* input, std::vector<uint8_t>* ret) {
-    std::array<uint8_t, 10> output;
+inline int
+encode_binary_data(ErlNifEnv* env, ERL_NIF_TERM* input, std::vector<uint8_t>* ret) {
     ErlNifBinary sbin;
 
     if (!enif_inspect_binary(env, *input, &sbin)) {
@@ -644,28 +639,32 @@ encode_string(ErlNifEnv* env, ERL_NIF_TERM* input, std::vector<uint8_t>* ret) {
     }
 
     auto len = sbin.size;
-    auto len2 = encodeInt64(len, output);
-    ret->insert(ret->end(), output.data(), output.data() + len2);
-    ret->insert(ret->end(), sbin.data, sbin.data + len);
+    auto offset = ret->size();
+
+    if (len < 64) {
+        // Fast path: zigzag of non-negative len = len * 2, fits in 1 byte
+        ret->resize(offset + 1 + len);
+        ret->data()[offset] = static_cast<uint8_t>(len << 1);
+        memcpy(ret->data() + offset + 1, sbin.data, len);
+    } else {
+        std::array<uint8_t, 10> output;
+        auto len2 = encodeInt64(len, output);
+        ret->resize(offset + len2 + len);
+        memcpy(ret->data() + offset, output.data(), len2);
+        memcpy(ret->data() + offset + len2, sbin.data, len);
+    }
 
     return 0;
 }
 
 int
+encode_string(ErlNifEnv* env, ERL_NIF_TERM* input, std::vector<uint8_t>* ret) {
+    return encode_binary_data(env, input, ret);
+}
+
+int
 encode_bytes(ErlNifEnv* env, ERL_NIF_TERM* input, std::vector<uint8_t>* ret) {
-    std::array<uint8_t, 10> output;
-    ErlNifBinary sbin;
-
-    if (!enif_inspect_binary(env, *input, &sbin)) {
-        return 5;
-    }
-
-    auto len = sbin.size;
-    auto len2 = encodeInt64(len, output);
-    ret->insert(ret->end(), output.data(), output.data() + len2);
-    ret->insert(ret->end(), sbin.data, sbin.data + len);
-
-    return 0;
+    return encode_binary_data(env, input, ret);
 }
 
 int
