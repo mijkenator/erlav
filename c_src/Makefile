@@ -21,6 +21,35 @@ ifeq ($(NATIVE_ARCH), 1)
 	ARCHFLAGS = -march=native
 endif
 
+# Profile-Guided Optimization. Driven by `make pgo` (see the pgo: target
+# below), which builds an instrumented .so (PGO_PHASE=generate), runs it
+# against eunit + erlav_perf to collect real encode/decode branch/call
+# frequencies, then rebuilds using that profile (PGO_PHASE=use). Not part
+# of the default build -- `make`/`make all` never sets PGO_PHASE, so a
+# plain `rebar3 compile` is unaffected and fully reproducible.
+PGO_DIR ?= $(CURDIR)/pgo-data
+CXX_IS_CLANG ?= $(shell $(CXX) --version 2>/dev/null | grep -qi clang && echo 1 || echo 0)
+
+# LTO is skipped for the instrumented (generate) build: it's a throwaway
+# artifact whose only job is to collect counters, and keeping the two
+# instrumentation passes independent avoids any LTO/coverage-instrumentation
+# interaction. LTOFLAGS is used below instead of a bare -flto.
+LTOFLAGS = -flto
+ifeq ($(PGO_PHASE), generate)
+	ifeq ($(CXX_IS_CLANG), 1)
+		PGOFLAGS = -fprofile-instr-generate=$(PGO_DIR)/%p.profraw
+	else
+		PGOFLAGS = -fprofile-generate=$(PGO_DIR)
+	endif
+	LTOFLAGS =
+else ifeq ($(PGO_PHASE), use)
+	ifeq ($(CXX_IS_CLANG), 1)
+		PGOFLAGS = -fprofile-instr-use=$(PGO_DIR)/erlav_nif.profdata
+	else
+		PGOFLAGS = -fprofile-use -fprofile-dir=$(PGO_DIR) -fprofile-correction
+	endif
+endif
+
 UNAME_SYS := $(shell uname -s)
 ifeq ($(UNAME_SYS), Darwin)
 	CC ?= cc
@@ -54,16 +83,16 @@ CXXFLAGS += -std=c++17
 # -ffunction-sections/-fdata-sections + --gc-sections (Linux)/-dead_strip
 # (Darwin) let the linker drop any unreferenced code/data at section
 # granularity.
-CFLAGS += -flto -DNDEBUG $(ARCHFLAGS) -fvisibility=hidden \
-	-ffunction-sections -fdata-sections
-CXXFLAGS += -flto -DNDEBUG $(ARCHFLAGS) -fvisibility=hidden \
-	-fvisibility-inlines-hidden -ffunction-sections -fdata-sections
+CFLAGS += $(LTOFLAGS) -DNDEBUG $(ARCHFLAGS) -fvisibility=hidden \
+	-ffunction-sections -fdata-sections $(PGOFLAGS)
+CXXFLAGS += $(LTOFLAGS) -DNDEBUG $(ARCHFLAGS) -fvisibility=hidden \
+	-fvisibility-inlines-hidden -ffunction-sections -fdata-sections $(PGOFLAGS)
 
 CFLAGS += -fPIC -I $(ERTS_INCLUDE_DIR) -I $(ERL_INTERFACE_INCLUDE_DIR)
 CXXFLAGS += -fPIC -I $(ERTS_INCLUDE_DIR) -I $(ERL_INTERFACE_INCLUDE_DIR)
 
 LDLIBS += -L $(ERL_INTERFACE_LIB_DIR) -lei
-LDFLAGS += -shared -flto
+LDFLAGS += -shared $(LTOFLAGS) $(PGOFLAGS)
 
 ifeq ($(UNAME_SYS), Darwin)
 	LDFLAGS += -Wl,-dead_strip
