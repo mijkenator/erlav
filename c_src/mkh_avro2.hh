@@ -154,7 +154,10 @@ encodemap(SchemaItem* si,
     encode_long_fast(env, static_cast<int64_t>(map_size), ret);
 
     if (si->obj_field != "complex") { // map of scalar types
-        auto st = get_scalar_type(si->obj_field);
+        // scalar_type is precomputed at schema-parse time and kept in
+        // lockstep with obj_field (see schema_item.hh) -- read it directly
+        // instead of re-scanning the scalars table on every map encode.
+        auto st = si->scalar_type;
         do {
             if (!enif_map_iterator_get_pair(env, &iter, &key, &val)) {
                 continue;
@@ -236,7 +239,11 @@ encodearray(SchemaItem* si,
         enif_get_list_length(env, *val, &len);
         encode_long_fast(env, len, ret);
         if (si->obj_field != "complex") {
-            auto st = get_scalar_type(si->obj_field);
+            // scalar_type is precomputed at schema-parse time and kept in
+            // lockstep with obj_field (see schema_item.hh) -- read it
+            // directly instead of re-scanning the scalars table on every
+            // array encode.
+            auto st = si->scalar_type;
             for (uint32_t i = 0; i < len; i++) {
                 if (enif_get_list_cell(env, *val, &elem, val)) {
                     if(encodescalar(st, env, &elem, ret) > 0) {

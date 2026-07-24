@@ -127,6 +127,29 @@ m6_test() ->
     ?assert(true == tst_utils:compare_maps(Term, Re1)),
     ok.
 
+% map whose *values* (not the map field itself) are a union of scalars,
+% e.g. {"type": "map", "values": ["null", "string"]}. Regression test:
+% SchemaItem previously left scalar_type unset (-1) for this shape (only
+% obj_field was set), which erlav_decode_fast relied on directly and would
+% badarg on. erlav_encode happened to self-heal by recomputing the scalar
+% type from obj_field on every call, so only decode was actually broken --
+% but both sides now read the same precomputed scalar_type.
+m7_test() ->
+    SchemaId = erlav_nif:erlav_init(<<"test/map_union_scalar_values.avsc">>),
+    Term = #{
+        <<"mapField">> =>
+            #{
+                <<"k1">> => <<"hello">>,
+                <<"k2">> => <<"world">>
+             }
+    },
+    Encoded = erlav_nif:erlav_encode(SchemaId, Term),
+    ?debugFmt("Encoded: ~p ~n", [Encoded]),
+    Re1 = erlav_nif:erlav_decode_fast(SchemaId, Encoded),
+    ?debugFmt("decode result: ~p ~n", [Re1]),
+    ?assert(true == tst_utils:compare_maps(Term, Re1)),
+    ok.
+
 to_map([{_,_}|_] = L) ->
     maps:from_list([{K, to_map(V)} || {K, V} <- L]);
 to_map(V) -> V.

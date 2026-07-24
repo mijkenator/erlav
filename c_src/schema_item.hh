@@ -135,6 +135,12 @@ struct SchemaItem {
                     is_nullable = 1;
                 } else if (it.is_string()) {
                     obj_field = it;
+                    // Keep scalar_type in lockstep with obj_field so callers
+                    // can trust si->scalar_type directly instead of calling
+                    // get_scalar_type(si->obj_field) (a linear scan) every
+                    // encode. -1 for non-scalar obj_field values (e.g.
+                    // "array"), matching get_scalar_type's "not found".
+                    scalar_type = get_scalar_type(it);
                     intsi = new SchemaItem("union_member", it, 0);
                     retv.push_back(intsi);
                 } else if (it.is_object()) {
