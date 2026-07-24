@@ -14,6 +14,13 @@ C_SRC_OUTPUT ?= $(CURDIR)/../priv/$(PROJECT).so
 
 # System type and C compiler/flags.
 
+# Set NATIVE_ARCH=1 to tune codegen for the build machine's CPU (e.g. AVX2/BMI2).
+# Only safe when the binary runs on the same (or identical) hardware it was built
+# on -- a -march=native .so shipped to a different CPU can SIGILL at load time.
+ifeq ($(NATIVE_ARCH), 1)
+	ARCHFLAGS = -march=native
+endif
+
 UNAME_SYS := $(shell uname -s)
 ifeq ($(UNAME_SYS), Darwin)
 	CC ?= cc
@@ -31,11 +38,18 @@ else ifeq ($(UNAME_SYS), Linux)
 endif
 CXXFLAGS += -std=c++17
 
+# -flto lets the linker inline across translation units (e.g. decode_scalar/
+# decodeLong into the decode/decode_array hot loops in mkh_avro_decoder.cc).
+# -DNDEBUG strips nlohmann/json's internal assertions (schema parsing only,
+# but free). ARCHFLAGS is empty unless NATIVE_ARCH=1 (see above).
+CFLAGS += -flto -DNDEBUG $(ARCHFLAGS)
+CXXFLAGS += -flto -DNDEBUG $(ARCHFLAGS)
+
 CFLAGS += -fPIC -I $(ERTS_INCLUDE_DIR) -I $(ERL_INTERFACE_INCLUDE_DIR)
 CXXFLAGS += -fPIC -I $(ERTS_INCLUDE_DIR) -I $(ERL_INTERFACE_INCLUDE_DIR)
 
 LDLIBS += -L $(ERL_INTERFACE_LIB_DIR) -lei
-LDFLAGS += -shared
+LDFLAGS += -shared -flto
 
 # Verbosity.
 
