@@ -24,17 +24,17 @@ endif
 UNAME_SYS := $(shell uname -s)
 ifeq ($(UNAME_SYS), Darwin)
 	CC ?= cc
-	CFLAGS ?= -O3 -std=c99 -finline-functions -Wall -Wmissing-prototypes
-	CXXFLAGS ?= -O3 -finline-functions -Wall -fpermissive
+	CFLAGS ?= -O3 -std=c99 -finline-functions -funroll-loops -Wall -Wmissing-prototypes
+	CXXFLAGS ?= -O3 -finline-functions -funroll-loops -Wall -fpermissive
 	LDFLAGS ?= -flat_namespace -undefined suppress
 else ifeq ($(UNAME_SYS), FreeBSD)
 	CC ?= cc
-	CFLAGS ?= -O3 -std=c99 -finline-functions -Wall -Wmissing-prototypes
-	CXXFLAGS ?= -O3 -finline-functions -Wall
+	CFLAGS ?= -O3 -std=c99 -finline-functions -funroll-loops -Wall -Wmissing-prototypes
+	CXXFLAGS ?= -O3 -finline-functions -funroll-loops -Wall
 else ifeq ($(UNAME_SYS), Linux)
 	CC ?= gcc
-	CFLAGS ?= -O3 -std=c99 -finline-functions -Wall -Wmissing-prototypes
-	CXXFLAGS ?= -O3 -finline-functions -Wall
+	CFLAGS ?= -O3 -std=c99 -finline-functions -funroll-loops -Wall -Wmissing-prototypes
+	CXXFLAGS ?= -O3 -finline-functions -funroll-loops -Wall
 endif
 CXXFLAGS += -std=c++17
 
@@ -42,14 +42,34 @@ CXXFLAGS += -std=c++17
 # decodeLong into the decode/decode_array hot loops in mkh_avro_decoder.cc).
 # -DNDEBUG strips nlohmann/json's internal assertions (schema parsing only,
 # but free). ARCHFLAGS is empty unless NATIVE_ARCH=1 (see above).
-CFLAGS += -flto -DNDEBUG $(ARCHFLAGS)
-CXXFLAGS += -flto -DNDEBUG $(ARCHFLAGS)
+#
+# -fvisibility(-inlines)=hidden makes every symbol local by default, except
+# the NIF's nif_init entry point, which erl_nif.h's ERL_NIF_INIT macro tags
+# with __attribute__((visibility("default"))) itself regardless of this
+# flag. Hidden visibility gives LTO certainty that nothing outside the .so
+# calls the internal mkh_avro2/SchemaItem functions, which allows more
+# complete cross-TU inlining/dead-code elimination, and shrinks the dynamic
+# symbol table.
+#
+# -ffunction-sections/-fdata-sections + --gc-sections (Linux)/-dead_strip
+# (Darwin) let the linker drop any unreferenced code/data at section
+# granularity.
+CFLAGS += -flto -DNDEBUG $(ARCHFLAGS) -fvisibility=hidden \
+	-ffunction-sections -fdata-sections
+CXXFLAGS += -flto -DNDEBUG $(ARCHFLAGS) -fvisibility=hidden \
+	-fvisibility-inlines-hidden -ffunction-sections -fdata-sections
 
 CFLAGS += -fPIC -I $(ERTS_INCLUDE_DIR) -I $(ERL_INTERFACE_INCLUDE_DIR)
 CXXFLAGS += -fPIC -I $(ERTS_INCLUDE_DIR) -I $(ERL_INTERFACE_INCLUDE_DIR)
 
 LDLIBS += -L $(ERL_INTERFACE_LIB_DIR) -lei
 LDFLAGS += -shared -flto
+
+ifeq ($(UNAME_SYS), Darwin)
+	LDFLAGS += -Wl,-dead_strip
+else
+	LDFLAGS += -Wl,--gc-sections
+endif
 
 # Verbosity.
 
