@@ -91,9 +91,8 @@ unknown_schema_id_decode_test() ->
 unknown_schema_id_decode_fast_test() ->
     ?assertError(badarg, erlav_nif:erlav_decode_fast(999999999, <<1, 2, 3>>)).
 
-%% Never-initialized id 0 is erlav_init/1's own reserved "bad binary input"
-%% sentinel (see erlav_init_nif) and is never handed out as a real schema id
-%% (ids start at 1) -- it must also be rejected, not treated as valid.
+%% 0 is never handed out as a real schema id (ids start at 1 -- see
+%% erlav_init_nif) -- it must be rejected like any other unknown id.
 schema_id_zero_encode_test() ->
     ?assertError(badarg, erlav_nif:erlav_encode(0, #{<<"f">> => 1})).
 

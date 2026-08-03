@@ -39,6 +39,19 @@ find_schema(int enc_ref) {
     return it == erlav_encoders_map.end() ? nullptr : it->second;
 }
 
+// Builds the {error, Msg, Code} tuple shared by every failure path in this
+// file -- erlav_init_nif and erlav_encode_nif both need the exact same
+// shape, so callers on the Erlang side can branch on one consistent
+// contract ({error, _, _} means failure) instead of each NIF having its own
+// ad hoc error representation.
+ERL_NIF_TERM
+make_error_tuple(ErlNifEnv* env, const std::string& msg, int code) {
+    ERL_NIF_TERM t1 = enif_make_atom(env, "error");
+    ERL_NIF_TERM t2 = enif_make_string(env, msg.c_str(), ERL_NIF_LATIN1);
+    ERL_NIF_TERM t3 = enif_make_int(env, code);
+    return enif_make_tuple3(env, t1, t2, t3);
+}
+
 ERL_NIF_TERM
 erlav_init_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
     ErlNifBinary sbin;
@@ -46,20 +59,53 @@ erlav_init_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
     int ret;
 
     if (!enif_inspect_binary(env, argv[0], &sbin)) {
-        return enif_make_int(env, 0);
+        // Previously returned the bare integer 0 here, indistinguishable
+        // from "handle 0" by any caller that only checks "is it a bare
+        // int" -- now returns the same {error, Msg, Code} shape as every
+        // other failure below, so erlav_init/1 has one consistent success
+        // (integer id >= 1) / failure ({error, _, _}) contract.
+        return make_error_tuple(env, "erlav_init: argument is not a binary", 100);
     }
     key.assign((const char*) sbin.data, sbin.size);
 
     std::unique_lock<std::shared_mutex> lock(erlav_schema_mutex);
 
-    if (erlav_schema_map.find(key) != erlav_schema_map.end()) {
-        ret = erlav_schema_map[key];
-        return enif_make_int(env, ret);
-    } else {
-        ret = erlav_schema_map.size() + 1;
+    auto found = erlav_schema_map.find(key);
+    if (found != erlav_schema_map.end()) {
+        return enif_make_int(env, found->second);
+    }
+
+    // Schema parsing (read_schema -> mkh_avro2::read_schema -> json::parse
+    // + resolve_user_types + the SchemaItem tree walk) was previously
+    // completely unguarded here, unlike erlav_encode_nif's try/catch a few
+    // lines down -- a malformed .avsc file (bad JSON, or one that fails the
+    // hardcoded well-formed-schema assumptions in schema_item.hh, e.g. its
+    // "Not implemented" branches) threw a raw C++ exception straight across
+    // the NIF boundary. That's undefined behavior per the Erlang NIF API
+    // (NIFs must not let a C++ exception escape into the calling BEAM
+    // scheduler) and can crash the whole VM, not just fail this call.
+    try {
+        ret = static_cast<int>(erlav_schema_map.size()) + 1;
+        auto* schema = mkh_avro2::read_schema(key);
+        // Only register the new id once parsing has fully succeeded --
+        // registering `key` first and filling in erlav_encoders_map after
+        // (the previous order) meant a throw here left erlav_schema_map
+        // pointing at an id with no matching encoder, so every future
+        // erlav_init/1 call for this same filename would keep returning
+        // that broken id instead of retrying (e.g. after the .avsc file on
+        // disk is fixed).
         erlav_schema_map[key] = ret;
-        auto schema = mkh_avro2::read_schema(key);
         erlav_encoders_map[ret] = schema;
+    } catch (nlohmann::json::exception const& je) {
+        return make_error_tuple(env, std::string("erlav_init: ") + je.what(), 101);
+    } catch (std::exception const& e) {
+        // Covers schema_item.hh's throw std::runtime_error("Not implemented
+        // ...") for schema constructs read_schema doesn't support, plus any
+        // other standard-library exception the parse/build path might
+        // raise.
+        return make_error_tuple(env, std::string("erlav_init: ") + e.what(), 102);
+    } catch (...) {
+        return make_error_tuple(env, "erlav_init: unknown error", 103);
     }
 
     return enif_make_int(env, ret);
@@ -86,24 +132,11 @@ erlav_encode_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
     } catch (int x) {
         return enif_make_int(env, x);
     } catch (mkh_avro::AvroException const& ae) {
-        ERL_NIF_TERM t1 = enif_make_atom(env, "error");
-        ERL_NIF_TERM t2 =
-            enif_make_string(env, &(ae.message[0]), ERL_NIF_LATIN1);
-        ERL_NIF_TERM t3 = enif_make_int(env, ae.code);
-        return enif_make_tuple3(env, t1, t2, t3);
+        return make_error_tuple(env, ae.message, ae.code);
     } catch (std::out_of_range const& ofr) {
-        ERL_NIF_TERM t1 = enif_make_atom(env, "error");
-        std::string wstr = ofr.what();
-        ERL_NIF_TERM t2 =
-            enif_make_string(env, wstr.c_str(), ERL_NIF_LATIN1);
-        ERL_NIF_TERM t3 = enif_make_int(env, 9990);
-        return enif_make_tuple3(env, t1, t2, t3);
+        return make_error_tuple(env, ofr.what(), 9990);
     } catch (...) {
-        ERL_NIF_TERM t1 = enif_make_atom(env, "error");
-        ERL_NIF_TERM t2 =
-            enif_make_string(env, "unknown error", ERL_NIF_LATIN1);
-        ERL_NIF_TERM t3 = enif_make_int(env, 9991);
-        return enif_make_tuple3(env, t1, t2, t3);
+        return make_error_tuple(env, "unknown error", 9991);
     }
     return enif_make_int(env, -1);
 }
