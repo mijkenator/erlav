@@ -273,7 +273,11 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
         for(uint64_t i=0; i < arrayLen; i++){
             decoded_list.push_back(decode_scalar(env, st, it));
         }
-        it++; // skip end of array, should be 0
+        if (arrayLen > 0) {
+            it++; // skip end of array, should be 0 -- encodearray only
+                  // writes this terminator when len > 0 (mkh_avro2.hh),
+                  // so an empty array must not consume it either.
+        }
         return enif_make_list_from_array(env, decoded_list.data(), decoded_list.size());
 
     } else if ((si->obj_field == "complex") && si->array_type == 1) {
@@ -305,7 +309,9 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
                     10);
             }
         }
-        it++; // skip end of array, should be 0
+        if (arrayLen > 0) {
+            it++; // skip end of array, should be 0
+        }
         return enif_make_list_from_array(env, decoded_list.data(), decoded_list.size());
     } else {
         // complex array - no support for union types yet
@@ -319,7 +325,9 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
             for(uint64_t i=0; i < arrayLen; i++){
                 decoded_list.push_back(decode_array(env, si->childItems[0], it));
             }
-            it++; // skip end of array, should be 0
+            if (arrayLen > 0) {
+                it++; // skip end of array, should be 0
+            }
             return enif_make_list_from_array(env, decoded_list.data(), arrayLen);
 
         }else if(child_len == 1){
@@ -333,7 +341,9 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
                     decoded_list.push_back(decode(env, si->childItems[0], it));
                 }
             }
-            it++; // skip end of array, should be 0
+            if (arrayLen > 0) {
+                it++; // skip end of array, should be 0
+            }
             return enif_make_list_from_array(env, decoded_list.data(), arrayLen);
         }else{
             // complex array multiple types

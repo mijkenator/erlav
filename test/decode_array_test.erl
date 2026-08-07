@@ -524,3 +524,73 @@ array_of_union_named_type_ref_items_test() ->
     ?debugFmt("decode result: ~p ~n", [Re1]),
     ?assert(true == tst_utils:compare_maps_deep(Term, Re1)),
     ok.
+
+% A self-referential named type (a record whose own field references its
+% own name, e.g. a tree/linked-list shape: {"name":"Node", "fields":
+% [..., {"type": {"type":"array","items":"Node"}}]}) must not hang or
+% crash schema resolution. resolve_named_type_refs's `active` guard
+% expands a self-reference once per recursion path rather than looping
+% forever, so a shallow tree (depth <= 2, i.e. root -> children with no
+% grandchildren) round-trips; a deeper tree currently exceeds what a
+% single JSON-substitution pass can inline and fails cleanly with a
+% catchable encode error (see self_referential_deep_test) rather than
+% hanging or crashing -- full unbounded recursive-schema support would
+% need SchemaItem to support self-referencing pointers, which is a
+% separate, larger change than this bug fix.
+self_referential_shallow_test() ->
+    SchemaId = erlav_nif:erlav_init(<<"test/tschema_self_ref.avsc">>),
+    Term = #{
+        <<"label">> => <<"root">>,
+        <<"children">> => [
+            #{<<"label">> => <<"child1">>, <<"children">> => []},
+            #{<<"label">> => <<"child2">>, <<"children">> => []}
+        ]
+    },
+    Encoded = erlav_nif:erlav_encode(SchemaId, Term),
+    ?debugFmt("Encoded: ~p ~n", [Encoded]),
+    ?assert(is_binary(Encoded)),
+    Re1 = erlav_nif:erlav_decode_fast(SchemaId, Encoded),
+    ?debugFmt("decode result: ~p ~n", [Re1]),
+    ?assert(true == tst_utils:compare_maps_deep(Term, Re1)),
+    ok.
+
+% Companion to self_referential_shallow_test -- a grandchild-deep tree
+% goes past what the current single-pass resolver can inline. This must
+% still fail as a clean, catchable {error, _, _} tuple, not hang or
+% crash, documenting today's depth limit.
+self_referential_deep_test() ->
+    SchemaId = erlav_nif:erlav_init(<<"test/tschema_self_ref.avsc">>),
+    Term = #{
+        <<"label">> => <<"root">>,
+        <<"children">> => [
+            #{<<"label">> => <<"child1">>, <<"children">> => [
+                #{<<"label">> => <<"grandchild1">>, <<"children">> => []}
+            ]}
+        ]
+    },
+    Encoded = erlav_nif:erlav_encode(SchemaId, Term),
+    ?debugFmt("Encoded: ~p ~n", [Encoded]),
+    ?assertMatch({error, _, _}, Encoded),
+    ok.
+
+% Belt-and-suspenders regression test for decode_array's defensive `else`
+% branch: an array-items union member whose name never resolves to
+% anything (not a scalar, not "null", not a registered record/enum) must
+% surface as a catchable {error, _, _} tuple from erlav_decode_fast, not
+% crash the VM. Before this fix, decode_array's eletype dispatch fell
+% through silently (no bytes consumed, uninitialized memory handed to
+% enif_make_list_from_array); after the mkh_avro2.hh resolver rewrite,
+% an unresolvable name can still reach here for a schema that genuinely
+% doesn't define the referenced type anywhere (a real schema/data bug,
+% not the named-type-in-union case this PR fixes) -- crafted by hand here
+% since the encoder itself refuses to produce bytes for such a union
+% member (see array_of_union_bad_atom_test-style encode failures).
+array_of_union_unresolved_member_decode_test() ->
+    SchemaId = erlav_nif:erlav_init(<<"test/tschema_array_of_union_unresolved.avsc">>),
+    % arrayLen=1 (varint 2), union type_index=1 i.e. the unresolved
+    % "totally_unknown_type" member (varint 2), end-of-array marker (0).
+    Bad = <<2, 2, 0>>,
+    Ret = erlav_nif:erlav_decode_fast(SchemaId, Bad),
+    ?debugFmt("decode result: ~p ~n", [Ret]),
+    ?assertMatch({error, _, 10}, Ret),
+    ok.

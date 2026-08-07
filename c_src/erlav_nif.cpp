@@ -93,7 +93,28 @@ erlav_decode_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
     //std::cout << "encdata vector length: " <<  encdata.size() << "\r\n";
     std::vector<uint8_t>::iterator it = encdata.begin();
 
-    ret_map = mkh_avro2::decode(env, erlav_encoders_map[enc_ref], it);
+    try {
+        ret_map = mkh_avro2::decode(env, erlav_encoders_map[enc_ref], it);
+    } catch (mkh_avro::AvroException const& ae) {
+        ERL_NIF_TERM t1 = enif_make_atom(env, "error");
+        ERL_NIF_TERM t2 =
+            enif_make_string(env, &(ae.message[0]), ERL_NIF_LATIN1);
+        ERL_NIF_TERM t3 = enif_make_int(env, ae.code);
+        return enif_make_tuple3(env, t1, t2, t3);
+    } catch (std::out_of_range const& ofr) {
+        ERL_NIF_TERM t1 = enif_make_atom(env, "error");
+        std::string wstr = ofr.what();
+        ERL_NIF_TERM t2 =
+            enif_make_string(env, wstr.c_str(), ERL_NIF_LATIN1);
+        ERL_NIF_TERM t3 = enif_make_int(env, 9990);
+        return enif_make_tuple3(env, t1, t2, t3);
+    } catch (...) {
+        ERL_NIF_TERM t1 = enif_make_atom(env, "error");
+        ERL_NIF_TERM t2 =
+            enif_make_string(env, "unknown error", ERL_NIF_LATIN1);
+        ERL_NIF_TERM t3 = enif_make_int(env, 9991);
+        return enif_make_tuple3(env, t1, t2, t3);
+    }
 
     //std::cout << "decode done\r\n";
 /*
@@ -130,7 +151,28 @@ erlav_decode_nif_fast(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
 
     uint8_t* p = sbin.data;
 
-    ret_map = mkh_avro2::decode(env, erlav_encoders_map[enc_ref], p);
+    try {
+        ret_map = mkh_avro2::decode(env, erlav_encoders_map[enc_ref], p);
+    } catch (mkh_avro::AvroException const& ae) {
+        ERL_NIF_TERM t1 = enif_make_atom(env, "error");
+        ERL_NIF_TERM t2 =
+            enif_make_string(env, &(ae.message[0]), ERL_NIF_LATIN1);
+        ERL_NIF_TERM t3 = enif_make_int(env, ae.code);
+        return enif_make_tuple3(env, t1, t2, t3);
+    } catch (std::out_of_range const& ofr) {
+        ERL_NIF_TERM t1 = enif_make_atom(env, "error");
+        std::string wstr = ofr.what();
+        ERL_NIF_TERM t2 =
+            enif_make_string(env, wstr.c_str(), ERL_NIF_LATIN1);
+        ERL_NIF_TERM t3 = enif_make_int(env, 9990);
+        return enif_make_tuple3(env, t1, t2, t3);
+    } catch (...) {
+        ERL_NIF_TERM t1 = enif_make_atom(env, "error");
+        ERL_NIF_TERM t2 =
+            enif_make_string(env, "unknown error", ERL_NIF_LATIN1);
+        ERL_NIF_TERM t3 = enif_make_int(env, 9991);
+        return enif_make_tuple3(env, t1, t2, t3);
+    }
 
     return ret_map;
 }
