@@ -358,8 +358,32 @@ encodearray(SchemaItem* si,
                     }
                 } else if (enif_is_list(env, elem)) {
                     int typeindex = si->array_multi_type.at("array");
+                    int child_idx = si->array_multi_type_child_index.at("array");
                     encode_int(env, typeindex, ret);
-                    encodearray(si->childItems[0], env, &elems[i], ret);
+                    encodearray(si->childItems[child_idx], env, &elems[i], ret);
+                } else if (enif_is_map(env, elem)) {
+                    // record or map union member
+                    bool encoded_ok = false;
+                    for (const auto& ttype : {"record", "map"}) {
+                        if (!si->array_multi_type.count(ttype)) {
+                            continue;
+                        }
+                        int typeindex = si->array_multi_type.at(ttype);
+                        int child_idx =
+                            si->array_multi_type_child_index.at(ttype);
+                        auto saved_size = ret->size();
+                        encode_int(env, typeindex, ret);
+                        if (encodevalue(
+                                si->childItems[child_idx], env, &elems[i], ret) ==
+                            0) {
+                            encoded_ok = true;
+                            break;
+                        }
+                        ret->resize(saved_size);
+                    }
+                    if (!encoded_ok) {
+                        return 8;
+                    }
                 } else {
                     return 8;
                 }
