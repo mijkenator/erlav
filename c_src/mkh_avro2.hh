@@ -382,6 +382,20 @@ encodearray(SchemaItem* si,
                         } catch (...){
                             return 8;
                         }
+                    } else if (enif_is_atom(env, elem) &&
+                               si->array_multi_type.count("null")) {
+                        // null union member -- only `undefined` is accepted;
+                        // any other atom (true/false/anything else) is not
+                        // a valid Avro value here.
+                        char atom[16];
+                        if (enif_get_atom(
+                                env, elem, atom, sizeof(atom), ERL_NIF_LATIN1) &&
+                            std::strcmp(atom, "undefined") == 0) {
+                            int typeindex = si->array_multi_type.at("null");
+                            encode_int(env, typeindex, ret);
+                        } else {
+                            return 8;
+                        }
                     } else {
                         return 8;
                     }

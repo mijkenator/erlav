@@ -285,6 +285,8 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
             //std::cout << "Type name:" << eletype << "\r\n";
             if((eletype == "string")||(eletype == "long")||(eletype == "double")){
                 decoded_list.push_back(decode_scalar(env, get_scalar_type(eletype), it));
+            }else if(eletype == "null"){
+                decoded_list.push_back(enif_make_atom(env, "undefined"));
             }else if(eletype == "array"){
                 int child_idx = si->array_multi_type_child_index.at("array");
                 decoded_list.push_back(decode_array(env, si->childItems[child_idx], it));

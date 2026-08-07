@@ -471,3 +471,45 @@ array_of_union_multi_nonscalar_items_test() ->
     ?debugFmt("decode result: ~p ~n", [Re1]),
     ?assert(true == tst_utils:compare_maps_deep(Term, Re1)),
     ok.
+
+% Array items union that includes "null" alongside scalars, e.g.
+% {"type": "array", "items": ["null", "long", "string"]}. `undefined`
+% array elements must round-trip as the null union member, interleaved
+% with plain scalar elements.
+array_of_union_null_scalar_items_test() ->
+    SchemaId = erlav_nif:erlav_init(<<"test/tschema_array_of_union5.avsc">>),
+    Term = #{
+        <<"arrayField">> => [1, undefined, <<"x">>, undefined]
+    },
+    Encoded = erlav_nif:erlav_encode(SchemaId, Term),
+    ?debugFmt("Encoded: ~p ~n", [Encoded]),
+    Re1 = erlav_nif:erlav_decode_fast(SchemaId, Encoded),
+    ?debugFmt("decode result: ~p ~n", [Re1]),
+    ?assertEqual(Term, Re1),
+    ok.
+
+% Companion to array_of_union_null_scalar_items_test -- "null" alongside a
+% scalar and a record member, e.g.
+% {"type": "array", "items": ["null", "long", {"type": "record", ...}]}.
+array_of_union_null_record_items_test() ->
+    SchemaId = erlav_nif:erlav_init(<<"test/tschema_array_of_union6.avsc">>),
+    Term = #{
+        <<"arrayField">> => [1, undefined, #{<<"a">> => 5}, undefined]
+    },
+    Encoded = erlav_nif:erlav_encode(SchemaId, Term),
+    ?debugFmt("Encoded: ~p ~n", [Encoded]),
+    Re1 = erlav_nif:erlav_decode_fast(SchemaId, Encoded),
+    ?debugFmt("decode result: ~p ~n", [Re1]),
+    ?assertEqual(Term, Re1),
+    ok.
+
+% An atom other than `undefined` (e.g. `true`) is not a valid Avro value
+% for any member of ["null", "long", "string"] and must be rejected
+% rather than silently misencoded.
+array_of_union_bad_atom_test() ->
+    SchemaId = erlav_nif:erlav_init(<<"test/tschema_array_of_union5.avsc">>),
+    Term = #{<<"arrayField">> => [1, true]},
+    Encoded = erlav_nif:erlav_encode(SchemaId, Term),
+    ?debugFmt("Encoded: ~p ~n", [Encoded]),
+    ?assertEqual({error, "Rec:Interop field:arrayField", 8}, Encoded),
+    ok.
