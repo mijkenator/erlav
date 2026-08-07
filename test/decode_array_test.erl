@@ -371,3 +371,24 @@ complex_array_bad_type_test() ->
 
     ?assert({error, "Rec:Interop field:arrayField", 8} == Encoded),
     ok.
+
+% array whose *items* are a union of a scalar (long) and a record, e.g.
+% {"type": "array", "items": ["long", {"type": "record", ...}]}.
+% Regression test for tschema_array_of_union1.avsc: encoding/decoding an
+% array mixing plain longs with union-member records should round-trip.
+array_of_union_record_items_test() ->
+    SchemaId = erlav_nif:erlav_init(<<"test/tschema_array_of_union1.avsc">>),
+    Term = #{
+        <<"arrayField">> => [
+            1,
+            2,
+            #{<<"rec1field">> => 10, <<"rec3field">> => 20},
+            3
+        ]
+    },
+    Encoded = erlav_nif:erlav_encode(SchemaId, Term),
+    ?debugFmt("Encoded: ~p ~n", [Encoded]),
+    Re1 = erlav_nif:erlav_decode_fast(SchemaId, Encoded),
+    ?debugFmt("decode result: ~p ~n", [Re1]),
+    ?assert(true == tst_utils:compare_maps_deep(Term, Re1)),
+    ok.

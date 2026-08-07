@@ -27,6 +27,9 @@ struct SchemaItem {
     std::string obj_field = "complex";
     std::map<std::string, int> array_multi_type;
     std::map<int, std::string> array_multi_type_reverse;
+    // For non-scalar union members (array/map/record/enum), maps the
+    // member's type name to its position in childItems.
+    std::map<std::string, int> array_multi_type_child_index;
     ErlNifEnv* key_env = nullptr; // Only set on root object for cleanup
     std::vector<ERL_NIF_TERM> cached_keys;
 
@@ -73,10 +76,17 @@ struct SchemaItem {
             if (it.is_string()) {
                 array_multi_type[it] = index;
                 array_multi_type_reverse[index] = it;
-            } else if (it.is_object() && it["type"] == "array") {
-                array_multi_type["array"] = index;
-                array_multi_type_reverse[index] = "array";
-                childItems = read_internal_types(it);
+            } else if (it.is_object() && it.contains("type") &&
+                       it["type"].is_string()) {
+                // Non-scalar union member: array, map, record or enum.
+                // Keyed by its Avro type keyword, matching the existing
+                // "array" convention -- a union is expected to contain at
+                // most one member of each such kind.
+                std::string ttype = it["type"];
+                array_multi_type[ttype] = index;
+                array_multi_type_reverse[index] = ttype;
+                array_multi_type_child_index[ttype] = childItems.size();
+                childItems.push_back(read_object_type(it));
             }
             index++;
         }
