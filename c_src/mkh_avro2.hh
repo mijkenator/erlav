@@ -237,11 +237,40 @@ encodearray(SchemaItem* si,
             for (uint32_t i = 0; i < len; i++) {
                 if (enif_get_list_cell(env, *val, &elem, val)) {
                     if (enif_is_binary(env, elem)) {
-                        try {
+                        // string or enum union member -- both carry a
+                        // binary value on the Erlang side, so try string
+                        // first (existing behavior) and fall back to enum.
+                        bool encoded_ok = false;
+                        if (si->array_multi_type.count("string")) {
                             int typeindex = si->array_multi_type.at("string");
+                            auto saved_size = ret->size();
                             encode_int(env, typeindex, ret);
-                            encode_string(env, &elem, ret);
-                        } catch (...){
+                            if (encode_string(env, &elem, ret) == 0) {
+                                encoded_ok = true;
+                            } else {
+                                ret->resize(saved_size);
+                            }
+                        }
+                        if (!encoded_ok && si->array_multi_type.count("enum")) {
+                            int typeindex = si->array_multi_type.at("enum");
+                            int child_idx =
+                                si->array_multi_type_child_index.at("enum");
+                            auto saved_size = ret->size();
+                            encode_int(env, typeindex, ret);
+                            try {
+                                if (encodeenum(si->childItems[child_idx],
+                                               env,
+                                               &elem,
+                                               ret) == 0) {
+                                    encoded_ok = true;
+                                } else {
+                                    ret->resize(saved_size);
+                                }
+                            } catch (const mkh_avro::AvroException&) {
+                                ret->resize(saved_size);
+                            }
+                        }
+                        if (!encoded_ok) {
                             return 8;
                         }
                     } else if (enif_is_number(env, elem)) {

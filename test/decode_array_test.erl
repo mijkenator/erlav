@@ -392,3 +392,64 @@ array_of_union_record_items_test() ->
     ?debugFmt("decode result: ~p ~n", [Re1]),
     ?assert(true == tst_utils:compare_maps_deep(Term, Re1)),
     ok.
+
+% Companion to array_of_union_record_items_test -- array items union of a
+% scalar (long) and a map, e.g.
+% {"type": "array", "items": ["long", {"type": "map", "values": "string"}]}.
+array_of_union_map_items_test() ->
+    SchemaId = erlav_nif:erlav_init(<<"test/tschema_array_of_union2.avsc">>),
+    Term = #{
+        <<"arrayField">> => [
+            1,
+            2,
+            #{<<"k1">> => <<"v1">>, <<"k2">> => <<"v2">>},
+            3
+        ]
+    },
+    Encoded = erlav_nif:erlav_encode(SchemaId, Term),
+    ?debugFmt("Encoded: ~p ~n", [Encoded]),
+    Re1 = erlav_nif:erlav_decode_fast(SchemaId, Encoded),
+    ?debugFmt("decode result: ~p ~n", [Re1]),
+    ?assert(true == tst_utils:compare_maps_deep(Term, Re1)),
+    ok.
+
+% Companion to array_of_union_record_items_test -- array items union of a
+% scalar (long) and an enum, e.g.
+% {"type": "array", "items": ["long", {"type": "enum", "symbols": [...]}]}.
+% On the Erlang side both string and enum union members are plain
+% binaries, so the encoder must be able to tell them apart (tries string
+% first, falls back to enum).
+array_of_union_enum_items_test() ->
+    SchemaId = erlav_nif:erlav_init(<<"test/tschema_array_of_union3.avsc">>),
+    Term = #{
+        <<"arrayField">> => [
+            1, <<"TWO">>, 2, <<"ONE">>
+        ]
+    },
+    Encoded = erlav_nif:erlav_encode(SchemaId, Term),
+    ?debugFmt("Encoded: ~p ~n", [Encoded]),
+    Re1 = erlav_nif:erlav_decode_fast(SchemaId, Encoded),
+    ?debugFmt("decode result: ~p ~n", [Re1]),
+    ?assert(true == tst_utils:compare_maps_deep(Term, Re1)),
+    ok.
+
+% Array items union with more than one non-scalar member: long, nested
+% array, and record all in the same union. Exercises
+% array_multi_type_child_index -- each non-scalar member must resolve to
+% its own childItems slot instead of colliding on childItems[0].
+array_of_union_multi_nonscalar_items_test() ->
+    SchemaId = erlav_nif:erlav_init(<<"test/tschema_array_of_union4.avsc">>),
+    Term = #{
+        <<"arrayField">> => [
+            1,
+            [10, 20, 30],
+            #{<<"rec1field">> => 10, <<"rec3field">> => 20},
+            2
+        ]
+    },
+    Encoded = erlav_nif:erlav_encode(SchemaId, Term),
+    ?debugFmt("Encoded: ~p ~n", [Encoded]),
+    Re1 = erlav_nif:erlav_decode_fast(SchemaId, Encoded),
+    ?debugFmt("decode result: ~p ~n", [Re1]),
+    ?assert(true == tst_utils:compare_maps_deep(Term, Re1)),
+    ok.
