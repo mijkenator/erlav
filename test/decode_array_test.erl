@@ -495,3 +495,32 @@ array_of_union_bad_atom_test() ->
     ?debugFmt("Encoded: ~p ~n", [Encoded]),
     ?assertEqual({error, "Rec:Interop field:arrayField", 8}, Encoded),
     ok.
+
+% Regression test for a named-type *reference* inside an array-items
+% union, e.g. {"type": "array", "items": ["long", "named_union_item"]}
+% where "named_union_item" is a record defined elsewhere in the schema
+% (not an inline object, unlike tschema_array_of_union1..6.avsc). Prior to
+% the fix, resolve_user_types never inlined this reference (it only
+% covered namespace-qualified names in top-level fields), so
+% set_array_multi_types silently treated the bare name as if it were a
+% scalar keyword; decode_array then fell through its eletype dispatch
+% with no matching branch, desyncing the read cursor and handing
+% enif_make_list_from_array uninitialized memory -- a segfault, not a
+% clean failure. See test/tschema_array_of_union7.avsc.
+array_of_union_named_type_ref_items_test() ->
+    SchemaId = erlav_nif:erlav_init(<<"test/tschema_array_of_union7.avsc">>),
+    Term = #{
+        <<"definingField">> => [#{<<"rec1field">> => 1, <<"rec3field">> => 2}],
+        <<"arrayField">> => [
+            1,
+            2,
+            #{<<"rec1field">> => 10, <<"rec3field">> => 20},
+            3
+        ]
+    },
+    Encoded = erlav_nif:erlav_encode(SchemaId, Term),
+    ?debugFmt("Encoded: ~p ~n", [Encoded]),
+    Re1 = erlav_nif:erlav_decode_fast(SchemaId, Encoded),
+    ?debugFmt("decode result: ~p ~n", [Re1]),
+    ?assert(true == tst_utils:compare_maps_deep(Term, Re1)),
+    ok.

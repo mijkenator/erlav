@@ -9,10 +9,6 @@ using json = nlohmann::json;
 
 namespace mkh_avro2 {
 
-typedef std::vector<std::string> MJpaths;
-typedef std::map<std::string, MJpaths> MJpatch;
-
-
 bool is_scalar(std::string);
 int get_scalar_type(std::string);
 

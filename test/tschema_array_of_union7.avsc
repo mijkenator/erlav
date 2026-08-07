@@ -1,0 +1,13 @@
+{"type": "record", "name":"Interop", "namespace": "erlav.test",
+  "fields": [
+      {"name": "definingField", "type": {"type": "array", "items": {
+          "name": "named_union_item",
+          "type": "record",
+          "fields":[
+            {"name": "rec1field", "type": "long"},
+            {"name": "rec3field", "type": "long"}
+          ]
+      }}},
+      {"name": "arrayField", "type": {"type": "array", "items": ["long", "named_union_item"]}}
+  ]
+}
