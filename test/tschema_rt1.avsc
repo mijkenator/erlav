@@ -1,0 +1,171 @@
+{
+  "namespace": "rtb.gateway.realtime",
+  "type": "record",
+  "name": "RealTime",
+  "doc":  "data for rtb-realtime-go application",
+  "fields": [
+    {
+        "name": "event",
+        "type": "string",
+        "doc": "Type of event"
+    },
+    {
+        "name": "timestamp",
+        "type": ["null", "double"],
+        "default": null,
+        "doc": "Time of event"
+    },
+    {
+        "name": "bid_request",
+        "type": ["null",{
+            "type": "record",
+            "name": "bid_request",
+            "fields":[
+                {
+                    "name": "id",
+                    "type": ["null", "string"],
+                    "default": null,
+                    "doc": "Unique ID of the bid request from the exchange"
+                },
+                {
+                    "name": "app",
+                    "type": ["null",{
+                        "type": "record",
+                        "name": "app",
+                        "fields":[
+                            {
+                                "name": "ext",
+                                "type": {
+                                    "type": "record",
+                                    "name": "bid_app_ext",
+                                    "fields": [
+                                        {
+                                            "name": "exchange_id",
+                                            "type": ["null","long"],
+                                            "default": null,
+                                            "doc": "Exchange ID from bid request"
+                                        },
+                                        {
+                                            "name": "exchange_seller_id",
+                                            "type": ["null","long"],
+                                            "default": null,
+                                            "doc": "ID from exchange_sellers rig table, original int version"
+                                        },
+                                        {
+                                            "name": "exchange_seller_alphanumeric_id",
+                                            "type": ["null","string"],
+                                            "default": null,
+                                            "doc": "ID from exchange_sellers rig table, new alphanumeric version"
+                                        }]
+                                },
+                                "doc": "combination of bid_request.app.ext and bid_request.site.ext"
+                            }
+                        ]
+                    }],
+                    "default": null,
+                    "doc": "bid request app/site combined metadata"
+                },
+                {
+                    "name": "imp",
+                    "type": ["null",{
+                        "type": "array",
+                        "items": {
+                            "type": "record",
+                            "name": "bid_imp_ext",
+                            "fields": [
+                                {
+                                    "name": "filtered_ids",
+                                    "type": ["null", {
+                                        "name": "filtered_ids_map",
+                                        "type": "map",
+                                        "values": {
+                                            "type": "array",
+                                            "items": {
+                                                "name": "filteres_ids_map_value",
+                                                "type": "record",
+                                                "fields": [
+                                                    {"name": "buyer_id", "type": ["null","long"], "default": null, "doc": "Buyer ID"},
+                                                    {"name": "campaign_id", "type": ["null","long"], "default": null, "doc": "Flight's Campaign ID"},
+                                                    {"name": "flight_id", "type": "long", "doc": "Flight ID for matched flight"}
+                                                ]
+                                            }
+                                        }
+                                    }],
+                                    "default": null,
+                                    "doc": "Filtered flights result"
+                                },
+                                {
+                                    "name": "impression_responses",
+                                    "type": ["null", {
+                                        "type": "array",
+                                        "items":{
+                                            "type": "record",
+                                            "name": "impression_responses_ext",
+                                            "fields":[
+                                                {"name": "buyer_id", "type": ["null","long"], "default": null, "doc": "Buyer ID "},
+                                                {"name": "campaign_id", "type": ["null","long"], "default": null, "doc": "Flight's Campaign ID"},
+                                                {"name": "flight_id", "type": "long", "doc": "Flight ID for matched flight"}
+                                            ]
+                                        }
+                                    }],
+                                    "default": null,
+                                    "doc": "All impression responses"
+                                },
+                                {
+                                    "name": "filtered_flight_ids",
+                                    "type": ["null", {
+                                        "name": "rt_filtered_flight_ids_map",
+                                        "type": "map",
+                                        "values": {
+                                            "type": "array",
+                                            "items": ["long", "filteres_ids_map_value"]
+                                        }
+                                    }],
+                                    "default": null,
+                                    "doc": "Eligible FlightIds from BeTree result"
+                                },
+                                {
+                                    "name": "filtered_paced_flight_ids",
+                                    "type": ["null", {
+                                        "name": "rt_filtered_paced_flight_ids_map",
+                                        "type": "map",
+                                        "values": {
+                                            "type": "array",
+                                            "items": ["long", "filteres_ids_map_value"]
+                                        }
+                                    }],
+                                    "default": null,
+                                    "doc": "Flights that passed pacing"
+                                },
+                                {
+                                    "name": "filtered_internal_auction_flight_ids",
+                                    "type": ["null", {
+                                        "name": "rt_filtered_internal_auction_flight_ids_map",
+                                        "type": "map",
+                                        "values": {
+                                            "type": "array",
+                                            "items": ["long", "filteres_ids_map_value"]
+                                        }
+                                    }],
+                                    "default": null,
+                                    "doc": "Flights that won internal auction"
+                                }
+                            ]
+                        }
+                    }],
+                    "default": null,
+                    "doc": "Impressions related Metadata"
+                }
+            ]
+        }],
+        "default": null,
+        "doc": "Bid-request related Metadata"
+    },
+    {
+        "name": "hostname",
+        "type": ["null","string"],
+        "default": null,
+        "doc": "Hostname of message's server originator"
+    }
+  ]
+}

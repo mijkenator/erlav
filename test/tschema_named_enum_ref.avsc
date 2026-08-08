@@ -1,0 +1,23 @@
+{
+  "type": "record",
+  "name": "Interop",
+  "namespace": "erlav.test",
+  "fields": [
+      {
+        "name": "colorField",
+        "type": {
+            "name": "Color",
+            "type": "enum",
+            "symbols": ["RED", "GREEN", "BLUE"]
+        }
+      },
+      {
+        "name": "secondColorField",
+        "type": "Color"
+      },
+      {
+        "name": "arrayField",
+        "type": {"type": "array", "items": ["long", "Color"]}
+      }
+  ]
+}

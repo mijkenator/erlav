@@ -1,0 +1,31 @@
+{
+  "type": "record",
+  "name": "Interop",
+  "namespace": "erlav.test",
+  "fields": [
+      {
+        "name": "wrapperField",
+        "type": {
+            "name": "Wrapper",
+            "type": "record",
+            "namespace": "erlav.test.nested",
+            "fields": [
+              {
+                "name": "inner",
+                "type": {
+                    "name": "Inner",
+                    "type": "record",
+                    "fields": [
+                      {"name": "value", "type": "long"}
+                    ]
+                }
+              }
+            ]
+        }
+      },
+      {
+        "name": "secondInnerField",
+        "type": "erlav.test.nested.Inner"
+      }
+  ]
+}
