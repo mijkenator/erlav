@@ -14,28 +14,91 @@ C_SRC_OUTPUT ?= $(CURDIR)/../priv/$(PROJECT).so
 
 # System type and C compiler/flags.
 
+# Set NATIVE_ARCH=1 to tune codegen for the build machine's CPU (e.g. AVX2/BMI2).
+# Only safe when the binary runs on the same (or identical) hardware it was built
+# on -- a -march=native .so shipped to a different CPU can SIGILL at load time.
+ifeq ($(NATIVE_ARCH), 1)
+	ARCHFLAGS = -march=native
+endif
+
+# Profile-Guided Optimization. Driven by `make pgo` (see the pgo: target
+# below), which builds an instrumented .so (PGO_PHASE=generate), runs it
+# against eunit + erlav_perf to collect real encode/decode branch/call
+# frequencies, then rebuilds using that profile (PGO_PHASE=use). Not part
+# of the default build -- `make`/`make all` never sets PGO_PHASE, so a
+# plain `rebar3 compile` is unaffected and fully reproducible.
+PGO_DIR ?= $(CURDIR)/pgo-data
+CXX_IS_CLANG ?= $(shell $(CXX) --version 2>/dev/null | grep -qi clang && echo 1 || echo 0)
+
+# LTO is skipped for the instrumented (generate) build: it's a throwaway
+# artifact whose only job is to collect counters, and keeping the two
+# instrumentation passes independent avoids any LTO/coverage-instrumentation
+# interaction. LTOFLAGS is used below instead of a bare -flto.
+LTOFLAGS = -flto
+ifeq ($(PGO_PHASE), generate)
+	ifeq ($(CXX_IS_CLANG), 1)
+		PGOFLAGS = -fprofile-instr-generate=$(PGO_DIR)/%p.profraw
+	else
+		PGOFLAGS = -fprofile-generate=$(PGO_DIR)
+	endif
+	LTOFLAGS =
+else ifeq ($(PGO_PHASE), use)
+	ifeq ($(CXX_IS_CLANG), 1)
+		PGOFLAGS = -fprofile-instr-use=$(PGO_DIR)/erlav_nif.profdata
+	else
+		PGOFLAGS = -fprofile-use -fprofile-dir=$(PGO_DIR) -fprofile-correction
+	endif
+endif
+
 UNAME_SYS := $(shell uname -s)
 ifeq ($(UNAME_SYS), Darwin)
 	CC ?= cc
-	CFLAGS ?= -O3 -std=c99 -finline-functions -Wall -Wmissing-prototypes
-	CXXFLAGS ?= -O3 -finline-functions -Wall -fpermissive
+	CFLAGS ?= -O3 -std=c99 -finline-functions -funroll-loops -Wall -Wmissing-prototypes
+	CXXFLAGS ?= -O3 -finline-functions -funroll-loops -Wall -fpermissive
 	LDFLAGS ?= -flat_namespace -undefined suppress
 else ifeq ($(UNAME_SYS), FreeBSD)
 	CC ?= cc
-	CFLAGS ?= -O3 -std=c99 -finline-functions -Wall -Wmissing-prototypes
-	CXXFLAGS ?= -O3 -finline-functions -Wall
+	CFLAGS ?= -O3 -std=c99 -finline-functions -funroll-loops -Wall -Wmissing-prototypes
+	CXXFLAGS ?= -O3 -finline-functions -funroll-loops -Wall
 else ifeq ($(UNAME_SYS), Linux)
 	CC ?= gcc
-	CFLAGS ?= -O3 -std=c99 -finline-functions -Wall -Wmissing-prototypes
-	CXXFLAGS ?= -O3 -finline-functions -Wall
+	CFLAGS ?= -O3 -std=c99 -finline-functions -funroll-loops -Wall -Wmissing-prototypes
+	CXXFLAGS ?= -O3 -finline-functions -funroll-loops -Wall
 endif
 CXXFLAGS += -std=c++17
+
+# -flto lets the linker inline across translation units (e.g. decode_scalar/
+# decodeLong into the decode/decode_array hot loops in mkh_avro_decoder.cc).
+# -DNDEBUG strips nlohmann/json's internal assertions (schema parsing only,
+# but free). ARCHFLAGS is empty unless NATIVE_ARCH=1 (see above).
+#
+# -fvisibility(-inlines)=hidden makes every symbol local by default, except
+# the NIF's nif_init entry point, which erl_nif.h's ERL_NIF_INIT macro tags
+# with __attribute__((visibility("default"))) itself regardless of this
+# flag. Hidden visibility gives LTO certainty that nothing outside the .so
+# calls the internal mkh_avro2/SchemaItem functions, which allows more
+# complete cross-TU inlining/dead-code elimination, and shrinks the dynamic
+# symbol table.
+#
+# -ffunction-sections/-fdata-sections + --gc-sections (Linux)/-dead_strip
+# (Darwin) let the linker drop any unreferenced code/data at section
+# granularity.
+CFLAGS += $(LTOFLAGS) -DNDEBUG $(ARCHFLAGS) -fvisibility=hidden \
+	-ffunction-sections -fdata-sections $(PGOFLAGS)
+CXXFLAGS += $(LTOFLAGS) -DNDEBUG $(ARCHFLAGS) -fvisibility=hidden \
+	-fvisibility-inlines-hidden -ffunction-sections -fdata-sections $(PGOFLAGS)
 
 CFLAGS += -fPIC -I $(ERTS_INCLUDE_DIR) -I $(ERL_INTERFACE_INCLUDE_DIR)
 CXXFLAGS += -fPIC -I $(ERTS_INCLUDE_DIR) -I $(ERL_INTERFACE_INCLUDE_DIR)
 
 LDLIBS += -L $(ERL_INTERFACE_LIB_DIR) -lei
-LDFLAGS += -shared
+LDFLAGS += -shared $(LTOFLAGS) $(PGOFLAGS)
+
+ifeq ($(UNAME_SYS), Darwin)
+	LDFLAGS += -Wl,-dead_strip
+else
+	LDFLAGS += -Wl,--gc-sections
+endif
 
 # Verbosity.
 

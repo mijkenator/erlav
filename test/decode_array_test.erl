@@ -371,3 +371,21 @@ complex_array_bad_type_test() ->
 
     ?assert({error, "Rec:Interop field:arrayField", 8} == Encoded),
     ok.
+
+% Companion to decode_map_test:m7_test -- array whose *items* (not the
+% array field itself) are a union of scalars, e.g.
+% {"type": "array", "items": ["null", "string"]}. Unlike the map/values
+% case, this shape was never broken: union array items are routed through
+% SchemaItem::set_array_multi_types, which always sets obj_field to
+% "complex", so encodearray/decode_array never hit the scalar_type gap
+% that affected map values. Locked down here as a regression test since
+% it's a closely related shape.
+array_union_scalar_items_test() ->
+    SchemaId = erlav_nif:erlav_init(<<"test/array_union_scalar_items.avsc">>),
+    Term = #{<<"arrayField">> => [<<"hello">>, <<"world">>]},
+    Encoded = erlav_nif:erlav_encode(SchemaId, Term),
+    ?debugFmt("Encoded: ~p ~n", [Encoded]),
+    Re1 = erlav_nif:erlav_decode_fast(SchemaId, Encoded),
+    ?debugFmt("decode result: ~p ~n", [Re1]),
+    ?assert(true == tst_utils:compare_maps(Term, Re1)),
+    ok.

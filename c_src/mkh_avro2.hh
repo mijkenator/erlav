@@ -52,9 +52,21 @@ ERL_NIF_TERM
 encode(ErlNifEnv* env, SchemaItem* si, const ERL_NIF_TERM* input) {
     ERL_NIF_TERM binary;
     ErlNifBinary retbin;
-    std::vector<uint8_t> retv;
 
-    retv.reserve(10000);
+    // Reused across calls on this scheduler thread instead of allocating a
+    // fresh ~10KB buffer every encode. NIFs run to completion on the calling
+    // thread with no reentrancy into encode() itself, so thread_local is
+    // safe here. clear() keeps the underlying allocation (capacity is not
+    // released), so after a few calls this settles at roughly the largest
+    // record size seen on this thread -- steady-state encodes become
+    // allocation-free. Cleared at the top of every call (not just on
+    // success) so a prior call that threw mid-encode never leaks partial
+    // bytes into the next one.
+    thread_local std::vector<uint8_t> retv;
+    retv.clear();
+    if (retv.capacity() == 0) {
+        retv.reserve(10000);
+    }
 
     if (!enif_is_map(env, *input)) {
         return enif_make_badarg(env);
@@ -142,7 +154,10 @@ encodemap(SchemaItem* si,
     encode_long_fast(env, static_cast<int64_t>(map_size), ret);
 
     if (si->obj_field != "complex") { // map of scalar types
-        auto st = get_scalar_type(si->obj_field);
+        // scalar_type is precomputed at schema-parse time and kept in
+        // lockstep with obj_field (see schema_item.hh) -- read it directly
+        // instead of re-scanning the scalars table on every map encode.
+        auto st = si->scalar_type;
         do {
             if (!enif_map_iterator_get_pair(env, &iter, &key, &val)) {
                 continue;
@@ -224,7 +239,11 @@ encodearray(SchemaItem* si,
         enif_get_list_length(env, *val, &len);
         encode_long_fast(env, len, ret);
         if (si->obj_field != "complex") {
-            auto st = get_scalar_type(si->obj_field);
+            // scalar_type is precomputed at schema-parse time and kept in
+            // lockstep with obj_field (see schema_item.hh) -- read it
+            // directly instead of re-scanning the scalars table on every
+            // array encode.
+            auto st = si->scalar_type;
             for (uint32_t i = 0; i < len; i++) {
                 if (enif_get_list_cell(env, *val, &elem, val)) {
                     if(encodescalar(st, env, &elem, ret) > 0) {
