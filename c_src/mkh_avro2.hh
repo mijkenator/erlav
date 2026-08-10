@@ -233,77 +233,87 @@ encodearray(SchemaItem* si,
             ErlNifEnv* env,
             ERL_NIF_TERM* val,
             std::vector<uint8_t>* ret) {
-    unsigned int len;
     ERL_NIF_TERM elem;
     if (enif_is_list(env, *val)) {
-        enif_get_list_length(env, *val, &len);
-        encode_long_fast(env, len, ret);
+        // Single-pass list traversal: collect element handles into a
+        // stack-local buffer (covers arrays up to 128 elements without
+        // any heap allocation) with vector fallback for longer lists.
+        // This eliminates the redundant O(n) walk that
+        // enif_get_list_length triggers via erts_list_length.
+        static constexpr size_t STACK_CAP = 128;
+        ERL_NIF_TERM stack_buf[STACK_CAP];
+        std::vector<ERL_NIF_TERM> heap_buf;
+        size_t len = 0;
+        while (enif_get_list_cell(env, *val, &elem, val)) {
+            if (len < STACK_CAP) {
+                stack_buf[len] = elem;
+            } else {
+                if (len == STACK_CAP) {
+                    heap_buf.assign(stack_buf, stack_buf + STACK_CAP);
+                }
+                heap_buf.push_back(elem);
+            }
+            len++;
+        }
+        ERL_NIF_TERM* elems = (len <= STACK_CAP) ? stack_buf : heap_buf.data();
+        encode_long_fast(env, static_cast<int64_t>(len), ret);
         if (si->obj_field != "complex") {
             // scalar_type is precomputed at schema-parse time and kept in
             // lockstep with obj_field (see schema_item.hh) -- read it
             // directly instead of re-scanning the scalars table on every
             // array encode.
             auto st = si->scalar_type;
-            for (uint32_t i = 0; i < len; i++) {
-                if (enif_get_list_cell(env, *val, &elem, val)) {
-                    if(encodescalar(st, env, &elem, ret) > 0) {
-                        return 8; // encode scalar failed
-                    }
+            for (size_t i = 0; i < len; i++) {
+                if(encodescalar(st, env, &elems[i], ret) > 0) {
+                    return 8; // encode scalar failed
                 }
             }
         } else if ((si->obj_field == "complex") && si->array_type == 1) {
-            //std::cout << "complex A1 \r\n";
-            for (uint32_t i = 0; i < len; i++) {
-                if (enif_get_list_cell(env, *val, &elem, val)) {
-                    if (enif_is_binary(env, elem)) {
+            for (size_t i = 0; i < len; i++) {
+                elem = elems[i];
+                if (enif_is_binary(env, elem)) {
+                    try {
+                        int typeindex = si->array_multi_type.at("string");
+                        encode_int(env, typeindex, ret);
+                        encode_string(env, &elems[i], ret);
+                    } catch (...){
+                        return 8;
+                    }
+                } else if (enif_is_number(env, elem)) {
+                    long i64;
+                    double dbl;
+                    if (enif_get_int64(env, elem, &i64)) {
+                        // longs
                         try {
-                            int typeindex = si->array_multi_type.at("string");
+                            int typeindex = si->array_multi_type.at("long");
                             encode_int(env, typeindex, ret);
-                            encode_string(env, &elem, ret);
+                            encode_long(env, &elems[i], ret);
                         } catch (...){
                             return 8;
                         }
-                    } else if (enif_is_number(env, elem)) {
-                        long i64;
-                        double dbl;
-                        //std::cout << "complex A1 1.0.0 \r\n";
-                        if (enif_get_int64(env, elem, &i64)) {
-                            // longs
-                            try {
-                                int typeindex = si->array_multi_type.at("long");
-                                encode_int(env, typeindex, ret);
-                                encode_long(env, &elem, ret);
-                            } catch (...){
-                                return 8;
-                            }
-                        } else if (enif_get_double(env, elem, &dbl)) {
-                            try {
-                                int typeindex = si->array_multi_type.at("double");
-                                encode_int(env, typeindex, ret);
-                                encode_double(env, &elem, ret);
-                            } catch (...){
-                                return 8;
-                            }
-                        } else {
+                    } else if (enif_get_double(env, elem, &dbl)) {
+                        try {
+                            int typeindex = si->array_multi_type.at("double");
+                            encode_int(env, typeindex, ret);
+                            encode_double(env, &elems[i], ret);
+                        } catch (...){
                             return 8;
                         }
-                    } else if (enif_is_list(env, elem)) {
-                        int typeindex = si->array_multi_type.at("array");
-                        encode_int(env, typeindex, ret);
-                        encodearray(si->childItems[0], env, &elem, ret);
                     } else {
                         return 8;
                     }
+                } else if (enif_is_list(env, elem)) {
+                    int typeindex = si->array_multi_type.at("array");
+                    encode_int(env, typeindex, ret);
+                    encodearray(si->childItems[0], env, &elems[i], ret);
                 } else {
                     return 8;
                 }
             }
         } else {
-            // complex array - no support for union types yet
-            for (uint32_t i = 0; i < len; i++) {
-                if (enif_get_list_cell(env, *val, &elem, val)) {
-                    encodevalue(si->childItems[0], env, &elem, ret);
-                }
+            // complex array
+            for (size_t i = 0; i < len; i++) {
+                encodevalue(si->childItems[0], env, &elems[i], ret);
             }
         }
         if(len > 0){
