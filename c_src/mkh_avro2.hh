@@ -236,11 +236,11 @@ encodearray(SchemaItem* si,
     ERL_NIF_TERM elem;
     if (enif_is_list(env, *val)) {
         // Single-pass list traversal: collect element handles into a
-        // stack-local buffer (covers arrays up to 128 elements without
+        // stack-local buffer (covers arrays up to 256 elements without
         // any heap allocation) with vector fallback for longer lists.
         // This eliminates the redundant O(n) walk that
         // enif_get_list_length triggers via erts_list_length.
-        static constexpr size_t STACK_CAP = 128;
+        static constexpr size_t STACK_CAP = 256;
         ERL_NIF_TERM stack_buf[STACK_CAP];
         std::vector<ERL_NIF_TERM> heap_buf;
         size_t len = 0;
