@@ -47,6 +47,8 @@ int encodeenum(SchemaItem* si,
 size_t encodeInt32(int32_t, std::array<uint8_t, 5>& output) noexcept;
 size_t encodeVarint(int64_t, std::array<uint8_t, 10>& output) noexcept;
 size_t encodeVarint(int64_t, std::vector<uint8_t>&) noexcept;
+size_t encodeInt64Raw(int64_t, uint8_t* output) noexcept;
+size_t encodeInt32Raw(int32_t, uint8_t* output) noexcept;
 
 ERL_NIF_TERM
 encode(ErlNifEnv* env, SchemaItem* si, const ERL_NIF_TERM* input) {
@@ -263,9 +265,52 @@ encodearray(SchemaItem* si,
             // directly instead of re-scanning the scalars table on every
             // array encode.
             auto st = si->scalar_type;
-            for (size_t i = 0; i < len; i++) {
-                if(encodescalar(st, env, &elems[i], ret) > 0) {
-                    return 8; // encode scalar failed
+            if (st == 0 || st == 1) {
+                // Fast path for array<int>/array<long>: encoding each
+                // element via encodescalar()->encode_int/long() means a
+                // separate vector::insert per element -- every call rechecks
+                // capacity and can trigger a memmove. Profiling showed that
+                // insert/memmove overhead (not the varint/zigzag math)
+                // dominates this loop. Instead, write the whole run of
+                // varints into a flat scratch buffer via raw pointer
+                // (no per-element bounds checks), then append it to `ret`
+                // in a single insert -- one capacity check, one potential
+                // reallocation/memmove for the entire array.
+                const size_t max_bytes = (st == 1) ? 10 : 5;
+                static constexpr size_t VARINT_STACK_CAP = 2560; // STACK_CAP * 10
+                uint8_t stack_scratch[VARINT_STACK_CAP];
+                std::vector<uint8_t> heap_scratch;
+                uint8_t* scratch;
+                if (len * max_bytes <= VARINT_STACK_CAP) {
+                    scratch = stack_scratch;
+                } else {
+                    heap_scratch.resize(len * max_bytes);
+                    scratch = heap_scratch.data();
+                }
+                uint8_t* out = scratch;
+                if (st == 1) {
+                    long i64;
+                    for (size_t i = 0; i < len; i++) {
+                        if (!enif_get_int64(env, elems[i], &i64)) {
+                            return 8; // encode scalar failed
+                        }
+                        out += encodeInt64Raw(i64, out);
+                    }
+                } else {
+                    int32_t i32;
+                    for (size_t i = 0; i < len; i++) {
+                        if (!enif_get_int(env, elems[i], &i32)) {
+                            return 8; // encode scalar failed
+                        }
+                        out += encodeInt32Raw(i32, out);
+                    }
+                }
+                ret->insert(ret->end(), scratch, out);
+            } else {
+                for (size_t i = 0; i < len; i++) {
+                    if(encodescalar(st, env, &elems[i], ret) > 0) {
+                        return 8; // encode scalar failed
+                    }
                 }
             }
         } else if ((si->obj_field == "complex") && si->array_type == 1) {
@@ -513,11 +558,15 @@ decodeZigzag32(uint32_t input) noexcept {
         ((input >> 1) ^ -(static_cast<int64_t>(input) & 1)));
 }
 
+// Writes directly to a raw pointer instead of a fixed std::array so callers
+// that already know the destination has room (e.g. a vector pre-sized for
+// the whole array) can encode straight into the final buffer -- no
+// intermediate 10-byte array, no per-element vector::insert bounds/capacity
+// check or memmove. Caller must guarantee at least 10 bytes are available.
 size_t
-encodeInt64(int64_t input, std::array<uint8_t, 10>& output) noexcept {
+encodeInt64Raw(int64_t input, uint8_t* output) noexcept {
     auto val = encodeZigzag64(input);
 
-    // put values in an array of bytes with variable length encoding
     const int mask = 0x7F;
     auto v = val & mask;
     size_t bytesOut = 0;
@@ -528,6 +577,11 @@ encodeInt64(int64_t input, std::array<uint8_t, 10>& output) noexcept {
 
     output[bytesOut++] = v;
     return bytesOut;
+}
+
+size_t
+encodeInt64(int64_t input, std::array<uint8_t, 10>& output) noexcept {
+    return encodeInt64Raw(input, output.data());
 }
 
 size_t
@@ -558,11 +612,12 @@ encodeVarint(int64_t val, std::vector<uint8_t>& ret) noexcept {
     return 1;
 }
 
+// See encodeInt64Raw -- same rationale, 32-bit/int-array counterpart.
+// Caller must guarantee at least 5 bytes are available.
 size_t
-encodeInt32(int32_t input, std::array<uint8_t, 5>& output) noexcept {
+encodeInt32Raw(int32_t input, uint8_t* output) noexcept {
     auto val = encodeZigzag32(input);
 
-    // put values in an array of bytes with variable length encoding
     const int mask = 0x7F;
     auto v = val & mask;
     size_t bytesOut = 0;
@@ -573,6 +628,11 @@ encodeInt32(int32_t input, std::array<uint8_t, 5>& output) noexcept {
 
     output[bytesOut++] = v;
     return bytesOut;
+}
+
+size_t
+encodeInt32(int32_t input, std::array<uint8_t, 5>& output) noexcept {
+    return encodeInt32Raw(input, output.data());
 }
 
 int
