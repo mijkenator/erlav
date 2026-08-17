@@ -238,11 +238,20 @@ encodearray(SchemaItem* si,
     ERL_NIF_TERM elem;
     if (enif_is_list(env, *val)) {
         // Single-pass list traversal: collect element handles into a
-        // stack-local buffer (covers arrays up to 256 elements without
+        // stack-local buffer (covers arrays up to 384 elements without
         // any heap allocation) with vector fallback for longer lists.
         // This eliminates the redundant O(n) walk that
         // enif_get_list_length triggers via erts_list_length.
-        static constexpr size_t STACK_CAP = 256;
+        //
+        // 384 was picked from real production traffic (OpenRTB bid
+        // requests): fields like unified_ids/applist_ids/tvidlist_ids
+        // (array<long>) regularly exceed 256 elements -- unified_ids alone
+        // crossed 256 in ~10% of sampled encodes, with observed lengths up
+        // to 341 -- so the previous cap pushed a routine fraction of real
+        // arrays onto the heap fallback. 384 covers the observed p99/max
+        // with headroom while staying a trivial stack cost (384 * 8 bytes =
+        // 3KB per encodearray recursion level).
+        static constexpr size_t STACK_CAP = 384;
         ERL_NIF_TERM stack_buf[STACK_CAP];
         std::vector<ERL_NIF_TERM> heap_buf;
         size_t len = 0;
@@ -277,7 +286,7 @@ encodearray(SchemaItem* si,
                 // in a single insert -- one capacity check, one potential
                 // reallocation/memmove for the entire array.
                 const size_t max_bytes = (st == 1) ? 10 : 5;
-                static constexpr size_t VARINT_STACK_CAP = 2560; // STACK_CAP * 10
+                static constexpr size_t VARINT_STACK_CAP = 3840; // STACK_CAP * 10
                 uint8_t stack_scratch[VARINT_STACK_CAP];
                 std::vector<uint8_t> heap_scratch;
                 uint8_t* scratch;
