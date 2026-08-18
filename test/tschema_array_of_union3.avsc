@@ -1,0 +1,10 @@
+{"type": "record", "name":"Interop", "namespace": "erlav.test",
+  "fields": [
+      {"name": "arrayField", "type": {"type": "array", "items": ["long", {
+            "name": "arrenum",
+            "type": "enum",
+            "symbols": ["ONE", "TWO", "THREE"]
+        }]
+      }}
+  ]
+}

@@ -1,3 +1,6 @@
+#ifndef AVRO_EXCEPTIONS_H
+#define AVRO_EXCEPTIONS_H
+
 #include <exception>
 #include <string>
 #include <iostream>
@@ -19,3 +22,5 @@ public:
 };
 
 } // namespace mkh_avro
+
+#endif // AVRO_EXCEPTIONS_H

@@ -4,6 +4,8 @@
 #include <array>
 #include <stdexcept>
 
+#include "avro_exceptions.hh"
+
 #ifndef SI_H
 #define SI_H
 #include "schema_item.hh"

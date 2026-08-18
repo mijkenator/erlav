@@ -1,0 +1,26 @@
+{
+  "type": "record",
+  "name": "Interop",
+  "namespace": "erlav.test",
+  "fields": [
+      {
+        "name": "definingField",
+        "type": {
+            "name": "Point",
+            "type": "record",
+            "fields": [
+              {"name": "x", "type": "long"},
+              {"name": "y", "type": "long"}
+            ]
+        }
+      },
+      {
+        "name": "pointsField",
+        "type": {"type": "array", "items": "Point"}
+      },
+      {
+        "name": "pointsMapField",
+        "type": {"type": "map", "values": "Point"}
+      }
+  ]
+}

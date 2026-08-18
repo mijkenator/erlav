@@ -1,5 +1,7 @@
 #include <fstream>
 #include <iostream>
+#include <map>
+#include <set>
 #include <stdexcept>
 #include <vector>
 
@@ -326,11 +328,40 @@ encodearray(SchemaItem* si,
             for (size_t i = 0; i < len; i++) {
                 elem = elems[i];
                 if (enif_is_binary(env, elem)) {
-                    try {
+                    // string or enum union member -- both carry a binary
+                    // value on the Erlang side, so try string first
+                    // (existing behavior) and fall back to enum.
+                    bool encoded_ok = false;
+                    if (si->array_multi_type.count("string")) {
                         int typeindex = si->array_multi_type.at("string");
+                        auto saved_size = ret->size();
                         encode_int(env, typeindex, ret);
-                        encode_string(env, &elems[i], ret);
-                    } catch (...){
+                        if (encode_string(env, &elems[i], ret) == 0) {
+                            encoded_ok = true;
+                        } else {
+                            ret->resize(saved_size);
+                        }
+                    }
+                    if (!encoded_ok && si->array_multi_type.count("enum")) {
+                        int typeindex = si->array_multi_type.at("enum");
+                        int child_idx =
+                            si->array_multi_type_child_index.at("enum");
+                        auto saved_size = ret->size();
+                        encode_int(env, typeindex, ret);
+                        try {
+                            if (encodeenum(si->childItems[child_idx],
+                                           env,
+                                           &elems[i],
+                                           ret) == 0) {
+                                encoded_ok = true;
+                            } else {
+                                ret->resize(saved_size);
+                            }
+                        } catch (const mkh_avro::AvroException&) {
+                            ret->resize(saved_size);
+                        }
+                    }
+                    if (!encoded_ok) {
                         return 8;
                     }
                 } else if (enif_is_number(env, elem)) {
@@ -358,8 +389,46 @@ encodearray(SchemaItem* si,
                     }
                 } else if (enif_is_list(env, elem)) {
                     int typeindex = si->array_multi_type.at("array");
+                    int child_idx = si->array_multi_type_child_index.at("array");
                     encode_int(env, typeindex, ret);
-                    encodearray(si->childItems[0], env, &elems[i], ret);
+                    encodearray(si->childItems[child_idx], env, &elems[i], ret);
+                } else if (enif_is_map(env, elem)) {
+                    // record or map union member
+                    bool encoded_ok = false;
+                    for (const auto& ttype : {"record", "map"}) {
+                        if (!si->array_multi_type.count(ttype)) {
+                            continue;
+                        }
+                        int typeindex = si->array_multi_type.at(ttype);
+                        int child_idx =
+                            si->array_multi_type_child_index.at(ttype);
+                        auto saved_size = ret->size();
+                        encode_int(env, typeindex, ret);
+                        if (encodevalue(
+                                si->childItems[child_idx], env, &elems[i], ret) ==
+                            0) {
+                            encoded_ok = true;
+                            break;
+                        }
+                        ret->resize(saved_size);
+                    }
+                    if (!encoded_ok) {
+                        return 8;
+                    }
+                } else if (enif_is_atom(env, elem) &&
+                           si->array_multi_type.count("null")) {
+                    // null union member -- only `undefined` is accepted;
+                    // any other atom (true/false/anything else) is not
+                    // a valid Avro value here.
+                    char atom[16];
+                    if (enif_get_atom(
+                            env, elem, atom, sizeof(atom), ERL_NIF_LATIN1) &&
+                        std::strcmp(atom, "undefined") == 0) {
+                        int typeindex = si->array_multi_type.at("null");
+                        encode_int(env, typeindex, ret);
+                    } else {
+                        return 8;
+                    }
                 } else {
                     return 8;
                 }
@@ -437,97 +506,159 @@ encodescalar(int scalar_type,
     return 1;
 }
 
-json
-get_type_object(std::string obj_name, json& data) {
-    if (data.is_array()) {
-        for (auto it : data) {
-            if (it.is_object() && it["type"].is_string() &&
-                it["type"] == "record" && it["name"] == obj_name) {
-                return it;
-            } else if (it.is_object() && it["type"].is_object() &&
-                       it["type"]["type"] == "record") {
-                if (it["type"]["name"] == obj_name) {
-                    return it["type"];
-                } else {
-                    get_type_object(obj_name, it["type"]["fields"]);
-                }
-            }
-        }
+// Registry of named record/enum definitions found anywhere in the schema,
+// keyed by both their bare name and their namespace-qualified fullname.
+// Avro resolves a bare type-name reference against the enclosing namespace
+// first, falling back to the bare name (schemas without namespaces, or a
+// reference already given as a fullname).
+typedef std::map<std::string, json> NamedTypeRegistry;
+
+std::string
+child_namespace(const json& node, const std::string& enclosing_ns) {
+    if (node.is_object() && node.contains("namespace") &&
+        node["namespace"].is_string()) {
+        return node["namespace"];
     }
-    return json::object({});
+    return enclosing_ns;
 }
 
+// Recursively walk the whole schema and record every record/enum
+// definition (object with "type":"record"/"enum" and a "name") under its
+// bare name and, if a namespace is in scope, its fullname too.
 void
-resolve_user_types(std::string jpath, std::string ns, json& data, MJpatch& mp) {
-    if (data.is_array()) {
-        int num = 0;
-        for (auto it : data) {
-            if (it.is_object() && it["type"].is_string() &&
-                it["type"].get<std::string>().rfind(ns, 0) == 0) {
-                std::string cpath = jpath + "/" + std::to_string(num) + "/type";
-                auto key = it["type"].get<std::string>();
-                if (mp.find(key) == mp.end()) {
-                    mp[key] = {cpath};
-                } else {
-                    MJpaths jv = mp[key];
-                    jv.push_back(cpath);
-                    mp[key] = jv;
-                }
-            } else if (it.is_object() && it["type"].is_array()) {
-                int intnum = 0;
-                for (auto ait : it["type"]) {
-                    if (ait.is_string() &&
-                        ait.get<std::string>().rfind(ns, 0) == 0) {
-                        std::string cpath = jpath + "/" + std::to_string(num) +
-                                            "/type/" + std::to_string(intnum);
-                        auto key = ait.get<std::string>();
-                        if (mp.find(key) == mp.end()) {
-                            mp[key] = {cpath};
-                        } else {
-                            MJpaths jv = mp[key];
-                            jv.push_back(cpath);
-                            mp[key] = jv;
-                        }
-                    } else if (ait.is_object() && ait["type"] == "record") {
-                        resolve_user_types(jpath + "/" + std::to_string(num) +
-                                               "/type/" +
-                                               std::to_string(intnum),
-                                           ns,
-                                           ait["fields"],
-                                           mp);
-                    }
-                    intnum++;
-                }
-            } else if (it.is_object() && it["type"].is_object() &&
-                       it["type"]["type"] == "record") {
-                resolve_user_types(jpath + "/" + std::to_string(num) +
-                                       "/type/fields",
-                                   ns,
-                                   it["type"]["fields"],
-                                   mp);
+collect_named_types(json& node,
+                     const std::string& enclosing_ns,
+                     NamedTypeRegistry& registry) {
+    if (node.is_object()) {
+        if (node.contains("type") && node["type"].is_string() &&
+            (node["type"] == "record" || node["type"] == "enum") &&
+            node.contains("name") && node["name"].is_string()) {
+            std::string ns = child_namespace(node, enclosing_ns);
+            std::string name = node["name"];
+            registry[name] = node;
+            if (!ns.empty()) {
+                registry[ns + "." + name] = node;
             }
-            num++;
+        }
+        std::string next_ns = child_namespace(node, enclosing_ns);
+        for (auto& item : node.items()) {
+            collect_named_types(item.value(), next_ns, registry);
+        }
+    } else if (node.is_array()) {
+        for (auto& item : node) {
+            collect_named_types(item, enclosing_ns, registry);
+        }
+    }
+}
+
+bool
+is_container_keyword(const std::string& name) {
+    return name == "null" || name == "array" || name == "map" ||
+           name == "record" || name == "enum";
+}
+
+// Look up a possibly-bare type name against the enclosing namespace first
+// (Avro fullname resolution), then as a bare/unqualified name. Returns
+// nullptr if nothing matches (left to the existing "unknown type"
+// handling further down the pipeline).
+const json*
+lookup_named_type(const std::string& name,
+                   const std::string& enclosing_ns,
+                   const NamedTypeRegistry& registry) {
+    if (is_scalar(name) || is_container_keyword(name)) {
+        return nullptr;
+    }
+    std::string fullname = enclosing_ns.empty() ? name : enclosing_ns + "." + name;
+    auto found = registry.find(fullname);
+    if (found == registry.end()) {
+        found = registry.find(name);
+    }
+    return found == registry.end() ? nullptr : &found->second;
+}
+
+// Forward declaration -- resolve_type_slot and resolve_named_type_refs
+// are mutually recursive (a "type"/"items"/"values" slot may itself be an
+// inline record with its own nested "fields"/"type" slots).
+void resolve_named_type_refs(json& node,
+                              const std::string& enclosing_ns,
+                              NamedTypeRegistry& registry,
+                              std::set<std::string>& active);
+
+// Rewrite the "type"/"items"/"values" slot of a schema object in place:
+// a bare string reference is replaced with the resolved definition (and
+// the substituted definition is itself recursed into, in case it carries
+// further named-type references), each string member of a union array is
+// resolved individually, and inline object definitions are recursed into.
+// Only these three keys ever hold type information in an Avro schema --
+// other keys ("name", "doc", "default", "aliases", "symbols", ...) are
+// left untouched so a field whose own name happens to collide with a type
+// name is never mistaken for a type reference.
+//
+// `active` tracks type names currently being substituted along the
+// current recursion path, so a self-/mutually-recursive Avro type (e.g. a
+// linked-list-style record referencing its own name) is expanded once and
+// then left as the bare name rather than recursing forever -- matching
+// how encode/decode already treat a still-unresolved name (SchemaItem
+// falls back to treating it as an unknown scalar rather than crashing).
+void
+resolve_type_slot(json& slot,
+                   const std::string& enclosing_ns,
+                   NamedTypeRegistry& registry,
+                   std::set<std::string>& active) {
+    if (slot.is_string()) {
+        std::string name = slot.get<std::string>();
+        if (active.count(name) == 0) {
+            const json* resolved =
+                lookup_named_type(name, enclosing_ns, registry);
+            if (resolved != nullptr) {
+                slot = *resolved;
+                active.insert(name);
+                resolve_named_type_refs(slot, enclosing_ns, registry, active);
+                active.erase(name);
+            }
+        }
+    } else if (slot.is_array()) {
+        for (auto& item : slot) {
+            resolve_type_slot(item, enclosing_ns, registry, active);
+        }
+    } else if (slot.is_object()) {
+        resolve_named_type_refs(slot, enclosing_ns, registry, active);
+    }
+}
+
+// Walk a schema object/record definition, resolving named-type references
+// in its "type"/"items"/"values" slots and recursing into its "fields"
+// (record) list, wherever such a definition appears (top-level schema,
+// nested record, array items, map values, union member, ...).
+void
+resolve_named_type_refs(json& node,
+                         const std::string& enclosing_ns,
+                         NamedTypeRegistry& registry,
+                         std::set<std::string>& active) {
+    if (!node.is_object()) {
+        return;
+    }
+    std::string next_ns = child_namespace(node, enclosing_ns);
+    for (const auto& key : {"type", "items", "values"}) {
+        if (node.contains(key)) {
+            resolve_type_slot(node[key], next_ns, registry, active);
+        }
+    }
+    if (node.contains("fields") && node["fields"].is_array()) {
+        for (auto& field : node["fields"]) {
+            resolve_named_type_refs(field, next_ns, registry, active);
         }
     }
 }
 
 void
 resolve_user_types(json& data) {
-    MJpatch mp;
-    std::string ns = data["namespace"];
-    resolve_user_types("/fields", ns, data["fields"], mp);
-
-    for (const auto& ele : mp) {
-        std::string fname = ele.first;
-        fname.erase(0, ns.length() + 1);
-        json repl_tst = get_type_object(fname, data["fields"]);
-        for (auto& ppath : ele.second) {
-            std::string patch_command =
-                "[{ \"op\": \"replace\", \"path\": \"" + ppath +
-                "\", \"value\": " + to_string(repl_tst) + " }]";
-            data = data.patch(json::parse(patch_command));
-        }
-    }
+    NamedTypeRegistry registry;
+    std::string ns =
+        data.contains("namespace") ? data["namespace"].get<std::string>() : "";
+    collect_named_types(data, ns, registry);
+    std::set<std::string> active;
+    resolve_named_type_refs(data, ns, registry, active);
 }
 
 SchemaItem*

@@ -1,0 +1,6 @@
+{"type": "record", "name": "Node", "namespace": "erlav.test",
+  "fields": [
+      {"name": "label", "type": "string"},
+      {"name": "children", "type": {"type": "array", "items": "Node"}}
+  ]
+}
