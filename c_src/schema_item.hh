@@ -63,7 +63,21 @@ struct SchemaItem {
                 unsigned char* data =
                     enif_make_new_binary(shared_env, len, &cached_keys[i]);
                 memcpy(data, name.c_str(), len);
-                field_index_by_name[name] = i;
+                // A duplicate field name would silently collide here,
+                // leaving field_index_by_name pointing at only the last
+                // occurrence -- encoderecord's single-pass path (see
+                // mkh_avro2.hh) would then treat every earlier
+                // same-named field as absent from the input map, and for
+                // a required non-nullable non-array field that means no
+                // bytes get emitted for it at all, corrupting the
+                // encoded output. Avro requires field names to be unique
+                // within a record, so reject this at schema-init time
+                // instead of miscompiling silently at encode time.
+                if (!field_index_by_name.emplace(name, i).second) {
+                    throw std::runtime_error(
+                        "Duplicate field name '" + name + "' in record '" +
+                        obj_name + "'");
+                }
             }
         }
         for (auto* child : childItems) {

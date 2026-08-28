@@ -155,3 +155,55 @@ valid_schema_idempotent_after_fix_test() ->
     Id1 = erlav_nif:erlav_init(<<"test/single_double.avsc">>),
     Id2 = erlav_nif:erlav_init(<<"test/single_double.avsc">>),
     ?assertEqual(Id1, Id2).
+
+%% --- Duplicate field names: schema_item.hh's field_index_by_name (added
+%% for encoderecord's single-pass map-scan optimization, see #20/#21) maps
+%% each field name to its position in childItems; a duplicate name would
+%% silently overwrite the earlier field's entry, so encoderecord's fast
+%% path (record has more fields than SMALL_RECORD_FIELD_THRESHOLD) would
+%% treat every earlier same-named field as absent from the input map and
+%% emit no bytes for it at all if it's required and non-nullable/non-array
+%% -- corrupting the encoded output instead of failing loudly. Avro
+%% requires field names to be unique within a record, so this must be
+%% rejected at erlav_init/1 time, not miscompiled silently at encode time. ---
+
+duplicate_field_name_rejected_test() ->
+    Schema = <<"{\"type\": \"record\", \"name\": \"Dup\", \"fields\": ["
+               "{\"name\": \"a\", \"type\": \"long\"},"
+               "{\"name\": \"b\", \"type\": \"long\"},"
+               "{\"name\": \"a\", \"type\": \"long\"},"
+               "{\"name\": \"c\", \"type\": \"long\"}"
+               "]}">>,
+    with_scratch_file("duplicate_field.avsc", Schema, fun(Path) ->
+        ?assertMatch({error, _, _}, erlav_nif:erlav_init(Path))
+    end).
+
+%% A record whose duplicate is below SMALL_RECORD_FIELD_THRESHOLD (3 total
+%% fields) must be rejected the same way -- the bug this guards against
+%% only manifests above the threshold, but the validation itself must not
+%% be threshold-dependent.
+
+duplicate_field_name_small_record_rejected_test() ->
+    Schema = <<"{\"type\": \"record\", \"name\": \"DupSmall\", \"fields\": ["
+               "{\"name\": \"a\", \"type\": \"long\"},"
+               "{\"name\": \"a\", \"type\": \"long\"}"
+               "]}">>,
+    with_scratch_file("duplicate_field_small.avsc", Schema, fun(Path) ->
+        ?assertMatch({error, _, _}, erlav_nif:erlav_init(Path))
+    end).
+
+%% A duplicate inside a *nested* record must also be caught, since
+%% init_keys_with_env recurses into every childItems record node.
+
+duplicate_field_name_nested_record_rejected_test() ->
+    Schema = <<"{\"type\": \"record\", \"name\": \"Outer\", \"fields\": ["
+               "{\"name\": \"x\", \"type\": \"long\"},"
+               "{\"name\": \"inner\", \"type\": {\"type\": \"record\", \"name\": \"Inner\","
+               "  \"fields\": ["
+               "    {\"name\": \"y\", \"type\": \"long\"},"
+               "    {\"name\": \"y\", \"type\": \"long\"}"
+               "  ]}}"
+               "]}">>,
+    with_scratch_file("duplicate_field_nested.avsc", Schema, fun(Path) ->
+        ?assertMatch({error, _, _}, erlav_nif:erlav_init(Path))
+    end).
