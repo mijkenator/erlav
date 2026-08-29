@@ -199,25 +199,109 @@ encodemap(SchemaItem* si,
     return 0;
 }
 
+// Below this many fields, per-field enif_get_map_value lookups (each an
+// independent scan of the input map) are cheaper in practice than the
+// single-pass iterator + hash-lookup strategy below: benchmarking against
+// synthetic records of increasing width showed a crossover between 3 and 4
+// fields (2-3 fields: single-pass ~10% *slower*; 4+ fields: single-pass
+// increasingly faster, e.g. ~31% faster at 8 fields, ~52% at 20, ~23% on
+// opnrtb.avsc's real ~430-field nested schema -- see #20). The single-pass
+// approach's fixed cost (iterator setup, the found/present scratch arrays)
+// isn't amortized until there are enough fields for the O(map_size) scan to
+// beat O(nfields) independent O(map_size) scans. Tables 2/3/4/8/20 fields
+// measured directly; this threshold sits just above the observed crossover.
+static constexpr size_t SMALL_RECORD_FIELD_THRESHOLD = 3;
+
 int
 encoderecord(SchemaItem* si,
              ErlNifEnv* env,
              const ERL_NIF_TERM* input,
              std::vector<uint8_t>* ret) {
-    ERL_NIF_TERM val;
-
     if (!enif_is_map(env, *input)) {
         return 9;
     }
 
     auto nfields = si->childItems.size();
-    // Use pre-built keys from schema init (process-independent env)
-    const auto& keys = si->cached_keys;
+
+    if (nfields <= SMALL_RECORD_FIELD_THRESHOLD) {
+        ERL_NIF_TERM val;
+        const auto& keys = si->cached_keys;
+        for (size_t i = 0; i < nfields; i++) {
+            auto* it = si->childItems[i];
+            if (enif_get_map_value(env, *input, keys[i], &val)) {
+                int encodeCode = encodevalue(it, env, &val, ret);
+                if (encodeCode != 0) {
+                    throw mkh_avro::AvroException("Rec:" + si->obj_name +
+                                                      " field:" + it->obj_name,
+                                                  encodeCode);
+                }
+            } else if (it->is_nullable == 1) {
+                ret->push_back(0);
+            } else if (it->obj_type == 2) {
+                ret->push_back(0);
+            }
+        }
+        return 0;
+    }
+
+    // Single pass over the *input* map instead of nfields separate
+    // enif_get_map_value calls (each of which independently re-scans the
+    // whole map -- Erlang's small-map ("flatmap") representation does a
+    // linear, binary-comparing scan per lookup, not a hash lookup).
+    // Profiling a deeply-nested real-world schema showed this map-key-
+    // lookup pattern dominating encoderecord's cost (~60% of total time,
+    // see #20). field_index_by_name (built once at schema-init time
+    // alongside cached_keys, see schema_item.hh) gives an O(1) "is this
+    // input key one of my fields" check per map entry, so the whole
+    // function becomes one O(map_size) walk instead of
+    // O(nfields * map_size).
+    static constexpr size_t STACK_CAP = 64;
+    ERL_NIF_TERM stack_found[STACK_CAP];
+    // Plain uint8_t, not bool/std::vector<bool> -- avoids the latter's
+    // bit-packed specialization (no contiguous pointer via .data()) while
+    // still being usable directly as a boolean flag below.
+    uint8_t stack_present[STACK_CAP];
+    std::vector<ERL_NIF_TERM> heap_found;
+    std::vector<uint8_t> heap_present;
+    ERL_NIF_TERM* found;
+    uint8_t* present;
+    if (nfields <= STACK_CAP) {
+        found = stack_found;
+        present = stack_present;
+    } else {
+        heap_found.resize(nfields);
+        heap_present.resize(nfields);
+        found = heap_found.data();
+        present = heap_present.data();
+    }
+    std::fill(present, present + nfields, 0);
+
+    ErlNifMapIterator iter;
+    ERL_NIF_TERM key, val;
+    ErlNifBinary key_bin;
+    if (enif_map_iterator_create(
+            env, *input, &iter, ERL_NIF_MAP_ITERATOR_HEAD)) {
+        do {
+            if (!enif_map_iterator_get_pair(env, &iter, &key, &val)) {
+                continue;
+            }
+            if (!enif_inspect_binary(env, key, &key_bin)) {
+                continue;
+            }
+            auto name_it = si->field_index_by_name.find(std::string(
+                reinterpret_cast<const char*>(key_bin.data), key_bin.size));
+            if (name_it != si->field_index_by_name.end()) {
+                found[name_it->second] = val;
+                present[name_it->second] = 1;
+            }
+        } while (enif_map_iterator_next(env, &iter));
+        enif_map_iterator_destroy(env, &iter);
+    }
 
     for (size_t i = 0; i < nfields; i++) {
         auto* it = si->childItems[i];
-        if (enif_get_map_value(env, *input, keys[i], &val)) {
-            int encodeCode = encodevalue(it, env, &val, ret);
+        if (present[i]) {
+            int encodeCode = encodevalue(it, env, &found[i], ret);
             if (encodeCode != 0) {
                 throw mkh_avro::AvroException("Rec:" + si->obj_name +
                                                   " field:" + it->obj_name,

@@ -1,6 +1,7 @@
 #include <stdexcept>
 #include <vector>
 #include <map>
+#include <unordered_map>
 #include <iostream>
 #include <erl_nif.h>
 #include "include/json.hpp"
@@ -28,6 +29,14 @@ struct SchemaItem {
     std::map<std::string, int> array_multi_type_child_index;
     ErlNifEnv* key_env = nullptr; // Only set on root object for cleanup
     std::vector<ERL_NIF_TERM> cached_keys;
+    // Maps a record field's name to its position in childItems/cached_keys.
+    // Built alongside cached_keys (see init_keys_with_env) so encoderecord
+    // can look up "is this input-map key one of my fields, and if so
+    // which" in O(1) instead of comparing against every field name in
+    // turn -- lets a single pass over the input map's entries replace the
+    // previous nfields separate enif_get_map_value scans (each an
+    // independent O(map_size) walk of Erlang's flatmap representation).
+    std::unordered_map<std::string, size_t> field_index_by_name;
 
     // Destructor to clean up the shared environment if this is the root object
     ~SchemaItem() {
@@ -47,12 +56,28 @@ struct SchemaItem {
     void init_keys_with_env(ErlNifEnv* shared_env) {
         if (obj_type == 3 && !childItems.empty()) {
             cached_keys.resize(childItems.size());
+            field_index_by_name.reserve(childItems.size());
             for (size_t i = 0; i < childItems.size(); i++) {
                 const auto& name = childItems[i]->obj_name;
                 auto len = name.size();
                 unsigned char* data =
                     enif_make_new_binary(shared_env, len, &cached_keys[i]);
                 memcpy(data, name.c_str(), len);
+                // A duplicate field name would silently collide here,
+                // leaving field_index_by_name pointing at only the last
+                // occurrence -- encoderecord's single-pass path (see
+                // mkh_avro2.hh) would then treat every earlier
+                // same-named field as absent from the input map, and for
+                // a required non-nullable non-array field that means no
+                // bytes get emitted for it at all, corrupting the
+                // encoded output. Avro requires field names to be unique
+                // within a record, so reject this at schema-init time
+                // instead of miscompiling silently at encode time.
+                if (!field_index_by_name.emplace(name, i).second) {
+                    throw std::runtime_error(
+                        "Duplicate field name '" + name + "' in record '" +
+                        obj_name + "'");
+                }
             }
         }
         for (auto* child : childItems) {
