@@ -55,7 +55,20 @@ ifeq ($(UNAME_SYS), Darwin)
 	CC ?= cc
 	CFLAGS ?= -O3 -std=c99 -finline-functions -funroll-loops -Wall -Wmissing-prototypes
 	CXXFLAGS ?= -O3 -finline-functions -funroll-loops -Wall -fpermissive
-	LDFLAGS ?= -flat_namespace -undefined suppress
+	# dynamic_lookup, not suppress: same "resolve these undefined symbols at
+	# runtime, not link time" contract (the NIF .so is loaded into beam.smp,
+	# which provides the erl_interface/erts symbols it needs) -- but
+	# -undefined suppress is deprecated on current Xcode/ld and prints a
+	# warning on every link, while dynamic_lookup is not. Verified the
+	# resulting .so has the same Mach-O load-command shape (no
+	# CHAINED_FIXUPS either way -- flat_namespace already opts out of the
+	# two-level-namespace mechanism chained fixups require) and the full
+	# eunit suite passes against it. Caveat noted in ld(1): "dynamic_lookup
+	# that depends on lazy binding will not work with chained fixups" --
+	# not applicable here since -flat_namespace precludes chained fixups,
+	# but flagging in case a future flag change (e.g. dropping
+	# -flat_namespace) reintroduces that combination.
+	LDFLAGS ?= -flat_namespace -undefined dynamic_lookup
 else ifeq ($(UNAME_SYS), FreeBSD)
 	CC ?= cc
 	CFLAGS ?= -O3 -std=c99 -finline-functions -funroll-loops -Wall -Wmissing-prototypes
