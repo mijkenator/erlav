@@ -223,41 +223,44 @@ ERL_NIF_TERM decode_enum(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
 ERL_NIF_TERM decode_map(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
     ERL_NIF_TERM ret = enif_make_new_map(env);
     ERL_NIF_TERM map_out;
-    uint32_t mapLen = decodeLong(it);
-    //std::cout << "MAP length --> " << mapLen << " \r\n";
-    //auto child_len = si->childItems.size();
-    //std::cout << "child len:" << child_len << "\r\n";
+    // Loop over blocks instead of a single upfront count: a block header's
+    // count may be negative (erlavro's usual form -- see #15), in which
+    // case decode_block_count also consumes the following block-byte-length
+    // long and returns the (positive) item count for that block. A count of
+    // 0 ends the map -- this also covers the empty-map case (first block
+    // read is 0) without any separate "was there a terminator" check.
     if (si->obj_field != "complex") { // map of scalars
-        for(uint64_t i=0; i < mapLen; i++){
-            ERL_NIF_TERM map_key = decode_scalar(env, 5, it); // map keys always strings, (scalar_type = 6)
-            ERL_NIF_TERM value = decode_scalar(env, si->scalar_type, it);
-            if(enif_make_map_put(env, ret, map_key, value, &map_out)){
-                ret = map_out;
+        for (;;) {
+            int64_t mapLen = decode_block_count(it);
+            if (mapLen == 0) break;
+            for (int64_t i = 0; i < mapLen; i++) {
+                ERL_NIF_TERM map_key = decode_scalar(env, 5, it); // map keys always strings, (scalar_type = 6)
+                ERL_NIF_TERM value = decode_scalar(env, si->scalar_type, it);
+                if(enif_make_map_put(env, ret, map_key, value, &map_out)){
+                    ret = map_out;
+                }
             }
         }
     }else{
-        for(uint64_t i=0; i < mapLen; i++){
-            ERL_NIF_TERM map_key = decode_scalar(env, 5, it); // map keys always strings, (scalar_type = 6)
-            ERL_NIF_TERM value = decodevalue(env, si->childItems[0], it);
-            if(enif_make_map_put(env, ret, map_key, value, &map_out)){
-                ret = map_out;
+        for (;;) {
+            int64_t mapLen = decode_block_count(it);
+            if (mapLen == 0) break;
+            for (int64_t i = 0; i < mapLen; i++) {
+                ERL_NIF_TERM map_key = decode_scalar(env, 5, it); // map keys always strings, (scalar_type = 6)
+                ERL_NIF_TERM value = decodevalue(env, si->childItems[0], it);
+                if(enif_make_map_put(env, ret, map_key, value, &map_out)){
+                    ret = map_out;
+                }
             }
         }
-
-    }
-    if(mapLen > 0){
-        it++;
     }
 
-    return ret; 
+    return ret;
 }
 
 ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
-    uint32_t arrayLen = decodeLong(it);
     std::vector<ERL_NIF_TERM> decoded_list;
-    decoded_list.reserve(arrayLen);
-    /*std::cout << "DA Array length --> " << arrayLen << " \r\n";
-    std::cout << "complex ARRAY union type " << si->array_type << "\r\n";
+    /*std::cout << "complex ARRAY union type " << si->array_type << "\r\n";
     std::cout << "si->obj_type:" << std::to_string(si->obj_type) << "\r\n";
     std::cout << "si->scalar_type:" << std::to_string(si->scalar_type) << "\r\n";
     std::cout << "si->obj_field:" << si->obj_field << "\r\n";
@@ -267,50 +270,56 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
     std::cout << "child len:" << child_len << "\r\n";
     std::cout << "----------------------------------- \r\n";*/
 
+    // Loop over blocks instead of a single upfront count: a block header's
+    // count may be negative (erlavro's usual form -- see #15), in which
+    // case decode_block_count also consumes the following block-byte-length
+    // long and returns the (positive) item count for that block. A count of
+    // 0 ends the array -- this also covers the empty-array case (first
+    // block read is 0) without any separate "was there a terminator" check.
     if (si->obj_field != "complex") {
         auto st = get_scalar_type(si->obj_field);
         //std::cout << "simple array: type --> " << st << " \r\n";
-        for(uint64_t i=0; i < arrayLen; i++){
-            decoded_list.push_back(decode_scalar(env, st, it));
-        }
-        if (arrayLen > 0) {
-            it++; // skip end of array, should be 0 -- encodearray only
-                  // writes this terminator when len > 0 (mkh_avro2.hh),
-                  // so an empty array must not consume it either.
+        for (;;) {
+            int64_t arrayLen = decode_block_count(it);
+            if (arrayLen == 0) break;
+            for (int64_t i = 0; i < arrayLen; i++) {
+                decoded_list.push_back(decode_scalar(env, st, it));
+            }
         }
         return enif_make_list_from_array(env, decoded_list.data(), decoded_list.size());
 
     } else if ((si->obj_field == "complex") && si->array_type == 1) {
         //std::cout << "complex ARRAY \r\n";
-        for(uint64_t i=0; i < arrayLen; i++){
-            int64_t type_index = decodeLong(it);
-            //std::cout << "Type index:" << std::to_string(type_index) << "\r\n";
-            std::string eletype = si->array_multi_type_reverse[type_index];
-            //std::cout << "Type name:" << eletype << "\r\n";
-            if((eletype == "string")||(eletype == "long")||(eletype == "double")){
-                decoded_list.push_back(decode_scalar(env, get_scalar_type(eletype), it));
-            }else if(eletype == "null"){
-                decoded_list.push_back(enif_make_atom(env, "undefined"));
-            }else if(eletype == "array"){
-                int child_idx = si->array_multi_type_child_index.at("array");
-                decoded_list.push_back(decode_array(env, si->childItems[child_idx], it));
-            }else if((eletype == "record")||(eletype == "map")||(eletype == "enum")){
-                int child_idx = si->array_multi_type_child_index.at(eletype);
-                decoded_list.push_back(decodevalue(env, si->childItems[child_idx], it));
-            }else{
-                // Unresolved/unrecognized union member name -- fail loudly
-                // rather than silently skipping the element (which would
-                // desync the read cursor for everything decoded after
-                // this array) and rather than handing
-                // enif_make_list_from_array uninitialized memory to
-                // interpret as ERL_NIF_TERM values.
-                throw mkh_avro::AvroException(
-                    "Array union: unresolved member type '" + eletype + "'",
-                    10);
+        for (;;) {
+            int64_t arrayLen = decode_block_count(it);
+            if (arrayLen == 0) break;
+            for (int64_t i = 0; i < arrayLen; i++) {
+                int64_t type_index = decodeLong(it);
+                //std::cout << "Type index:" << std::to_string(type_index) << "\r\n";
+                std::string eletype = si->array_multi_type_reverse[type_index];
+                //std::cout << "Type name:" << eletype << "\r\n";
+                if((eletype == "string")||(eletype == "long")||(eletype == "double")){
+                    decoded_list.push_back(decode_scalar(env, get_scalar_type(eletype), it));
+                }else if(eletype == "null"){
+                    decoded_list.push_back(enif_make_atom(env, "undefined"));
+                }else if(eletype == "array"){
+                    int child_idx = si->array_multi_type_child_index.at("array");
+                    decoded_list.push_back(decode_array(env, si->childItems[child_idx], it));
+                }else if((eletype == "record")||(eletype == "map")||(eletype == "enum")){
+                    int child_idx = si->array_multi_type_child_index.at(eletype);
+                    decoded_list.push_back(decodevalue(env, si->childItems[child_idx], it));
+                }else{
+                    // Unresolved/unrecognized union member name -- fail loudly
+                    // rather than silently skipping the element (which would
+                    // desync the read cursor for everything decoded after
+                    // this array) and rather than handing
+                    // enif_make_list_from_array uninitialized memory to
+                    // interpret as ERL_NIF_TERM values.
+                    throw mkh_avro::AvroException(
+                        "Array union: unresolved member type '" + eletype + "'",
+                        10);
+                }
             }
-        }
-        if (arrayLen > 0) {
-            it++; // skip end of array, should be 0
         }
         return enif_make_list_from_array(env, decoded_list.data(), decoded_list.size());
     } else {
@@ -322,50 +331,38 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
 
         if((child_len == 1) && (si->childItems[0]->scalar_type > 0) && (si->childItems[0]->obj_field != "complex")){
             // array of simple arrays
-            for(uint64_t i=0; i < arrayLen; i++){
-                decoded_list.push_back(decode_array(env, si->childItems[0], it));
+            for (;;) {
+                int64_t arrayLen = decode_block_count(it);
+                if (arrayLen == 0) break;
+                for (int64_t i = 0; i < arrayLen; i++) {
+                    decoded_list.push_back(decode_array(env, si->childItems[0], it));
+                }
             }
-            if (arrayLen > 0) {
-                it++; // skip end of array, should be 0
-            }
-            return enif_make_list_from_array(env, decoded_list.data(), arrayLen);
+            return enif_make_list_from_array(env, decoded_list.data(), decoded_list.size());
 
         }else if(child_len == 1){
             // array of 1 complex type
-            if(si->childItems[0]->obj_type == 2){
-                for(uint64_t i=0; i < arrayLen; i++){
-                    decoded_list.push_back(decode_array(env, si->childItems[0], it));
-                }
-            }else{
-                for(uint64_t i=0; i < arrayLen; i++){
-                    decoded_list.push_back(decode(env, si->childItems[0], it));
+            for (;;) {
+                int64_t arrayLen = decode_block_count(it);
+                if (arrayLen == 0) break;
+                if(si->childItems[0]->obj_type == 2){
+                    for (int64_t i = 0; i < arrayLen; i++) {
+                        decoded_list.push_back(decode_array(env, si->childItems[0], it));
+                    }
+                }else{
+                    for (int64_t i = 0; i < arrayLen; i++) {
+                        decoded_list.push_back(decode(env, si->childItems[0], it));
+                    }
                 }
             }
-            if (arrayLen > 0) {
-                it++; // skip end of array, should be 0
-            }
-            return enif_make_list_from_array(env, decoded_list.data(), arrayLen);
+            return enif_make_list_from_array(env, decoded_list.data(), decoded_list.size());
         }else{
             // complex array multiple types
             std::cout << "MUHAHAHA"  << "\r\n";
-        } 
-
-        //for(uint64_t i=0; i < arrayLen; i++){
-            //int64_t type_index = decodeLong(it);
-            //std::cout << "Type index:" << std::to_string(type_index) << "\r\n";
-            //std::string eletype = si->array_multi_type_reverse[type_index];
-            //std::cout << "Type name:" << eletype << "\r\n";
-            /*if((eletype == "string")||(eletype == "long")||(eletype == "double")){
-                decoded_list.push_back(decode_scalar(env, get_scalar_type(eletype), it));
-            }else if(eletype == "array"){
-                decoded_list.push_back(decode_array(env, si->childItems[0], it));
-            }*/
-        //}
-        //it++; // skip end of array, should be 0
-        //return enif_make_list_from_array(env, decoded_list.data(), arrayLen);
+        }
     }
 
-    return enif_make_atom(env, "undefined"); 
+    return enif_make_atom(env, "undefined");
 }
 
 ERL_NIF_TERM decode_union(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
@@ -479,6 +476,23 @@ int64_t decodeLong(uint8_t*& it) {
     } while (u & 0x80);
 
     return decodeZigzag64(encoded);
+}
+
+// Reads one Avro array/map block header. A positive count means that many
+// items follow directly. Avro also permits a negative count -N: a signed
+// long giving the block's encoded byte length follows immediately (unused
+// here -- items are decoded one at a time rather than skipped by byte
+// offset), then N items. erlavro's encoder emits this negative form for
+// essentially every array/map it writes (see #15), so decode_array/
+// decode_map must handle both. Returns the item count for this block; 0
+// means "no more blocks" -- the array/map terminator.
+int64_t decode_block_count(uint8_t*& it) {
+    int64_t count = decodeLong(it);
+    if (count < 0) {
+        decodeLong(it); // block byte-length, unused
+        count = -count;
+    }
+    return count;
 }
 
 int32_t decodeInt32(uint8_t*& it) {

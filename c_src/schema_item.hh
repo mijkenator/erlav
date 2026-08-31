@@ -38,6 +38,26 @@ struct SchemaItem {
     // independent O(map_size) walk of Erlang's flatmap representation).
     std::unordered_map<std::string, size_t> field_index_by_name;
 
+    // When true, encodearray/encodemap (mkh_avro2.hh) write the Avro
+    // "negative block count" form -- a negative item count followed by the
+    // block's encoded byte length, then the items -- instead of the
+    // default plain positive count. This is the form erlavro's encoder
+    // emits for essentially every array/map (see #15); opted into via
+    // erlav_init/2 with the `use_negative_block_count` option, off by
+    // default so erlav_init/1 keeps today's byte output unchanged.
+    bool use_negative_block_count = false;
+
+    // Propagates the schema-init-time encoding choice to every node in the
+    // tree (including union-member children in childItems), so
+    // encodearray/encodemap can read si->use_negative_block_count directly
+    // regardless of nesting depth.
+    void set_negative_block_count(bool v) {
+        use_negative_block_count = v;
+        for (auto* child : childItems) {
+            child->set_negative_block_count(v);
+        }
+    }
+
     // Destructor to clean up the shared environment if this is the root object
     ~SchemaItem() {
         if (key_env != nullptr) {

@@ -15,7 +15,11 @@
 using json = nlohmann::json;
 
 std::map<int, mkh_avro2::SchemaItem*> erlav_encoders_map;
-std::map<std::string, int> erlav_schema_map;
+// Keyed by (filename, use_negative_block_count) so the same .avsc file can
+// be registered twice -- once for each encoding mode -- and get distinct
+// schema ids, rather than the second erlav_init call silently returning the
+// first mode's id.
+std::map<std::pair<std::string, bool>, int> erlav_schema_map;
 
 // Guards both global maps above. BEAM schedulers can call erlav_init/1
 // concurrently from different threads (nothing in OTP serializes NIF calls
@@ -53,13 +57,16 @@ make_error_tuple(ErlNifEnv* env, const std::string& msg, int code) {
     return enif_make_tuple3(env, t1, t2, t3);
 }
 
+// Shared body for erlav_init/1 and erlav_init/2 -- the only difference
+// between the two arities is whether use_negative_block_count is on, so
+// both NIF entry points parse their own arguments and delegate here.
 ERL_NIF_TERM
-erlav_init_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+erlav_init_impl(ErlNifEnv* env, ERL_NIF_TERM filename_term, bool use_negative_block_count) {
     ErlNifBinary sbin;
-    std::string key;
+    std::string filename;
     int ret;
 
-    if (!enif_inspect_binary(env, argv[0], &sbin)) {
+    if (!enif_inspect_binary(env, filename_term, &sbin)) {
         // Previously returned the bare integer 0 here, indistinguishable
         // from "handle 0" by any caller that only checks "is it a bare
         // int" -- now returns the same {error, Msg, Code} shape as every
@@ -67,7 +74,8 @@ erlav_init_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
         // (integer id >= 1) / failure ({error, _, _}) contract.
         return make_error_tuple(env, "erlav_init: argument is not a binary", 100);
     }
-    key.assign((const char*) sbin.data, sbin.size);
+    filename.assign((const char*) sbin.data, sbin.size);
+    auto key = std::make_pair(filename, use_negative_block_count);
 
     std::unique_lock<std::shared_mutex> lock(erlav_schema_mutex);
 
@@ -87,7 +95,7 @@ erlav_init_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
     // scheduler) and can crash the whole VM, not just fail this call.
     try {
         ret = static_cast<int>(erlav_schema_map.size()) + 1;
-        auto* schema = mkh_avro2::read_schema(key);
+        auto* schema = mkh_avro2::read_schema(filename, use_negative_block_count);
         // Only register the new id once parsing has fully succeeded --
         // registering `key` first and filling in erlav_encoders_map after
         // (the previous order) meant a throw here left erlav_schema_map
@@ -110,6 +118,36 @@ erlav_init_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
     }
 
     return enif_make_int(env, ret);
+}
+
+ERL_NIF_TERM
+erlav_init_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+    return erlav_init_impl(env, argv[0], false);
+}
+
+// erlav_init/2 -- argv[1] is an options list. The only option recognized
+// today is the atom `use_negative_block_count`, which registers the schema
+// so encodearray/encodemap (mkh_avro2.hh) emit Avro's negative block-count
+// form instead of the default plain positive count (see #15 -- this is the
+// form erlavro's own encoder emits for essentially every array/map).
+ERL_NIF_TERM
+erlav_init_nif2(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+    ERL_NIF_TERM list = argv[1];
+    ERL_NIF_TERM head;
+    bool use_negative_block_count = false;
+
+    if (!enif_is_list(env, list)) {
+        return enif_make_badarg(env);
+    }
+    while (enif_get_list_cell(env, list, &head, &list)) {
+        char atom[32];
+        if (enif_get_atom(env, head, atom, sizeof(atom), ERL_NIF_LATIN1) &&
+            std::strcmp(atom, "use_negative_block_count") == 0) {
+            use_negative_block_count = true;
+        }
+    }
+
+    return erlav_init_impl(env, argv[0], use_negative_block_count);
 }
 
 ERL_NIF_TERM
@@ -301,6 +339,7 @@ int_decode_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
 }
 
 ErlNifFunc nif_funcs[] = {{"erlav_init", 1, erlav_init_nif},
+                          {"erlav_init", 2, erlav_init_nif2},
                           {"erlav_encode", 2, erlav_encode_nif},
                           {"erlav_decode_fast", 2, erlav_decode_nif_fast},
                           {"int_encode", 1, int_encode_nif},

@@ -32,6 +32,32 @@ DecodedTerm = erlav_nif:erlav_decode_fast(SchemaId, Ret)
 
 ```
 
+### Negative block-count encoding
+
+Avro allows array/map blocks to be encoded either as a plain positive item
+count, or as a negative count followed by the block's byte length (used by
+readers to skip a block without decoding it). `erlav_decode`/
+`erlav_decode_fast` always understand both forms, so bytes produced by other
+Avro implementations (e.g. `erlavro`, which emits the negative form by
+default) decode correctly out of the box.
+
+`erlav_encode` emits the plain positive-count form by default. To make it
+emit the negative form instead -- e.g. to match `erlavro`'s byte output, or
+for interop with a reader that expects it -- pass
+`use_negative_block_count` when initializing the schema:
+
+```erlang
+SchemaId = erlav_nif:erlav_init(<<"priv/tschema2.avsc">>, [use_negative_block_count]),
+
+% Every array/map field encoded with this SchemaId now uses the negative
+% block-count form; decoding is unaffected either way.
+Ret = erlav_nif:erlav_encode(SchemaId, Term),
+DecodedTerm = erlav_nif:erlav_decode_fast(SchemaId, Ret)
+```
+
+Plain `erlav_init/1` (no options) keeps emitting today's positive-count
+form, unchanged.
+
 
 Performance
 -----
