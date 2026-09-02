@@ -16,6 +16,7 @@ int64_t decodeZigzag64(uint64_t) noexcept;
 int32_t decodeZigzag32(uint32_t) noexcept;
 int64_t decodeLong( std::vector<uint8_t>::iterator& );
 int64_t decodeLong(uint8_t*& it);
+int64_t decode_block_count(uint8_t*& it);
 float decode_float(std::vector<uint8_t>::iterator& );
 float decode_float(uint8_t*& it);
 double decode_double(std::vector<uint8_t>::iterator& );

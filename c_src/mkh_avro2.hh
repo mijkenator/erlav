@@ -21,7 +21,7 @@ namespace mkh_avro2 {
 
 extern const std::vector<std::string> scalars;
 
-SchemaItem* read_schema(std::string);
+SchemaItem* read_schema(std::string, bool use_negative_block_count = false);
 ERL_NIF_TERM encode(ErlNifEnv*, SchemaItem*, const ERL_NIF_TERM*);
 int encodevalue(SchemaItem*, ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*);
 int encodescalar(int, ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*);
@@ -155,7 +155,20 @@ encodemap(SchemaItem* si,
         return 10;
     }
 
-    encode_long_fast(env, static_cast<int64_t>(map_size), ret);
+    // Negative block-count form (see #15/schema_item.hh) needs the block's
+    // encoded byte length written *before* the block header, so entries are
+    // encoded into a scratch buffer first and the real header (negative
+    // count + byte length) is prefixed onto `ret` afterwards. Only entered
+    // when there's at least one entry -- an empty map is still just a
+    // single 0 byte in both forms.
+    bool negative = si->use_negative_block_count && map_size > 0;
+    std::vector<uint8_t> block_buf;
+    std::vector<uint8_t>* target = ret;
+    if (negative) {
+        target = &block_buf;
+    } else {
+        encode_long_fast(env, static_cast<int64_t>(map_size), ret);
+    }
 
     if (si->obj_field != "complex") { // map of scalar types
         // scalar_type is precomputed at schema-parse time and kept in
@@ -170,10 +183,10 @@ encodemap(SchemaItem* si,
                 continue;
             }
             // encode key: length-prefixed string
-            encode_long_fast(env, static_cast<int64_t>(sbin.size), ret);
-            ret->insert(ret->end(), sbin.data, sbin.data + sbin.size);
+            encode_long_fast(env, static_cast<int64_t>(sbin.size), target);
+            target->insert(target->end(), sbin.data, sbin.data + sbin.size);
             // encode value
-            encodescalar(st, env, &val, ret);
+            encodescalar(st, env, &val, target);
         } while (enif_map_iterator_next(env, &iter));
     } else { // map of complex types
         do {
@@ -184,15 +197,20 @@ encodemap(SchemaItem* si,
                 continue;
             }
             // encode key: length-prefixed string
-            encode_long_fast(env, static_cast<int64_t>(sbin.size), ret);
-            ret->insert(ret->end(), sbin.data, sbin.data + sbin.size);
+            encode_long_fast(env, static_cast<int64_t>(sbin.size), target);
+            target->insert(target->end(), sbin.data, sbin.data + sbin.size);
             // encode value
-            encodevalue(si->childItems[0], env, &val, ret);
+            encodevalue(si->childItems[0], env, &val, target);
         } while (enif_map_iterator_next(env, &iter));
     }
 
     enif_map_iterator_destroy(env, &iter);
 
+    if (negative) {
+        encode_long_fast(env, -static_cast<int64_t>(map_size), ret);
+        encode_long_fast(env, static_cast<int64_t>(block_buf.size()), ret);
+        ret->insert(ret->end(), block_buf.begin(), block_buf.end());
+    }
     if (map_size > 0) {
         ret->push_back(0);
     }
@@ -353,7 +371,20 @@ encodearray(SchemaItem* si,
             len++;
         }
         ERL_NIF_TERM* elems = (len <= STACK_CAP) ? stack_buf : heap_buf.data();
-        encode_long_fast(env, static_cast<int64_t>(len), ret);
+        // Negative block-count form (see #15/schema_item.hh) needs the
+        // block's encoded byte length written *before* the block header, so
+        // elements are encoded into a scratch buffer first and the real
+        // header (negative count + byte length) is prefixed onto `ret`
+        // afterwards. Only entered when there's at least one element -- an
+        // empty array is still just a single 0 byte in both forms.
+        bool negative = si->use_negative_block_count && len > 0;
+        std::vector<uint8_t> block_buf;
+        std::vector<uint8_t>* target = ret;
+        if (negative) {
+            target = &block_buf;
+        } else {
+            encode_long_fast(env, static_cast<int64_t>(len), ret);
+        }
         if (si->obj_field != "complex") {
             // scalar_type is precomputed at schema-parse time and kept in
             // lockstep with obj_field (see schema_item.hh) -- read it
@@ -400,10 +431,10 @@ encodearray(SchemaItem* si,
                         out += encodeInt32Raw(i32, out);
                     }
                 }
-                ret->insert(ret->end(), scratch, out);
+                target->insert(target->end(), scratch, out);
             } else {
                 for (size_t i = 0; i < len; i++) {
-                    if(encodescalar(st, env, &elems[i], ret) > 0) {
+                    if(encodescalar(st, env, &elems[i], target) > 0) {
                         return 8; // encode scalar failed
                     }
                 }
@@ -418,31 +449,31 @@ encodearray(SchemaItem* si,
                     bool encoded_ok = false;
                     if (si->array_multi_type.count("string")) {
                         int typeindex = si->array_multi_type.at("string");
-                        auto saved_size = ret->size();
-                        encode_int(env, typeindex, ret);
-                        if (encode_string(env, &elems[i], ret) == 0) {
+                        auto saved_size = target->size();
+                        encode_int(env, typeindex, target);
+                        if (encode_string(env, &elems[i], target) == 0) {
                             encoded_ok = true;
                         } else {
-                            ret->resize(saved_size);
+                            target->resize(saved_size);
                         }
                     }
                     if (!encoded_ok && si->array_multi_type.count("enum")) {
                         int typeindex = si->array_multi_type.at("enum");
                         int child_idx =
                             si->array_multi_type_child_index.at("enum");
-                        auto saved_size = ret->size();
-                        encode_int(env, typeindex, ret);
+                        auto saved_size = target->size();
+                        encode_int(env, typeindex, target);
                         try {
                             if (encodeenum(si->childItems[child_idx],
                                            env,
                                            &elems[i],
-                                           ret) == 0) {
+                                           target) == 0) {
                                 encoded_ok = true;
                             } else {
-                                ret->resize(saved_size);
+                                target->resize(saved_size);
                             }
                         } catch (const mkh_avro::AvroException&) {
-                            ret->resize(saved_size);
+                            target->resize(saved_size);
                         }
                     }
                     if (!encoded_ok) {
@@ -455,16 +486,16 @@ encodearray(SchemaItem* si,
                         // longs
                         try {
                             int typeindex = si->array_multi_type.at("long");
-                            encode_int(env, typeindex, ret);
-                            encode_long(env, &elems[i], ret);
+                            encode_int(env, typeindex, target);
+                            encode_long(env, &elems[i], target);
                         } catch (...){
                             return 8;
                         }
                     } else if (enif_get_double(env, elem, &dbl)) {
                         try {
                             int typeindex = si->array_multi_type.at("double");
-                            encode_int(env, typeindex, ret);
-                            encode_double(env, &elems[i], ret);
+                            encode_int(env, typeindex, target);
+                            encode_double(env, &elems[i], target);
                         } catch (...){
                             return 8;
                         }
@@ -474,8 +505,8 @@ encodearray(SchemaItem* si,
                 } else if (enif_is_list(env, elem)) {
                     int typeindex = si->array_multi_type.at("array");
                     int child_idx = si->array_multi_type_child_index.at("array");
-                    encode_int(env, typeindex, ret);
-                    encodearray(si->childItems[child_idx], env, &elems[i], ret);
+                    encode_int(env, typeindex, target);
+                    encodearray(si->childItems[child_idx], env, &elems[i], target);
                 } else if (enif_is_map(env, elem)) {
                     // record or map union member
                     bool encoded_ok = false;
@@ -486,15 +517,15 @@ encodearray(SchemaItem* si,
                         int typeindex = si->array_multi_type.at(ttype);
                         int child_idx =
                             si->array_multi_type_child_index.at(ttype);
-                        auto saved_size = ret->size();
-                        encode_int(env, typeindex, ret);
+                        auto saved_size = target->size();
+                        encode_int(env, typeindex, target);
                         if (encodevalue(
-                                si->childItems[child_idx], env, &elems[i], ret) ==
+                                si->childItems[child_idx], env, &elems[i], target) ==
                             0) {
                             encoded_ok = true;
                             break;
                         }
-                        ret->resize(saved_size);
+                        target->resize(saved_size);
                     }
                     if (!encoded_ok) {
                         return 8;
@@ -509,7 +540,7 @@ encodearray(SchemaItem* si,
                             env, elem, atom, sizeof(atom), ERL_NIF_LATIN1) &&
                         std::strcmp(atom, "undefined") == 0) {
                         int typeindex = si->array_multi_type.at("null");
-                        encode_int(env, typeindex, ret);
+                        encode_int(env, typeindex, target);
                     } else {
                         return 8;
                     }
@@ -520,8 +551,13 @@ encodearray(SchemaItem* si,
         } else {
             // complex array
             for (size_t i = 0; i < len; i++) {
-                encodevalue(si->childItems[0], env, &elems[i], ret);
+                encodevalue(si->childItems[0], env, &elems[i], target);
             }
+        }
+        if (negative) {
+            encode_long_fast(env, -static_cast<int64_t>(len), ret);
+            encode_long_fast(env, static_cast<int64_t>(block_buf.size()), ret);
+            ret->insert(ret->end(), block_buf.begin(), block_buf.end());
         }
         if(len > 0){
             ret->push_back(0);
@@ -746,13 +782,14 @@ resolve_user_types(json& data) {
 }
 
 SchemaItem*
-read_schema(std::string schemaName) {
+read_schema(std::string schemaName, bool use_negative_block_count) {
     SchemaItem* si;
     std::ifstream f(schemaName);
     json data = json::parse(f);
     resolve_user_types(data);
     si = new SchemaItem(data["name"], data["fields"], 3);
     si->init_keys();
+    si->set_negative_block_count(use_negative_block_count);
     return si;
 }
 
