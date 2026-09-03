@@ -84,7 +84,79 @@ trend.)
 ## Bottom line
 
 No measurable performance regression or improvement for the OpenRTB schema
-between `1.8` and `1.14`. The six releases in between are correctness fixes
-and optimizations targeted at code paths (array-of-union, large maps,
-negative block-count) that these specific OpenRTB fixtures don't exercise,
-so encode throughput on this schema is unchanged.
+between `1.8` and `1.14` **at the default settings**. The six releases in
+between are correctness fixes and optimizations targeted at code paths
+(array-of-union, large maps, negative block-count) that these specific
+OpenRTB fixtures don't exercise, so encode throughput on this schema is
+unchanged. Opting into 1.14's new `use_negative_block_count` flag, however,
+does cost real throughput — see below.
+
+## Cost of opting into `use_negative_block_count` (1.14)
+
+The comparisons above all use `erlav_init/1`, i.e. the default plain
+positive block-count encoding, on every tag including 1.14. But 1.14 also
+added an *opt-in* `erlav_init/2` mode (`erlav_init(File,
+[use_negative_block_count])`) that makes erlav's own encoder emit Avro's
+negative block-count form — the form erlavro's encoder always emits, useful
+if something downstream expects byte-identical output to erlavro. That mode
+is off by default and wasn't exercised by the 1.8–1.14 comparison above, so
+it was benchmarked separately, same method (isolated worktree build of
+`1.14`, both schemas, `erlav_nif:erlav_encode/2`).
+
+### Method
+
+Registered each schema twice — once via `erlav_init/1` (positive, default)
+and once via `erlav_init/2(File, [use_negative_block_count])` (negative) —
+and timed N back-to-back `erlav_encode/2` calls against each, alternating
+which mode ran first each repeat to cancel out warm-up bias. Two variants:
+
+- **Randomized term per call, N=20000/10000, 4 repeats** — matches the style
+  of `erlav_perf`'s own benchmarks (fresh random data each iteration).
+- **Fixed term, N=50000, 4 repeats** — same term re-encoded every iteration,
+  to strip out the randomizer's own (nontrivial — tens of seconds for 20k
+  terms on the full schema) cost from the timing noise.
+
+### Results (µs/op)
+
+| schema | mode | randomized-term avg | fixed-term avg |
+|---|---|---|---|
+| `opnrtb_test1.avsc` | positive (default) | 54.2 | 18.6 |
+| `opnrtb_test1.avsc` | negative block-count | 64.7 | 24.2 |
+| `opnrtb_test1.avsc` | **overhead** | **+19%** | **+30%** |
+| `opnrtb.avsc` (full) | positive (default) | 105.0 | 34.2 |
+| `opnrtb.avsc` (full) | negative block-count | 126.1 | 47.1 |
+| `opnrtb.avsc` (full) | **overhead** | **+20%** | **+38%** |
+
+(The fixed-term numbers are the more trustworthy ones — lower absolute
+µs/op because there's no per-call randomization cost mixed in, and a
+cleaner, more consistent ratio across repeats. The randomized-term numbers
+are noisier but point the same direction.)
+
+Encoded output size also grows, independent of speed: encoding the same
+`field_test.data` term against `opnrtb.avsc` produced 1634 bytes (positive)
+vs. 1690 bytes (negative) — 56 extra bytes for the block-length varints that
+the negative form has to write.
+
+### Why
+
+`encodearray`/`encodemap` in `c_src/mkh_avro2.hh` can't write the
+negative-block header until they know the encoded byte length of the whole
+block, but that length isn't known until the block is encoded. So the
+negative-block path encodes every array/map's entries into a scratch
+`std::vector<uint8_t> block_buf` first, then copies that buffer into the
+real output buffer once the header (negative count + byte length) is known
+and prefixed. The positive-count path just writes the count up front and
+streams entries straight into the destination buffer — no scratch buffer,
+no extra copy. That per-array/per-map scratch-and-copy is the source of the
+~20–40% overhead; it's proportionally worse on `opnrtb.avsc` (the wider
+schema) since it has more arrays/maps to pay the extra allocation+copy on.
+
+### Bottom line for this flag
+
+`use_negative_block_count` is opt-in and off by default specifically
+because it's an interop trade-off, not a free-standing improvement:
+enabling it to match erlavro's own byte-for-byte encoding costs roughly
+**20–40% more encode time** (and a handful of extra bytes) versus the
+default positive block-count form, on both OpenRTB schemas tested. Only
+turn it on if byte-compatibility with erlavro's output is actually required
+downstream.
