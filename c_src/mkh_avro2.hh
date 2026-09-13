@@ -175,19 +175,85 @@ encodemap(SchemaItem* si,
         // lockstep with obj_field (see schema_item.hh) -- read it directly
         // instead of re-scanning the scalars table on every map encode.
         auto st = si->scalar_type;
-        do {
-            if (!enif_map_iterator_get_pair(env, &iter, &key, &val)) {
-                continue;
-            }
-            if (!enif_inspect_binary(env, key, &sbin)) {
-                continue;
-            }
-            // encode key: length-prefixed string
-            encode_long_fast(env, static_cast<int64_t>(sbin.size), target);
-            target->insert(target->end(), sbin.data, sbin.data + sbin.size);
-            // encode value
-            encodescalar(st, env, &val, target);
-        } while (enif_map_iterator_next(env, &iter));
+        if (st == 0 || st == 1) {
+            // Fast path for map<int>/map<long>: batch each entry's
+            // key-length varint + key bytes + value varint into one
+            // on-stack scratch buffer, then append with a single
+            // vector::insert -- instead of three separate inserts per
+            // entry (key length varint, key bytes, value varint via
+            // encode_int/long), each independently rechecking capacity and
+            // potentially triggering a memmove. See #18, mirroring the
+            // array<int>/array<long> fix in #16/#17.
+            //
+            // Unlike encodearray's whole-array batch, this batches only
+            // one entry at a time: map keys are variable-length strings
+            // interleaved with values, so sizing a single scratch buffer
+            // for the *whole* map up front would need an extra full pass
+            // over every key's length first -- the same two-pass
+            // bookkeeping that made the array<string> attempt ~15%
+            // *slower* (see
+            // docs/array-string-encoding-optimization-attempt.md).
+            // Per-entry batching needs no extra pass: the key's size is
+            // already known from the iterator, and only fixed-size
+            // varints are being batched alongside it.
+            static constexpr size_t ENTRY_STACK_CAP = 256;
+            uint8_t stack_entry[ENTRY_STACK_CAP];
+            std::vector<uint8_t> heap_entry;
+            const size_t max_val_bytes = (st == 1) ? 10 : 5;
+            do {
+                if (!enif_map_iterator_get_pair(env, &iter, &key, &val)) {
+                    continue;
+                }
+                if (!enif_inspect_binary(env, key, &sbin)) {
+                    continue;
+                }
+                long i64 = 0;
+                int32_t i32 = 0;
+                if (st == 1) {
+                    if (!enif_get_int64(env, val, &i64)) {
+                        return 8; // encode scalar failed
+                    }
+                } else {
+                    if (!enif_get_int(env, val, &i32)) {
+                        return 8; // encode scalar failed
+                    }
+                }
+                // Worst case: 10-byte key-length varint + key bytes +
+                // up to 10-byte value varint.
+                size_t needed = 10 + sbin.size + max_val_bytes;
+                uint8_t* entry;
+                if (needed <= ENTRY_STACK_CAP) {
+                    entry = stack_entry;
+                } else {
+                    heap_entry.resize(needed);
+                    entry = heap_entry.data();
+                }
+                uint8_t* out = entry;
+                out += encodeInt64Raw(static_cast<int64_t>(sbin.size), out);
+                memcpy(out, sbin.data, sbin.size);
+                out += sbin.size;
+                if (st == 1) {
+                    out += encodeInt64Raw(i64, out);
+                } else {
+                    out += encodeInt32Raw(i32, out);
+                }
+                target->insert(target->end(), entry, out);
+            } while (enif_map_iterator_next(env, &iter));
+        } else {
+            do {
+                if (!enif_map_iterator_get_pair(env, &iter, &key, &val)) {
+                    continue;
+                }
+                if (!enif_inspect_binary(env, key, &sbin)) {
+                    continue;
+                }
+                // encode key: length-prefixed string
+                encode_long_fast(env, static_cast<int64_t>(sbin.size), target);
+                target->insert(target->end(), sbin.data, sbin.data + sbin.size);
+                // encode value
+                encodescalar(st, env, &val, target);
+            } while (enif_map_iterator_next(env, &iter));
+        }
     } else { // map of complex types
         do {
             if (!enif_map_iterator_get_pair(env, &iter, &key, &val)) {
