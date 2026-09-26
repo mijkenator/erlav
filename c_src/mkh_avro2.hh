@@ -296,6 +296,34 @@ encodemap(SchemaItem* si,
 // measured directly; this threshold sits just above the observed crossover.
 static constexpr size_t SMALL_RECORD_FIELD_THRESHOLD = 3;
 
+// Shared by both encoderecord() paths below (small-record and single-pass):
+// given a field's value/presence, either encode it or fall back to the
+// Avro default-handling rules for a missing field. Kept out of the two
+// branches so default-handling semantics (union/array/enum defaults,
+// schema-evolution defaults, ...) only need to change in one place -- see
+// #26. static inline with a trivial body, so this is expected to disappear
+// after inlining; it does not touch the small-record path's dominant cost
+// (the enif_get_map_value calls themselves).
+static inline void
+encode_field_or_default(SchemaItem* it,
+                         ERL_NIF_TERM* val,
+                         bool found,
+                         ErlNifEnv* env,
+                         std::vector<uint8_t>* ret,
+                         const std::string& rec_name) {
+    if (found) {
+        int encodeCode = encodevalue(it, env, val, ret);
+        if (encodeCode != 0) {
+            throw mkh_avro::AvroException(
+                "Rec:" + rec_name + " field:" + it->obj_name, encodeCode);
+        }
+    } else if (it->is_nullable == 1) {
+        ret->push_back(0);
+    } else if (it->obj_type == 2) {
+        ret->push_back(0);
+    }
+}
+
 int
 encoderecord(SchemaItem* si,
              ErlNifEnv* env,
@@ -312,18 +340,8 @@ encoderecord(SchemaItem* si,
         const auto& keys = si->cached_keys;
         for (size_t i = 0; i < nfields; i++) {
             auto* it = si->childItems[i];
-            if (enif_get_map_value(env, *input, keys[i], &val)) {
-                int encodeCode = encodevalue(it, env, &val, ret);
-                if (encodeCode != 0) {
-                    throw mkh_avro::AvroException("Rec:" + si->obj_name +
-                                                      " field:" + it->obj_name,
-                                                  encodeCode);
-                }
-            } else if (it->is_nullable == 1) {
-                ret->push_back(0);
-            } else if (it->obj_type == 2) {
-                ret->push_back(0);
-            }
+            bool found = enif_get_map_value(env, *input, keys[i], &val);
+            encode_field_or_default(it, &val, found, env, ret, si->obj_name);
         }
         return 0;
     }
@@ -384,18 +402,8 @@ encoderecord(SchemaItem* si,
 
     for (size_t i = 0; i < nfields; i++) {
         auto* it = si->childItems[i];
-        if (present[i]) {
-            int encodeCode = encodevalue(it, env, &found[i], ret);
-            if (encodeCode != 0) {
-                throw mkh_avro::AvroException("Rec:" + si->obj_name +
-                                                  " field:" + it->obj_name,
-                                              encodeCode);
-            }
-        } else if (it->is_nullable == 1) {
-            ret->push_back(0);
-        } else if (it->obj_type == 2) {
-            ret->push_back(0);
-        }
+        encode_field_or_default(
+            it, &found[i], present[i] != 0, env, ret, si->obj_name);
     }
     return 0;
 }
