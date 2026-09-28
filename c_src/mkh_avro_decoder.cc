@@ -90,7 +90,6 @@ double decode_double(std::vector<uint8_t>::iterator& it){
 ERL_NIF_TERM  decode(ErlNifEnv* env, SchemaItem* si, uint8_t*& it) {
     ERL_NIF_TERM ret = enif_make_new_map(env);
     ERL_NIF_TERM map_out;
-    std::cout << "decode funcs!!!!!" << "\r\n";
 
     for(SchemaItem* si_e : si->childItems){
        //std::cout << "Field: " << si_e->obj_name << "  | type: " << si_e->obj_type << " | scalar_type: " << si_e->scalar_type  << "\r\n";
@@ -163,7 +162,6 @@ ERL_NIF_TERM  decode(ErlNifEnv* env, SchemaItem* si, uint8_t*& it) {
                 ret = map_out;
             }
         } else if(si_e->obj_type == 5) {
-            std::cout << "ENUM TYPE!!!!" << "\r\n";
             ERL_NIF_TERM value;
             ERL_NIF_TERM key;
             unsigned char* key_data;
@@ -195,7 +193,7 @@ ERL_NIF_TERM decodevalue(ErlNifEnv* env, SchemaItem* si, uint8_t*& it) {
         case 5: // enym
             return decode_enum(env, si, it);
         default:
-            std::cout << "DECODE VALUE!!!" << std::to_string(si->obj_type) << "\n\r";
+            break;
     }
     return 0;
 }
@@ -208,9 +206,7 @@ ERL_NIF_TERM decode_record(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
 ERL_NIF_TERM decode_enum(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
     ERL_NIF_TERM str_ret;
     uint32_t valueNumber = decodeInt32(it);
-    std::cout << "ItemNumber :" << std::to_string(valueNumber) << "\r\n";
     auto val = si->array_multi_type_reverse.at(valueNumber);
-    std::cout << "ItemValue :" << val << "\r\n";
 
     auto len = val.length();
     unsigned char* str_data;
@@ -357,8 +353,7 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
             }
             return enif_make_list_from_array(env, decoded_list.data(), decoded_list.size());
         }else{
-            // complex array multiple types
-            std::cout << "MUHAHAHA"  << "\r\n";
+            // complex array multiple types -- unimplemented, see #41
         }
     }
 
