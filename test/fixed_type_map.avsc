@@ -1,0 +1,8 @@
+{
+  "type": "record",
+  "name": "Interop",
+  "namespace": "org.apache.avro",
+  "fields": [
+      {"name": "mapField", "type": {"type": "map", "values": {"type": "fixed", "name": "MD5", "size": 4}}}
+  ]
+}

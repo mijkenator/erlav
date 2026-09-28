@@ -1,0 +1,8 @@
+{
+  "type": "record",
+  "name": "Interop",
+  "namespace": "org.apache.avro",
+  "fields": [
+      {"name": "f", "type": {"type": "fixed", "name": "Z", "size": 0}}
+  ]
+}
