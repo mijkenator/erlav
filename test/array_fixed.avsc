@@ -1,0 +1,6 @@
+{"type": "record", "name": "ArrFixed", "namespace": "erlav.test",
+  "fields": [
+      {"name": "arrayField", "type": {"type": "array", "items":
+          {"type": "fixed", "name": "MD5", "size": 4}}}
+  ]
+}

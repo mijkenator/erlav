@@ -1,0 +1,6 @@
+{"type": "record", "name": "ArrEnum", "namespace": "erlav.test",
+  "fields": [
+      {"name": "arrayField", "type": {"type": "array", "items":
+          {"type": "enum", "name": "Kind", "symbols": ["A", "B", "C"]}}}
+  ]
+}

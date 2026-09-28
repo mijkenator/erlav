@@ -350,7 +350,18 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
         //std::cout << "child scalar_type: " << std::to_string(si->childItems[0]->scalar_type) << "\r\n";
         //std::cout << "child obj_field: " << si->childItems[0]->obj_field << "\r\n";
 
-        if((child_len == 1) && (si->childItems[0]->scalar_type > 0) && (si->childItems[0]->obj_field != "complex")){
+        // obj_type == 2 (array) must be checked explicitly here, not just
+        // "does this child look scalar-shaped" (scalar_type > 0 &&
+        // obj_field != "complex") -- a map-of-scalars or fixed SchemaItem
+        // also has a scalar-looking scalar_type/obj_field (a map's own
+        // scalar_type/obj_field describe its *values*, per decode_map's
+        // "obj_field != complex" convention), so array<map<string>> used
+        // to satisfy this condition and get routed into decode_array on a
+        // map schema -- an immediate cursor desync that crashed the VM via
+        // a garbage length handed to enif_make_new_binary. See #44.
+        if((child_len == 1) && (si->childItems[0]->obj_type == 2) &&
+           (si->childItems[0]->scalar_type > 0) &&
+           (si->childItems[0]->obj_field != "complex")){
             // array of simple arrays
             for (;;) {
                 int64_t arrayLen = decode_block_count(it);
@@ -362,18 +373,27 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
             return enif_make_list_from_array(env, decoded_list.data(), decoded_list.size());
 
         }else if(child_len == 1){
-            // array of 1 complex type
+            // Array of 1 complex type -- dispatch each element through
+            // decodevalue(), which switches on obj_type to the right
+            // decoder (decode_array/decode_record/decode_map/decode_enum/
+            // decode_fixed/decode_union), mirroring encodearray's matching
+            // complex-array branch (mkh_avro2.hh), which already calls
+            // encodevalue() the same way.
+            //
+            // Previously this called decode() (the record-field-loop
+            // decoder) unconditionally for anything that wasn't itself an
+            // array, which only "worked" for array<record> by coincidence
+            // (decode()'s childItems-as-record-fields loop happens to match
+            // what a record decode needs) -- array<map> desynced the cursor
+            // and crashed the VM via a garbage length handed to
+            // enif_make_new_binary, and array<fixed>/array<enum> silently
+            // decoded every element to an empty map instead of throwing or
+            // reading the right bytes. See #44.
             for (;;) {
                 int64_t arrayLen = decode_block_count(it);
                 if (arrayLen == 0) break;
-                if(si->childItems[0]->obj_type == 2){
-                    for (int64_t i = 0; i < arrayLen; i++) {
-                        decoded_list.push_back(decode_array(env, si->childItems[0], it));
-                    }
-                }else{
-                    for (int64_t i = 0; i < arrayLen; i++) {
-                        decoded_list.push_back(decode(env, si->childItems[0], it));
-                    }
+                for (int64_t i = 0; i < arrayLen; i++) {
+                    decoded_list.push_back(decodevalue(env, si->childItems[0], it));
                 }
             }
             return enif_make_list_from_array(env, decoded_list.data(), decoded_list.size());
