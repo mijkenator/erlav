@@ -37,13 +37,29 @@ init() ->
 not_loaded(Line) ->
     erlang:nif_error({not_loaded, [{module, ?MODULE}, {line, Line}]}).
 
-erlav_encode(_A, _B) ->
+-spec erlav_encode(SchemaId :: integer(), Data :: map()) -> binary() | {error, string(), integer()}.
+erlav_encode(_SchemaId, _Data) ->
     not_loaded(?LINE).
 
-erlav_decode(_A, _B) ->
+%% Decodes an Avro-encoded binary (produced for the given SchemaId) back into
+%% an Erlang map. Walks the input with a std::vector<uint8_t>::iterator
+%% internally -- see erlav_decode_fast/2 for the raw-pointer variant, which is
+%% otherwise identical (same decode logic, same error handling; "fast" refers
+%% only to that iterator-vs-pointer implementation detail, not to any
+%% difference in what input it's safe to hand either function).
+-spec erlav_decode(SchemaId :: integer(), Bin :: binary()) -> map() | {error, string(), integer()}.
+erlav_decode(_SchemaId, _Bin) ->
     not_loaded(?LINE).
 
-erlav_decode_fast(_A, _B) ->
+%% Same decode logic and error handling as erlav_decode/2 -- walks the input
+%% with a raw pointer instead of a std::vector<uint8_t>::iterator, which is
+%% faster but not any more or less tolerant of malformed/truncated input than
+%% erlav_decode/2. Despite the name, this is not an "unsafe" counterpart to a
+%% "safe" erlav_decode/2 (contrast erlav_safe_encode/2 below, which *is* a
+%% distinct, safer wrapper around erlav_encode/2) -- pick either based on
+%% performance, not on how much you trust the input.
+-spec erlav_decode_fast(SchemaId :: integer(), Bin :: binary()) -> map() | {error, string(), integer()}.
+erlav_decode_fast(_SchemaId, _Bin) ->
     not_loaded(?LINE).
 
 erlav_init(_A) ->
