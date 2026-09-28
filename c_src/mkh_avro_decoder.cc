@@ -172,6 +172,17 @@ ERL_NIF_TERM  decode(ErlNifEnv* env, SchemaItem* si, uint8_t*& it) {
             if(enif_make_map_put(env, ret, key, value, &map_out)){
                 ret = map_out;
             }
+        } else if(si_e->obj_type == 6) {
+            ERL_NIF_TERM value;
+            ERL_NIF_TERM key;
+            unsigned char* key_data;
+            auto len = si_e->obj_name.length();
+            key_data = enif_make_new_binary(env, len, &key);
+            memcpy(key_data, si_e->obj_name.c_str(), len);
+            value = decode_fixed(env, si_e, it);
+            if(enif_make_map_put(env, ret, key, value, &map_out)){
+                ret = map_out;
+            }
         }
     }
 
@@ -192,6 +203,8 @@ ERL_NIF_TERM decodevalue(ErlNifEnv* env, SchemaItem* si, uint8_t*& it) {
             return decode_map(env, si, it);
         case 5: // enym
             return decode_enum(env, si, it);
+        case 6: // fixed
+            return decode_fixed(env, si, it);
         default:
             break;
     }
@@ -214,6 +227,18 @@ ERL_NIF_TERM decode_enum(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
     memcpy(str_data, val.c_str(), len);
 
     return str_ret;
+}
+
+// Avro "fixed" -- exactly si->fixed_size bytes, with no wire-encoded
+// length prefix (unlike decode_string's bytes/string, whose length is
+// read from the data). See #39.
+ERL_NIF_TERM decode_fixed(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
+    ERL_NIF_TERM bin_ret;
+    unsigned char* bin_data;
+    bin_data = enif_make_new_binary(env, si->fixed_size, &bin_ret);
+    memcpy(bin_data, it, si->fixed_size);
+    it += si->fixed_size;
+    return bin_ret;
 }
 
 ERL_NIF_TERM decode_map(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {

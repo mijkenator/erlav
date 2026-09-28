@@ -1,0 +1,10 @@
+{
+  "type": "record",
+  "name": "Interop",
+  "namespace": "org.apache.avro",
+  "fields": [
+      {"name": "beforeField", "type": "long"},
+      {"name": "fixedField", "type": {"type": "fixed", "name": "MD5", "size": 16}},
+      {"name": "afterField", "type": "long"}
+  ]
+}
