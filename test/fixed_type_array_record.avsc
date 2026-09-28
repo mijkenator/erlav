@@ -1,0 +1,12 @@
+{
+  "type": "record",
+  "name": "Interop",
+  "namespace": "org.apache.avro",
+  "fields": [
+      {"name": "arrayField", "type": {"type": "array", "items":
+          {"type": "record", "name": "Item", "fields": [
+              {"name": "id", "type": "long"},
+              {"name": "hash", "type": {"type": "fixed", "name": "MD5", "size": 4}}
+          ]}}}
+  ]
+}

@@ -46,6 +46,10 @@ int encodeenum(SchemaItem* si,
                ErlNifEnv*,
                ERL_NIF_TERM*,
                std::vector<uint8_t>*);
+int encode_fixed(SchemaItem* si,
+                  ErlNifEnv*,
+                  ERL_NIF_TERM*,
+                  std::vector<uint8_t>*);
 size_t encodeInt32(int32_t, std::array<uint8_t, 5>& output) noexcept;
 size_t encodeVarint(int64_t, std::array<uint8_t, 10>& output) noexcept;
 size_t encodeVarint(int64_t, std::vector<uint8_t>&) noexcept;
@@ -103,6 +107,8 @@ encodevalue(SchemaItem* si,
             return encodemap(si, env, val, ret);
         case 5:
             return encodeenum(si, env, val, ret);
+        case 6:
+            return encode_fixed(si, env, val, ret);
         default:
             std::cout << "ENCODE VALUE!!!\n\r";
     }
@@ -129,6 +135,33 @@ encodeenum(SchemaItem* si,
         throw mkh_avro::AvroException(
             "Rec:" + si->obj_name + " enum bad value:" + enumval, 11);
     }
+}
+
+// Avro "fixed" -- exactly si->fixed_size bytes, written as-is with no
+// length prefix (unlike bytes/string, whose length is wire-encoded from
+// the data). See #39.
+int
+encode_fixed(SchemaItem* si,
+             ErlNifEnv* env,
+             ERL_NIF_TERM* input,
+             std::vector<uint8_t>* ret) {
+    ErlNifBinary sbin;
+
+    if (!enif_inspect_binary(env, *input, &sbin)) {
+        return 12;
+    }
+    if (static_cast<int>(sbin.size) != si->fixed_size) {
+        throw mkh_avro::AvroException(
+            "Rec:" + si->obj_name + " fixed size mismatch: expected " +
+                std::to_string(si->fixed_size) + " got " +
+                std::to_string(sbin.size),
+            12);
+    }
+
+    auto offset = ret->size();
+    ret->resize(offset + sbin.size);
+    memcpy(ret->data() + offset, sbin.data, sbin.size);
+    return 0;
 }
 
 int
@@ -725,7 +758,8 @@ collect_named_types(json& node,
                      NamedTypeRegistry& registry) {
     if (node.is_object()) {
         if (node.contains("type") && node["type"].is_string() &&
-            (node["type"] == "record" || node["type"] == "enum") &&
+            (node["type"] == "record" || node["type"] == "enum" ||
+             node["type"] == "fixed") &&
             node.contains("name") && node["name"].is_string()) {
             std::string ns = child_namespace(node, enclosing_ns);
             std::string name = node["name"];
@@ -748,7 +782,7 @@ collect_named_types(json& node,
 bool
 is_container_keyword(const std::string& name) {
     return name == "null" || name == "array" || name == "map" ||
-           name == "record" || name == "enum";
+           name == "record" || name == "enum" || name == "fixed";
 }
 
 // Look up a possibly-bare type name against the enclosing namespace first

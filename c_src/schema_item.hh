@@ -19,6 +19,11 @@ struct SchemaItem {
     int scalar_type = -1;
     int obj_simple_type = 0;
     int is_nullable = 0;
+    // Declared size in bytes for obj_type == 6 (Avro "fixed") -- fixed
+    // values have no wire-encoded length prefix (unlike bytes/string),
+    // so decode/encode must read/write exactly this many bytes, taken
+    // from the schema itself rather than the data (see #39).
+    int fixed_size = 0;
     std::string obj_name;
     std::vector<SchemaItem*> childItems;
     std::string obj_field = "complex";
@@ -143,6 +148,13 @@ struct SchemaItem {
             intsi = new SchemaItem(otype["name"], otype["fields"], 3);
         } else if (otype["type"] == "enum") {
             intsi = new SchemaItem(otype["name"], otype["symbols"], 5);
+        } else if (otype["type"] == "fixed") {
+            // Inline fixed type given directly as a union member, e.g.
+            // ["null", {"type": "fixed", "name": "MD5", "size": 16}] --
+            // `otype` here already *is* the fixed type object, unlike the
+            // nested "type":{"type":"fixed",...} shape a record field uses
+            // (handled in the else-chain below). See #39.
+            intsi = new SchemaItem(otype["name"], otype["size"].get<int>());
         } else {
             if (otype["type"].is_string() && is_scalar(otype["type"])) {
                 // record field with scalar type
@@ -170,6 +182,15 @@ struct SchemaItem {
                           << "\r\n";
                 intsi =
                     new SchemaItem(otype["name"], otype["type"]["symbols"], 5);
+            } else if (otype["type"].is_object() &&
+                       otype["type"].contains("type") &&
+                       otype["type"]["type"] == "fixed") {
+                // Record field declared as {"name": "f", "type":
+                // {"type": "fixed", "name": "MD5", "size": 16}} -- the
+                // usual shape for a fixed-typed record field (contrast the
+                // inline-union-member shape handled above). See #39.
+                intsi = new SchemaItem(
+                    otype["name"], otype["type"]["size"].get<int>());
             } else {
                 intsi = new SchemaItem(otype["name"], otype["type"]);
             }
@@ -253,6 +274,20 @@ struct SchemaItem {
         } else {
             childItems = read_internal_types(jtypes);
         }
+    }
+
+    // Avro "fixed" type -- a fixed-size binary value with no wire-encoded
+    // length prefix (unlike bytes/string, whose length is read from the
+    // data itself). obj_type 6 is dedicated to it: it isn't a scalar in
+    // the existing 0-5 numbering (scalar_type stays -1, matching the
+    // "not a scalar" convention used by array/map/record/enum) and isn't
+    // a union/array/record/map/enum either. See #39.
+    SchemaItem(std::string name, int size) {
+        obj_name = name;
+        obj_type = 6;
+        fixed_size = size;
+        obj_field = "fixed";
+        scalar_type = -1;
     }
 };
 
