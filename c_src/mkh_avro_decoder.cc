@@ -250,7 +250,32 @@ ERL_NIF_TERM decode_map(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
     // long and returns the (positive) item count for that block. A count of
     // 0 ends the map -- this also covers the empty-map case (first block
     // read is 0) without any separate "was there a terminator" check.
-    if (si->obj_field != "complex") { // map of scalars
+    if (si->values_are_union) {
+        // Map values are a union (e.g. {"values": ["null", "string"]}) --
+        // every value has a per-entry union type-index byte on the wire
+        // that decode_union already knows how to read (it reads
+        // si->is_nullable/si->childItems directly, which read_internal_types
+        // populated on this very SchemaItem the same way it would for a
+        // nullable/union record field). Checked before obj_field, since
+        // values_are_union can be true alongside either obj_field ==
+        // "complex" (a non-null complex union member) or a scalar
+        // obj_field (the union's non-null scalar member) -- neither of the
+        // two branches below knows to read the discriminator byte, and
+        // misreading it as the start of the next value corrupts the
+        // cursor for everything decoded after (previously a VM-crashing
+        // garbage length handed to enif_make_new_binary). See #32.
+        for (;;) {
+            int64_t mapLen = decode_block_count(it);
+            if (mapLen == 0) break;
+            for (int64_t i = 0; i < mapLen; i++) {
+                ERL_NIF_TERM map_key = decode_scalar(env, 5, it); // map keys always strings, (scalar_type = 6)
+                ERL_NIF_TERM value = decode_union(env, si, it);
+                if(enif_make_map_put(env, ret, map_key, value, &map_out)){
+                    ret = map_out;
+                }
+            }
+        }
+    } else if (si->obj_field != "complex") { // map of scalars
         for (;;) {
             int64_t mapLen = decode_block_count(it);
             if (mapLen == 0) break;

@@ -24,6 +24,18 @@ struct SchemaItem {
     // so decode/encode must read/write exactly this many bytes, taken
     // from the schema itself rather than the data (see #39).
     int fixed_size = 0;
+    // True for a map SchemaItem (obj_type == 4) whose Avro "values" was a
+    // union (JSON array), e.g. {"type": "map", "values": ["null",
+    // "string"]}. childItems.size() alone can't distinguish this from a
+    // plain "map of one complex type" ({"values": {"type": "record",
+    // ...}}) -- both populate childItems identically via
+    // read_internal_types -- so this flag is set explicitly at the one
+    // point (read_object_type's "map" branches) where the JSON shape of
+    // `values` is still known. encodemap/decode_map use it to detect that
+    // a per-value union type-index byte must be written/read, instead of
+    // taking the "map of plain scalar/complex type" fast path and
+    // silently reading/writing the wrong bytes (see #32).
+    bool values_are_union = false;
     std::string obj_name;
     std::vector<SchemaItem*> childItems;
     std::string obj_field = "complex";
@@ -144,6 +156,7 @@ struct SchemaItem {
             intsi = new SchemaItem("array", otype["items"], 2);
         } else if (otype["type"] == "map") {
             intsi = new SchemaItem("map", otype["values"], 4);
+            intsi->values_are_union = otype["values"].is_array();
         } else if (otype["type"] == "record") {
             intsi = new SchemaItem(otype["name"], otype["fields"], 3);
         } else if (otype["type"] == "enum") {
@@ -170,6 +183,7 @@ struct SchemaItem {
                        otype["type"]["type"] == "map") {
                 intsi =
                     new SchemaItem(otype["name"], otype["type"]["values"], 4);
+                intsi->values_are_union = otype["type"]["values"].is_array();
             } else if (otype["type"].is_object() &&
                        otype["type"].contains("type") &&
                        otype["type"]["type"] == "record") {
