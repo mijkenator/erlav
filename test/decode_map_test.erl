@@ -150,6 +150,61 @@ m7_test() ->
     ?assert(true == tst_utils:compare_maps(Term, Re1)),
     ok.
 
+% #32: m7_test above only ever self-round-trips through erlav's own
+% encoder (encode -> decode, both sides previously agreeing to skip the
+% per-value union type-index byte). Decoding spec-compliant bytes from
+% another Avro implementation that *does* write the discriminator byte
+% used to desync the cursor and crash the whole BEAM VM via a garbage
+% length handed to enif_make_new_binary. This decodes erlavro-encoded
+% bytes directly, closing that gap.
+m7_erlavro_interop_test() ->
+    SchemaId = erlav_nif:erlav_init(<<"test/map_union_scalar_values.avsc">>),
+    Term = #{<<"mapField">> => #{<<"k1">> => <<"hello">>}},
+
+    {ok, SchemaJSON} = file:read_file("test/map_union_scalar_values.avsc"),
+    Encoder = avro:make_simple_encoder(SchemaJSON, []),
+    ErlavroEncoded = iolist_to_binary(Encoder(Term)),
+    ?debugFmt("erlavro Encoded: ~p ~n", [ErlavroEncoded]),
+
+    Re1 = erlav_nif:erlav_decode_fast(SchemaId, ErlavroEncoded),
+    ?debugFmt("decode result: ~p ~n", [Re1]),
+    ?assertEqual(Term, Re1).
+
+% Same map-of-union shape, but the union's non-null member is itself
+% complex (a record) rather than a scalar -- exercises decode_union's
+% decodevalue() fallback (not just decode_scalar()) reached via
+% decode_map's values_are_union branch.
+m8_map_union_record_values_test() ->
+    SchemaId = erlav_nif:erlav_init(<<"test/map_union_record_values.avsc">>),
+    Term = #{<<"mapField">> => #{<<"k1">> => #{<<"label">> => <<"foo">>}}},
+    Encoded = erlav_nif:erlav_encode(SchemaId, Term),
+    ?debugFmt("Encoded: ~p ~n", [Encoded]),
+    Re1 = erlav_nif:erlav_decode_fast(SchemaId, Encoded),
+    ?debugFmt("decode result: ~p ~n", [Re1]),
+    ?assertEqual(Term, Re1).
+
+m8_erlavro_interop_test() ->
+    SchemaId = erlav_nif:erlav_init(<<"test/map_union_record_values.avsc">>),
+    {ok, SchemaJSON} = file:read_file("test/map_union_record_values.avsc"),
+    Encoder = avro:make_simple_encoder(SchemaJSON, []),
+    TermList = [{<<"mapField">>, [{<<"k1">>, [{<<"label">>, <<"foo">>}]}]}],
+    ErlavroEncoded = iolist_to_binary(Encoder(TermList)),
+    ?debugFmt("erlavro Encoded: ~p ~n", [ErlavroEncoded]),
+    Re1 = erlav_nif:erlav_decode_fast(SchemaId, ErlavroEncoded),
+    ?assertEqual(#{<<"mapField">> => #{<<"k1">> => #{<<"label">> => <<"foo">>}}}, Re1).
+
+% Map values are a non-nullable multi-branch union (["string", "long"]) --
+% exercises encodeunion/decode_union's non-nullable branch-search path
+% (as opposed to m7/m8's nullable-union path) via decode_map.
+m9_map_union_multi_scalar_values_test() ->
+    SchemaId = erlav_nif:erlav_init(<<"test/map_union_multi_scalar_values.avsc">>),
+    Term = #{<<"mapField">> => #{<<"k1">> => <<"hello">>, <<"k2">> => 42}},
+    Encoded = erlav_nif:erlav_encode(SchemaId, Term),
+    ?debugFmt("Encoded: ~p ~n", [Encoded]),
+    Re1 = erlav_nif:erlav_decode_fast(SchemaId, Encoded),
+    ?debugFmt("decode result: ~p ~n", [Re1]),
+    ?assertEqual(Term, Re1).
+
 to_map([{_,_}|_] = L) ->
     maps:from_list([{K, to_map(V)} || {K, V} <- L]);
 to_map(V) -> V.

@@ -203,7 +203,31 @@ encodemap(SchemaItem* si,
         encode_long_fast(env, static_cast<int64_t>(map_size), ret);
     }
 
-    if (si->obj_field != "complex") { // map of scalar types
+    if (si->values_are_union) {
+        // Map values are a union (e.g. {"values": ["null", "string"]}) --
+        // every value needs the per-entry union type-index byte that
+        // encodeunion already knows how to write (it reads si->is_nullable/
+        // si->childItems directly, which read_internal_types populated on
+        // this very SchemaItem the same way it would for a nullable/union
+        // record field). Checked before obj_field, since values_are_union
+        // can be true alongside either obj_field == "complex" (a non-null
+        // complex union member) or a scalar obj_field (the union's
+        // non-null scalar member) -- neither of the two branches below
+        // knows to write the discriminator byte. See #32.
+        do {
+            if (!enif_map_iterator_get_pair(env, &iter, &key, &val)) {
+                continue;
+            }
+            if (!enif_inspect_binary(env, key, &sbin)) {
+                continue;
+            }
+            encode_long_fast(env, static_cast<int64_t>(sbin.size), target);
+            target->insert(target->end(), sbin.data, sbin.data + sbin.size);
+            if (encodeunion(si, env, &val, target) != 0) {
+                return 8;
+            }
+        } while (enif_map_iterator_next(env, &iter));
+    } else if (si->obj_field != "complex") { // map of scalar types
         // scalar_type is precomputed at schema-parse time and kept in
         // lockstep with obj_field (see schema_item.hh) -- read it directly
         // instead of re-scanning the scalars table on every map encode.
