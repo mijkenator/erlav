@@ -1,0 +1,18 @@
+{
+ "type": "record",
+ "name": "RobustLegacyDesync",
+ "namespace": "erlav.test",
+ "fields": [
+  {
+   "name": "n",
+   "type": [
+    "null",
+    "long"
+   ]
+  },
+  {
+   "name": "l",
+   "type": "long"
+  }
+ ]
+}

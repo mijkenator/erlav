@@ -1,0 +1,11 @@
+{
+ "type": "record",
+ "name": "RobustBytes",
+ "namespace": "erlav.test",
+ "fields": [
+  {
+   "name": "v",
+   "type": "bytes"
+  }
+ ]
+}
