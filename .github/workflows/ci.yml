@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test (${{ matrix.os }}, ${{ matrix.cxx_std }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Auto-detected standard: GCC 11 / GCC 13 / Apple clang+libc++.
+          - { os: ubuntu-22.04, cxx_std: auto }
+          - { os: ubuntu-24.04, cxx_std: auto }
+          - { os: macos-latest, cxx_std: auto }
+          # Forces the C++17 fallback (allocating field lookup, see #25).
+          - { os: ubuntu-24.04, cxx_std: c++17 }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "26"
+          rebar3-version: "3.22"
+
+      - name: Cache rebar3 deps
+        uses: actions/cache@v4
+        with:
+          path: _build
+          key: rebar-${{ matrix.os }}-${{ hashFiles('rebar.lock') }}
+          restore-keys: rebar-${{ matrix.os }}-
+
+      - name: Compile
+        run: |
+          if [ "${{ matrix.cxx_std }}" != "auto" ]; then
+            export CXX_STD="${{ matrix.cxx_std }}"
+          fi
+          rebar3 compile
+
+      - name: EUnit
+        run: rebar3 eunit
+
+  perf:
+    name: perf (speedup vs erlavro)
+    runs-on: ubuntu-24.04
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "26"
+          rebar3-version: "3.22"
+
+      - name: Compile
+        run: rebar3 compile
+
+      # Each benchmark times erlav and erlavro in the same run, so the
+      # speedup ratio is far less sensitive to shared-runner speed than
+      # absolute microseconds. The job fails if any ratio drops below the
+      # floor or if erlav's output stops matching erlavro's.
+      - name: Perf check
+        run: ci/perf_check.sh 5000 1.5
+
+      - name: Publish summary
+        if: always()
+        run: |
+          if [ -f perf-summary.md ]; then
+            { echo "### Perf: erlav vs erlavro"; echo; cat perf-summary.md; } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: perf-results
+          path: |
+            perf.log
+            perf-summary.md
