@@ -3,6 +3,23 @@
 
 namespace mkh_avro2 {
 
+// Atom terms are immediates, valid in any env, so look each one up in the
+// VM's atom table once instead of on every decoded null/boolean (each
+// enif_make_atom takes the atom table's read lock and hashes the name).
+// Function-local statics are initialised thread-safely on first use.
+static inline ERL_NIF_TERM atom_undefined(ErlNifEnv* env) {
+    static const ERL_NIF_TERM a = enif_make_atom(env, "undefined");
+    return a;
+}
+static inline ERL_NIF_TERM atom_true(ErlNifEnv* env) {
+    static const ERL_NIF_TERM a = enif_make_atom(env, "true");
+    return a;
+}
+static inline ERL_NIF_TERM atom_false(ErlNifEnv* env) {
+    static const ERL_NIF_TERM a = enif_make_atom(env, "false");
+    return a;
+}
+
 
 
 ERL_NIF_TERM  decode(ErlNifEnv* env, SchemaItem* si, std::vector<uint8_t>::iterator& it) {
@@ -88,104 +105,44 @@ double decode_double(std::vector<uint8_t>::iterator& it){
 
 
 ERL_NIF_TERM  decode(ErlNifEnv* env, SchemaItem* si, uint8_t*& it) {
-    ERL_NIF_TERM ret = enif_make_new_map(env);
-    ERL_NIF_TERM map_out;
+    // Collect keys/values and build the map once with
+    // enif_make_map_from_arrays, instead of one enif_make_map_put per field
+    // (each put re-walks/copies the partial map and re-compares keys -- the
+    // dominant cost of decoding a wide record). Field names are unique
+    // (enforced at schema-init, see init_keys_with_env), so the
+    // duplicate-key failure mode of from_arrays cannot occur.
+    static constexpr size_t STACK_CAP = 64;
+    const size_t nchildren = si->childItems.size();
+    ERL_NIF_TERM stack_keys[STACK_CAP];
+    ERL_NIF_TERM stack_vals[STACK_CAP];
+    std::vector<ERL_NIF_TERM> heap_keys, heap_vals;
+    ERL_NIF_TERM* keys = stack_keys;
+    ERL_NIF_TERM* vals = stack_vals;
+    if (nchildren > STACK_CAP) {
+        heap_keys.resize(nchildren);
+        heap_vals.resize(nchildren);
+        keys = heap_keys.data();
+        vals = heap_vals.data();
+    }
+    size_t n = 0;
 
     for(SchemaItem* si_e : si->childItems){
-       //std::cout << "Field: " << si_e->obj_name << "  | type: " << si_e->obj_type << " | scalar_type: " << si_e->scalar_type  << "\r\n";
-        if(si_e->obj_type == 0 && si_e->scalar_type >= 0){ // decode simple scalar
-            ERL_NIF_TERM value;
-            ERL_NIF_TERM key;
-            unsigned char* key_data;
-            auto len = si_e->obj_name.length();
-            key_data = enif_make_new_binary(env, len, &key);
-            memcpy(key_data, si_e->obj_name.c_str(), len);
-            value = decode_scalar(env, si_e->scalar_type, it);
-            if(enif_make_map_put(env, ret, key, value, &map_out)){
-                ret = map_out;
-            }
-        }else if(si_e->obj_type == 1){
-            //std::cout << "UNION TYPE!!!" << "\r\n";
-            ERL_NIF_TERM value;
-            ERL_NIF_TERM key;
-            unsigned char* key_data;
-            auto len = si_e->obj_name.length();
-            key_data = enif_make_new_binary(env, len, &key);
-            memcpy(key_data, si_e->obj_name.c_str(), len);
-            if(si_e->childItems.size() == 1){
-                // just nullable scalar OR nullable array,record, map....
-                //std::cout << "CHILDITEMS111 size: " << si_e->childItems.size() << "\r\n"; 
-                //value = decode_nullable_scalar(env, si_e->childItems[0]->scalar_type, it);
-                value = decode_union(env, si_e, it);
-            }else{
-                // real union
-                //std::cout << "CHILDITEMS size: " << si_e->childItems.size() << "\r\n"; 
-                value = decode_union(env, si_e, it);
-            }
-            if(enif_make_map_put(env, ret, key, value, &map_out)){
-                ret = map_out;
-            }
-        } else if(si_e->obj_type == 2) {
-            //std::cout << "ARRAY TYPE!!!!" << "\r\n";
-            ERL_NIF_TERM value;
-            ERL_NIF_TERM key;
-            unsigned char* key_data;
-            auto len = si_e->obj_name.length();
-            key_data = enif_make_new_binary(env, len, &key);
-            memcpy(key_data, si_e->obj_name.c_str(), len);
-            value = decode_array(env, si_e, it);
-            if(enif_make_map_put(env, ret, key, value, &map_out)){
-                ret = map_out;
-            }
-        } else if(si_e->obj_type == 3) {
-            //std::cout << "RECORD TYPE!!!!" << "\r\n";
-            ERL_NIF_TERM value;
-            ERL_NIF_TERM key;
-            unsigned char* key_data;
-            auto len = si_e->obj_name.length();
-            key_data = enif_make_new_binary(env, len, &key);
-            memcpy(key_data, si_e->obj_name.c_str(), len);
-            value = decode_record(env, si_e, it);
-            if(enif_make_map_put(env, ret, key, value, &map_out)){
-                ret = map_out;
-            }
-        } else if(si_e->obj_type == 4) {
-            //std::cout << "MAP TYPE!!!!" << "\r\n";
-            ERL_NIF_TERM value;
-            ERL_NIF_TERM key;
-            unsigned char* key_data;
-            auto len = si_e->obj_name.length();
-            key_data = enif_make_new_binary(env, len, &key);
-            memcpy(key_data, si_e->obj_name.c_str(), len);
-            value = decode_map(env, si_e, it);
-            if(enif_make_map_put(env, ret, key, value, &map_out)){
-                ret = map_out;
-            }
-        } else if(si_e->obj_type == 5) {
-            ERL_NIF_TERM value;
-            ERL_NIF_TERM key;
-            unsigned char* key_data;
-            auto len = si_e->obj_name.length();
-            key_data = enif_make_new_binary(env, len, &key);
-            memcpy(key_data, si_e->obj_name.c_str(), len);
-            value = decode_enum(env, si_e, it);
-            if(enif_make_map_put(env, ret, key, value, &map_out)){
-                ret = map_out;
-            }
-        } else if(si_e->obj_type == 6) {
-            ERL_NIF_TERM value;
-            ERL_NIF_TERM key;
-            unsigned char* key_data;
-            auto len = si_e->obj_name.length();
-            key_data = enif_make_new_binary(env, len, &key);
-            memcpy(key_data, si_e->obj_name.c_str(), len);
-            value = decode_fixed(env, si_e, it);
-            if(enif_make_map_put(env, ret, key, value, &map_out)){
-                ret = map_out;
-            }
-        }
+        // A scalar-typed field with no resolvable scalar type, or an
+        // unknown obj_type, has always been skipped (no key emitted).
+        if (si_e->obj_type == 0 && si_e->scalar_type < 0) continue;
+        if (si_e->obj_type < 0 || si_e->obj_type > 6) continue;
+
+        auto len = si_e->obj_name.length();
+        unsigned char* key_data = enif_make_new_binary(env, len, &keys[n]);
+        memcpy(key_data, si_e->obj_name.data(), len);
+        vals[n] = decodevalue(env, si_e, it);
+        n++;
     }
 
+    ERL_NIF_TERM ret;
+    if (!enif_make_map_from_arrays(env, keys, vals, n, &ret)) {
+        throw mkh_avro::AvroException("Record decode: duplicate field name", 12);
+    }
     return ret;
 }
 
@@ -219,12 +176,13 @@ ERL_NIF_TERM decode_record(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
 ERL_NIF_TERM decode_enum(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
     ERL_NIF_TERM str_ret;
     uint32_t valueNumber = decodeInt32(it);
-    auto val = si->array_multi_type_reverse.at(valueNumber);
+    // const& -- this used to copy the symbol's std::string on every decode.
+    const auto& val = si->array_multi_type_reverse.at(valueNumber);
 
     auto len = val.length();
     unsigned char* str_data;
     str_data = enif_make_new_binary(env, len, &str_ret);
-    memcpy(str_data, val.c_str(), len);
+    memcpy(str_data, val.data(), len);
 
     return str_ret;
 }
@@ -241,9 +199,42 @@ ERL_NIF_TERM decode_fixed(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
     return bin_ret;
 }
 
+// Key/value gather buffer for decode_map: the first STACK_CAP entries live
+// on the stack (a std::vector would heap-allocate twice per call, which made
+// 3-entry maps ~55% slower than the old put loop); larger maps spill to the
+// heap.
+struct MapEntries {
+    static constexpr size_t STACK_CAP = 16;
+    ERL_NIF_TERM skeys[STACK_CAP];
+    ERL_NIF_TERM svals[STACK_CAP];
+    std::vector<ERL_NIF_TERM> hkeys, hvals;
+    size_t n = 0;
+    void add(ERL_NIF_TERM k, ERL_NIF_TERM v) {
+        if (n < STACK_CAP) {
+            skeys[n] = k;
+            svals[n] = v;
+        } else {
+            if (n == STACK_CAP) {
+                hkeys.assign(skeys, skeys + STACK_CAP);
+                hvals.assign(svals, svals + STACK_CAP);
+            }
+            hkeys.push_back(k);
+            hvals.push_back(v);
+        }
+        n++;
+    }
+    ERL_NIF_TERM* keys() { return n <= STACK_CAP ? skeys : hkeys.data(); }
+    ERL_NIF_TERM* vals() { return n <= STACK_CAP ? svals : hvals.data(); }
+};
+
 ERL_NIF_TERM decode_map(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
-    ERL_NIF_TERM ret = enif_make_new_map(env);
-    ERL_NIF_TERM map_out;
+    // Entries are gathered, then the map is built once for larger maps (see
+    // decode() for why enif_make_map_put per entry is slow). Unlike record
+    // field names, map keys on the wire are not guaranteed unique;
+    // enif_make_map_from_arrays fails on a duplicate, so fall back to the
+    // sequential put loop (last occurrence wins) in that case to keep
+    // behaviour identical.
+    MapEntries entries;
     // Loop over blocks instead of a single upfront count: a block header's
     // count may be negative (erlavro's usual form -- see #15), in which
     // case decode_block_count also consumes the following block-byte-length
@@ -268,11 +259,8 @@ ERL_NIF_TERM decode_map(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
             int64_t mapLen = decode_block_count(it);
             if (mapLen == 0) break;
             for (int64_t i = 0; i < mapLen; i++) {
-                ERL_NIF_TERM map_key = decode_scalar(env, 5, it); // map keys always strings, (scalar_type = 6)
-                ERL_NIF_TERM value = decode_union(env, si, it);
-                if(enif_make_map_put(env, ret, map_key, value, &map_out)){
-                    ret = map_out;
-                }
+                ERL_NIF_TERM k = decode_scalar(env, 5, it); // map keys always strings
+                entries.add(k, decode_union(env, si, it));
             }
         }
     } else if (si->obj_field != "complex") { // map of scalars
@@ -280,27 +268,43 @@ ERL_NIF_TERM decode_map(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
             int64_t mapLen = decode_block_count(it);
             if (mapLen == 0) break;
             for (int64_t i = 0; i < mapLen; i++) {
-                ERL_NIF_TERM map_key = decode_scalar(env, 5, it); // map keys always strings, (scalar_type = 6)
-                ERL_NIF_TERM value = decode_scalar(env, si->scalar_type, it);
-                if(enif_make_map_put(env, ret, map_key, value, &map_out)){
-                    ret = map_out;
-                }
+                ERL_NIF_TERM k = decode_scalar(env, 5, it); // map keys always strings
+                entries.add(k, decode_scalar(env, si->scalar_type, it));
             }
         }
-    }else{
+    } else {
         for (;;) {
             int64_t mapLen = decode_block_count(it);
             if (mapLen == 0) break;
             for (int64_t i = 0; i < mapLen; i++) {
-                ERL_NIF_TERM map_key = decode_scalar(env, 5, it); // map keys always strings, (scalar_type = 6)
-                ERL_NIF_TERM value = decodevalue(env, si->childItems[0], it);
-                if(enif_make_map_put(env, ret, map_key, value, &map_out)){
-                    ret = map_out;
-                }
+                ERL_NIF_TERM k = decode_scalar(env, 5, it); // map keys always strings
+                entries.add(k, decodevalue(env, si->childItems[0], it));
             }
         }
     }
 
+    // Tiny maps are faster through the put loop: from_arrays has a fixed
+    // setup cost (key sort + dedup) that only pays off once the put loop's
+    // per-put copy/compare work grows. Using from_arrays for *every* map
+    // made the OpenRTB fixture (whose maps are almost all 1-2 entries)
+    // ~25% slower than the put loop; 4+ entries were consistently faster
+    // (4: ~35%, 128: ~3x). 3 entries was not cleanly separated by the
+    // measurements, so the threshold of 4 is a conservative pick, not a
+    // measured optimum -- see docs/decode-map-build-perf.md.
+    static constexpr size_t FROM_ARRAYS_MIN_ENTRIES = 4;
+    ERL_NIF_TERM ret;
+    if (entries.n >= FROM_ARRAYS_MIN_ENTRIES &&
+        enif_make_map_from_arrays(
+            env, entries.keys(), entries.vals(), entries.n, &ret)) {
+        return ret;
+    }
+    ret = enif_make_new_map(env);
+    ERL_NIF_TERM map_out;
+    for (size_t i = 0; i < entries.n; i++) {
+        if (enif_make_map_put(env, ret, entries.keys()[i], entries.vals()[i], &map_out)) {
+            ret = map_out;
+        }
+    }
     return ret;
 }
 
@@ -347,7 +351,7 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
                 if((eletype == "string")||(eletype == "long")||(eletype == "double")){
                     decoded_list.push_back(decode_scalar(env, get_scalar_type(eletype), it));
                 }else if(eletype == "null"){
-                    decoded_list.push_back(enif_make_atom(env, "undefined"));
+                    decoded_list.push_back(atom_undefined(env));
                 }else if(eletype == "array"){
                     int child_idx = si->array_multi_type_child_index.at("array");
                     decoded_list.push_back(decode_array(env, si->childItems[child_idx], it));
@@ -427,7 +431,7 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
         }
     }
 
-    return enif_make_atom(env, "undefined");
+    return atom_undefined(env);
 }
 
 ERL_NIF_TERM decode_union(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
@@ -435,7 +439,7 @@ ERL_NIF_TERM decode_union(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
     if(si->is_nullable == 1){
         //std::cout << "Nullable Child number: " << childNumber << "\r\n";
         if(childNumber == 0){
-            return enif_make_atom(env, "undefined"); 
+            return atom_undefined(env); 
         }else{
             auto sctype = si->childItems[childNumber - 1]->scalar_type;
             //std::cout << "SCTYPE: " << sctype << "\r\n";
@@ -463,14 +467,14 @@ ERL_NIF_TERM decode_union(ErlNifEnv* env, SchemaItem * si, uint8_t*& it) {
             return decodevalue(env, si->childItems[childNumber], it);
         }
     }
-    return enif_make_atom(env, "undefined"); 
+    return atom_undefined(env); 
 }
 
 ERL_NIF_TERM decode_nullable_scalar(ErlNifEnv* env, int sctype, uint8_t*& it) {
     auto union_byte = *it;
     it++;
     if(union_byte == 0){
-        return enif_make_atom(env, "undefined"); 
+        return atom_undefined(env); 
     } else {
         return decode_scalar(env, sctype, it);
     }
@@ -499,16 +503,9 @@ ERL_NIF_TERM decode_scalar(ErlNifEnv* env, int sctype, uint8_t*& it) {
 }
 
 ERL_NIF_TERM decode_boolean(ErlNifEnv* env, uint8_t*& it) {
-    std::string atom;
     uint8_t bool_val = *it;
     it++;
-    if(bool_val == 1){ //true
-        atom = "true";
-        return enif_make_atom_len(env, atom.c_str(), 4);
-    } else { //false
-        atom = "false";
-        return enif_make_atom_len(env, atom.c_str(), 5);
-    }
+    return bool_val == 1 ? atom_true(env) : atom_false(env);
 }
 
 ERL_NIF_TERM decode_string(ErlNifEnv* env, uint8_t*& it) {
