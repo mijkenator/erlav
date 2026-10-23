@@ -1,0 +1,14 @@
+{
+ "type": "record",
+ "name": "RobustMap",
+ "namespace": "erlav.test",
+ "fields": [
+  {
+   "name": "m",
+   "type": {
+    "type": "map",
+    "values": "long"
+   }
+  }
+ ]
+}

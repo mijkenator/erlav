@@ -1,0 +1,15 @@
+{
+ "type": "record",
+ "name": "RobustUnion",
+ "namespace": "erlav.test",
+ "fields": [
+  {
+   "name": "u",
+   "type": [
+    "null",
+    "long",
+    "string"
+   ]
+  }
+ ]
+}

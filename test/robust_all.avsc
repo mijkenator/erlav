@@ -1,0 +1,100 @@
+{
+ "type": "record",
+ "name": "RobustAll",
+ "namespace": "erlav.test",
+ "fields": [
+  {
+   "name": "l",
+   "type": "long"
+  },
+  {
+   "name": "i",
+   "type": "int"
+  },
+  {
+   "name": "s",
+   "type": "string"
+  },
+  {
+   "name": "b",
+   "type": "bytes"
+  },
+  {
+   "name": "d",
+   "type": "double"
+  },
+  {
+   "name": "f",
+   "type": "float"
+  },
+  {
+   "name": "t",
+   "type": "boolean"
+  },
+  {
+   "name": "n",
+   "type": [
+    "null",
+    "long"
+   ]
+  },
+  {
+   "name": "al",
+   "type": {
+    "type": "array",
+    "items": "long"
+   }
+  },
+  {
+   "name": "as",
+   "type": {
+    "type": "array",
+    "items": "string"
+   }
+  },
+  {
+   "name": "m",
+   "type": {
+    "type": "map",
+    "values": "long"
+   }
+  },
+  {
+   "name": "r",
+   "type": {
+    "type": "record",
+    "name": "Inner",
+    "fields": [
+     {
+      "name": "x",
+      "type": "long"
+     },
+     {
+      "name": "y",
+      "type": "string"
+     }
+    ]
+   }
+  },
+  {
+   "name": "e",
+   "type": {
+    "type": "enum",
+    "name": "Kind",
+    "symbols": [
+     "ONE",
+     "TWO",
+     "THREE"
+    ]
+   }
+  },
+  {
+   "name": "u",
+   "type": [
+    "null",
+    "long",
+    "string"
+   ]
+  }
+ ]
+}

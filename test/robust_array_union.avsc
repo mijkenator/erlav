@@ -1,0 +1,17 @@
+{
+ "type": "record",
+ "name": "RobustAUnion",
+ "namespace": "erlav.test",
+ "fields": [
+  {
+   "name": "a",
+   "type": {
+    "type": "array",
+    "items": [
+     "null",
+     "string"
+    ]
+   }
+  }
+ ]
+}

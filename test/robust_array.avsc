@@ -1,0 +1,14 @@
+{
+ "type": "record",
+ "name": "RobustArray",
+ "namespace": "erlav.test",
+ "fields": [
+  {
+   "name": "a",
+   "type": {
+    "type": "array",
+    "items": "long"
+   }
+  }
+ ]
+}
