@@ -447,11 +447,11 @@ encoderecord(SchemaItem* si,
             if (!enif_inspect_binary(env, key, &key_bin)) {
                 continue;
             }
-            auto name_it = si->field_index_by_name.find(std::string(
-                reinterpret_cast<const char*>(key_bin.data), key_bin.size));
-            if (name_it != si->field_index_by_name.end()) {
-                found[name_it->second] = val;
-                present[name_it->second] = 1;
+            size_t idx = si->find_field_index(
+                reinterpret_cast<const char*>(key_bin.data), key_bin.size);
+            if (idx != SIZE_MAX) {
+                found[idx] = val;
+                present[idx] = 1;
             }
         } while (enif_map_iterator_next(env, &iter));
         enif_map_iterator_destroy(env, &iter);
