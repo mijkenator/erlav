@@ -2,6 +2,10 @@
 #include <vector>
 #include <map>
 #include <unordered_map>
+#include <string>
+#include <string_view>
+#include <cstdint>
+#include <functional>
 #include <iostream>
 #include <erl_nif.h>
 #include "include/json.hpp"
@@ -9,6 +13,29 @@
 using json = nlohmann::json;
 
 namespace mkh_avro2 {
+
+// std::unordered_map::find(const K&) heterogeneous lookup is C++20
+// (P0919/P2077), advertised by __cpp_lib_generic_unordered_lookup. With it,
+// encoderecord can probe field_index_by_name straight from the input map's
+// key bytes via a std::string_view; without it, every probe has to build a
+// temporary std::string, which heap-allocates for names past the SSO
+// cutoff (22 bytes on libc++; see #25). c_src/Makefile compiles with
+// -std=c++20 only when the toolchain passes a probe for this feature, so
+// older compilers keep building (as C++17) with the allocating fallback.
+#if defined(__cpp_lib_generic_unordered_lookup) && \
+    __cpp_lib_generic_unordered_lookup >= 201811L
+#define ERLAV_HETEROGENEOUS_LOOKUP 1
+struct StringViewHash {
+    using is_transparent = void;
+    size_t operator()(std::string_view sv) const noexcept {
+        return std::hash<std::string_view>{}(sv);
+    }
+};
+using FieldIndexMap =
+    std::unordered_map<std::string, size_t, StringViewHash, std::equal_to<>>;
+#else
+using FieldIndexMap = std::unordered_map<std::string, size_t>;
+#endif
 
 bool is_scalar(std::string);
 int get_scalar_type(std::string);
@@ -53,7 +80,19 @@ struct SchemaItem {
     // turn -- lets a single pass over the input map's entries replace the
     // previous nfields separate enif_get_map_value scans (each an
     // independent O(map_size) walk of Erlang's flatmap representation).
-    std::unordered_map<std::string, size_t> field_index_by_name;
+    FieldIndexMap field_index_by_name;
+
+    // Returns the index of the field named by the `len` bytes at `name`, or
+    // SIZE_MAX if there is no such field. Allocation-free when
+    // ERLAV_HETEROGENEOUS_LOOKUP is set.
+    size_t find_field_index(const char* name, size_t len) const {
+#ifdef ERLAV_HETEROGENEOUS_LOOKUP
+        auto it = field_index_by_name.find(std::string_view(name, len));
+#else
+        auto it = field_index_by_name.find(std::string(name, len));
+#endif
+        return it == field_index_by_name.end() ? SIZE_MAX : it->second;
+    }
 
     // When true, encodearray/encodemap (mkh_avro2.hh) write the Avro
     // "negative block count" form -- a negative item count followed by the
