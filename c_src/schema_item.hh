@@ -14,6 +14,15 @@ using json = nlohmann::json;
 
 namespace mkh_avro2 {
 
+// Every "name -> position" lookup on a SchemaItem uses NameIndexMap (#27):
+// union member type name -> union tag (array_multi_type), non-scalar union
+// member name -> childItems position (array_multi_type_child_index), enum
+// symbol -> ordinal (also array_multi_type), and record field name ->
+// childItems position (field_index_by_name). One container (hashed, O(1))
+// and one value type (size_t) instead of a std::map<string,int> here and an
+// unordered_map<string,size_t> there; a new name-indexed lookup should reuse
+// this rather than add another ad-hoc structure.
+//
 // std::unordered_map::find(const K&) heterogeneous lookup is C++20
 // (P0919/P2077), advertised by __cpp_lib_generic_unordered_lookup. With it,
 // encoderecord can probe field_index_by_name straight from the input map's
@@ -31,10 +40,10 @@ struct StringViewHash {
         return std::hash<std::string_view>{}(sv);
     }
 };
-using FieldIndexMap =
+using NameIndexMap =
     std::unordered_map<std::string, size_t, StringViewHash, std::equal_to<>>;
 #else
-using FieldIndexMap = std::unordered_map<std::string, size_t>;
+using NameIndexMap = std::unordered_map<std::string, size_t>;
 #endif
 
 bool is_scalar(std::string);
@@ -66,11 +75,11 @@ struct SchemaItem {
     std::string obj_name;
     std::vector<SchemaItem*> childItems;
     std::string obj_field = "complex";
-    std::map<std::string, int> array_multi_type;
+    NameIndexMap array_multi_type;
     std::map<int, std::string> array_multi_type_reverse;
     // For non-scalar union members (array/map/record/enum), maps the
     // member's type name to its position in childItems.
-    std::map<std::string, int> array_multi_type_child_index;
+    NameIndexMap array_multi_type_child_index;
     ErlNifEnv* key_env = nullptr; // Only set on root object for cleanup
     std::vector<ERL_NIF_TERM> cached_keys;
     // Maps a record field's name to its position in childItems/cached_keys.
@@ -80,7 +89,7 @@ struct SchemaItem {
     // turn -- lets a single pass over the input map's entries replace the
     // previous nfields separate enif_get_map_value scans (each an
     // independent O(map_size) walk of Erlang's flatmap representation).
-    FieldIndexMap field_index_by_name;
+    NameIndexMap field_index_by_name;
 
     // Returns the index of the field named by the `len` bytes at `name`, or
     // SIZE_MAX if there is no such field. Allocation-free when
