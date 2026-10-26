@@ -1,0 +1,32 @@
+{
+ "type": "record",
+ "name": "RobustLegacyTail",
+ "namespace": "erlav.test",
+ "fields": [
+  {
+   "name": "l",
+   "type": "long"
+  },
+  {
+   "name": "n",
+   "type": [
+    "null",
+    "long"
+   ]
+  },
+  {
+   "name": "al",
+   "type": {
+    "type": "array",
+    "items": "long"
+   }
+  },
+  {
+   "name": "m",
+   "type": {
+    "type": "map",
+    "values": "long"
+   }
+  }
+ ]
+}

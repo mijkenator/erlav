@@ -1,0 +1,11 @@
+{
+ "type": "record",
+ "name": "RobustString",
+ "namespace": "erlav.test",
+ "fields": [
+  {
+   "name": "s",
+   "type": "string"
+  }
+ ]
+}
