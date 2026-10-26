@@ -77,9 +77,9 @@ the ranges do not overlap (e.g. 111.0–114.2 vs 43.3–44.3).
 
 ## Findings
 
-- **Decode got ~2.3–2.6x faster on both OpenRTB schemas**, consistent with the
-  ~3.1x measured in `docs/decode-map-build-perf.md` on a different machine and
-  with a more nested fixture. Against `erlavro`, decode went from ~1.5x to
+- **Decode got ~2.3–2.6x faster on both OpenRTB schemas**, in line with the
+  ~3.1x measured on `opnrtb_test1` in `docs/decode-map-build-perf.md` (same
+  900 B fixture; a different machine and a different timing loop). Against `erlavro`, decode went from ~1.5x to
   ~3.6–3.8x faster. That is the whole effect of #54: decode was dominated by
   `enif_make_map_put` re-copying the partial map per field, and building each
   record once removes most of that.
@@ -104,8 +104,8 @@ the ranges do not overlap (e.g. 111.0–114.2 vs 43.3–44.3).
   steady-state cost for that shape, not variation across inputs.
 - `erlav_decode/2` (the legacy iterator decoder) was not measured; #54 did not
   change it.
-- The 2-entry-map decode regression noted in #54 (~15% slower) is not visible
-  here; the OpenRTB fixtures' maps are dominated by the larger-record gains.
+- #54 documents a ~15% decode slowdown for 2-entry maps. This benchmark does not
+  isolate that case, so the figures here neither confirm nor rule it out.
 
 ## Bottom line
 
