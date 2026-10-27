@@ -8,6 +8,7 @@
 #include "avro_exceptions.hh"
 #include "include/json.hpp"
 #include "mkh_avro_decoder.hh"
+#include "stack_or_heap_buffer.hh"
 
 #ifndef SI_H
 #define SI_H
@@ -253,9 +254,7 @@ encodemap(SchemaItem* si,
             // Per-entry batching needs no extra pass: the key's size is
             // already known from the iterator, and only fixed-size
             // varints are being batched alongside it.
-            static constexpr size_t ENTRY_STACK_CAP = 256;
-            uint8_t stack_entry[ENTRY_STACK_CAP];
-            std::vector<uint8_t> heap_entry;
+            StackOrHeapBuffer<uint8_t, 256> entry_buf;
             const size_t max_val_bytes = (st == 1) ? 10 : 5;
             do {
                 if (!enif_map_iterator_get_pair(env, &iter, &key, &val)) {
@@ -278,13 +277,7 @@ encodemap(SchemaItem* si,
                 // Worst case: 10-byte key-length varint + key bytes +
                 // up to 10-byte value varint.
                 size_t needed = 10 + sbin.size + max_val_bytes;
-                uint8_t* entry;
-                if (needed <= ENTRY_STACK_CAP) {
-                    entry = stack_entry;
-                } else {
-                    heap_entry.resize(needed);
-                    entry = heap_entry.data();
-                }
+                uint8_t* entry = entry_buf.acquire(needed);
                 uint8_t* out = entry;
                 out += encodeInt64Raw(static_cast<int64_t>(sbin.size), out);
                 memcpy(out, sbin.data, sbin.size);
@@ -414,25 +407,13 @@ encoderecord(SchemaItem* si,
     // input key one of my fields" check per map entry, so the whole
     // function becomes one O(map_size) walk instead of
     // O(nfields * map_size).
-    static constexpr size_t STACK_CAP = 64;
-    ERL_NIF_TERM stack_found[STACK_CAP];
     // Plain uint8_t, not bool/std::vector<bool> -- avoids the latter's
     // bit-packed specialization (no contiguous pointer via .data()) while
     // still being usable directly as a boolean flag below.
-    uint8_t stack_present[STACK_CAP];
-    std::vector<ERL_NIF_TERM> heap_found;
-    std::vector<uint8_t> heap_present;
-    ERL_NIF_TERM* found;
-    uint8_t* present;
-    if (nfields <= STACK_CAP) {
-        found = stack_found;
-        present = stack_present;
-    } else {
-        heap_found.resize(nfields);
-        heap_present.resize(nfields);
-        found = heap_found.data();
-        present = heap_present.data();
-    }
+    StackOrHeapBuffer<ERL_NIF_TERM, 64> found_buf;
+    StackOrHeapBuffer<uint8_t, 64> present_buf;
+    ERL_NIF_TERM* found = found_buf.acquire(nfields);
+    uint8_t* present = present_buf.acquire(nfields);
     std::fill(present, present + nfields, 0);
 
     ErlNifMapIterator iter;
@@ -486,22 +467,12 @@ encodearray(SchemaItem* si,
         // arrays onto the heap fallback. 384 covers the observed p99/max
         // with headroom while staying a trivial stack cost (384 * 8 bytes =
         // 3KB per encodearray recursion level).
-        static constexpr size_t STACK_CAP = 384;
-        ERL_NIF_TERM stack_buf[STACK_CAP];
-        std::vector<ERL_NIF_TERM> heap_buf;
-        size_t len = 0;
+        StackOrHeapBuffer<ERL_NIF_TERM, 384> elem_buf;
         while (enif_get_list_cell(env, *val, &elem, val)) {
-            if (len < STACK_CAP) {
-                stack_buf[len] = elem;
-            } else {
-                if (len == STACK_CAP) {
-                    heap_buf.assign(stack_buf, stack_buf + STACK_CAP);
-                }
-                heap_buf.push_back(elem);
-            }
-            len++;
+            elem_buf.push_back(elem);
         }
-        ERL_NIF_TERM* elems = (len <= STACK_CAP) ? stack_buf : heap_buf.data();
+        const size_t len = elem_buf.size();
+        ERL_NIF_TERM* elems = elem_buf.data();
         // Negative block-count form (see #15/schema_item.hh) needs the
         // block's encoded byte length written *before* the block header, so
         // elements are encoded into a scratch buffer first and the real
@@ -534,16 +505,9 @@ encodearray(SchemaItem* si,
                 // in a single insert -- one capacity check, one potential
                 // reallocation/memmove for the entire array.
                 const size_t max_bytes = (st == 1) ? 10 : 5;
-                static constexpr size_t VARINT_STACK_CAP = 3840; // STACK_CAP * 10
-                uint8_t stack_scratch[VARINT_STACK_CAP];
-                std::vector<uint8_t> heap_scratch;
-                uint8_t* scratch;
-                if (len * max_bytes <= VARINT_STACK_CAP) {
-                    scratch = stack_scratch;
-                } else {
-                    heap_scratch.resize(len * max_bytes);
-                    scratch = heap_scratch.data();
-                }
+                // 3840 = 384 (element cap) * 10 (max varint bytes)
+                StackOrHeapBuffer<uint8_t, 3840> scratch_buf;
+                uint8_t* scratch = scratch_buf.acquire(len * max_bytes);
                 uint8_t* out = scratch;
                 if (st == 1) {
                     long i64;
