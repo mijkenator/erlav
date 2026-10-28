@@ -1,0 +1,18 @@
+{"type": "record", "name": "Colliding", "namespace": "test",
+  "fields": [
+      {"name": "prefix00_AAAAAAAA_suffix00", "type": "int"},
+      {"name": "prefix00_BBBBBBBB_suffix00", "type": "int"},
+      {"name": "prefix00_CCCCCCCC_suffix00", "type": "int"},
+      {"name": "prefix00_DDDDDDDD_suffix00", "type": "int"},
+      {"name": "prefix00_AAAAAAAAA_suffix00", "type": "int"},
+      {"name": "a", "type": "int"},
+      {"name": "ab", "type": "int"},
+      {"name": "abc", "type": "int"},
+      {"name": "abcdefg", "type": "int"},
+      {"name": "abcdefgh", "type": "int"},
+      {"name": "abcdefghi", "type": "int"},
+      {"name": "abcdefgXhi", "type": "int"},
+      {"name": "abcdefghijklmno", "type": "int"},
+      {"name": "abcdefgXijklmno", "type": "int"}
+  ]
+}
