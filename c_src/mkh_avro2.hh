@@ -921,6 +921,7 @@ read_schema(std::string schemaName, bool use_negative_block_count) {
     resolve_user_types(data);
     si = new SchemaItem(data["name"], data["fields"], 3);
     si->init_keys();
+    si->compute_wire_sizes();
     si->set_negative_block_count(use_negative_block_count);
     return si;
 }

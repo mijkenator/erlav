@@ -1,8 +1,8 @@
 %% Decoder robustness: malformed / truncated input, and erlav_decode/2
 %% (the legacy iterator-based decoder) behaviour.
 %%
-%% Malformed input can still crash the whole VM (block counts: #40; #30,
-%% truncated/overlong input, and #38, union branch index, are fixed), which
+%% Malformed input used to be able to crash the whole VM (#30 truncated /
+%% overlong input, #38 union branch index, #40 block counts; all fixed), which
 %% would take the eunit run down with it. So every
 %% malformed-input decode runs in a disposable `peer` node; the test sees one
 %% of:
@@ -432,6 +432,111 @@ enum_index_wider_than_32_bits_test_() ->
             decode_fast("enum.avsc", <<(idx((1 bsl 32) + 1))/binary, ?PAD/binary>>))
     end}.
 
+%% ------------------------ always-on: array / map block counts (#40)
+%%
+%% A block count read off the wire used to drive a loop with no bound at all:
+%% 2^62 elements meant an unbounded allocate-and-decode cycle (hang, OOM, or a
+%% VM abort). Now: a count whose items cannot fit in the remaining input is
+%% rejected up front; the negative form's byte length must fit in the input;
+%% and items that occupy no bytes at all (empty record, fixed(0)) -- the one
+%% case the input length cannot bound -- draw on a fixed budget per decode.
+
+block_count_cases() ->
+    %% zigzag(2^62) ~ 2^63: a count no real payload could satisfy
+    [{"~2^62", <<254, 255, 255, 255, 255, 255, 255, 255, 255, 1>>},
+     %% INT64_MIN: negating it overflows
+     {"INT64_MIN", <<255, 255, 255, 255, 255, 255, 255, 255, 255, 1>>},
+     %% negative form: count -2^40, followed by a block byte length
+     {"-2^40 with byte length", <<255, 255, 255, 255, 255, 31, 2>>}].
+
+huge_block_count_test_() ->
+    [
+        {Kind ++ " block count " ++ Name,
+         {timeout, ?TEST_TIMEOUT, fun() ->
+              ?assertRejected(decode_fast(File, <<Count/binary, ?PAD/binary>>))
+          end}}
+     || {Kind, File} <- [{"array", "robust_array.avsc"}, {"map", "robust_map.avsc"}],
+        {Name, Count} <- block_count_cases()
+    ].
+
+%% Exactly as many items as the remaining input holds is fine; one more is not.
+%% array<double>: each item is 8 bytes. Terminator byte included in the input.
+block_count_exactly_fits_test_() ->
+    {timeout, ?TEST_TIMEOUT, fun() ->
+        Items = binary:copy(<<0:64>>, 3),
+        %% 3 items + terminator
+        ?assertEqual({ok, #{<<"a">> => [0.0, 0.0, 0.0]}},
+                     decode_fast("robust_double_array.avsc",
+                                 <<(idx(3))/binary, Items/binary, 0>>)),
+        %% claims 4 items but only 3 (24 bytes) + a 1-byte terminator are there
+        ?assertRejected(decode_fast("robust_double_array.avsc",
+                                    <<(idx(4))/binary, Items/binary, 0>>))
+    end}.
+
+%% The negative form carries the block's byte length; it must fit the input.
+negative_block_byte_length_must_fit_test_() ->
+    {timeout, ?TEST_TIMEOUT, fun() ->
+        Items = binary:copy(<<0:64>>, 2),
+        %% count -2, byte length 16 (correct), 2 doubles, terminator
+        ?assertEqual({ok, #{<<"a">> => [0.0, 0.0]}},
+                     decode_fast("robust_double_array.avsc",
+                                 <<(idx(-2))/binary, (idx(16))/binary, Items/binary, 0>>)),
+        %% byte length claims far more than the input holds
+        ?assertRejected(decode_fast("robust_double_array.avsc",
+                                    <<(idx(-2))/binary, (idx(1000000))/binary, Items/binary, 0>>)),
+        %% a negative byte length is meaningless
+        ?assertRejected(decode_fast("robust_double_array.avsc",
+                                    <<(idx(-2))/binary, (idx(-5))/binary, Items/binary, 0>>))
+    end}.
+
+%% Zero-width items are not bounded by the input, so a fixed budget applies.
+%% Below it: decodes. Above it: rejected, in a few ms, with no big allocation.
+zero_width_items_within_budget_test_() ->
+    {timeout, ?TEST_TIMEOUT, fun() ->
+        N = 1000,
+        {ok, #{<<"a">> := L}} = decode_fast("robust_zero_width_array.avsc",
+                                            <<(idx(N))/binary, 0>>),
+        ?assertEqual(N, length(L)),
+        {ok, #{<<"m">> := M}} = decode_fast("robust_zero_width_map.avsc",
+                                            <<(idx(1))/binary, (idx(1))/binary, "k", 0>>),
+        ?assertEqual(#{<<"k">> => #{}}, M)
+    end}.
+
+zero_width_items_over_budget_test_() ->
+    [
+        {File ++ " " ++ integer_to_list(Count),
+         {timeout, ?TEST_TIMEOUT, fun() ->
+              T0 = erlang:monotonic_time(millisecond),
+              ?assertRejected(decode_fast(File, <<(idx(Count))/binary, 0>>)),
+              %% rejected up front, not after building the list
+              ?assert(erlang:monotonic_time(millisecond) - T0 < ?CALL_TIMEOUT)
+          end}}
+     || {File, Count} <- [{"robust_zero_width_array.avsc", 20000000},
+                          {"robust_zero_width_array.avsc", 1 bsl 40},
+                          {"robust_zero_width_array.avsc", (1 bsl 20) + 1}]
+    ].
+
+%% The budget is per decode call, not per array: several arrays that each fit
+%% must not add up past it (nested arrays would otherwise multiply).
+zero_width_budget_is_shared_across_arrays_test_() ->
+    {timeout, ?TEST_TIMEOUT, fun() ->
+        %% 2000 inner arrays of 1000 empty records = 2,000,000 items > 2^20,
+        %% with every individual block small.
+        Inner = <<(idx(1000))/binary, 0>>,
+        Outer = iolist_to_binary([idx(2000), binary:copy(Inner, 2000), 0]),
+        ?assertRejected(decode_fast("robust_zero_width_nested.avsc", Outer))
+    end}.
+
+%% A previous over-budget decode must not poison the next one (the budget is
+%% reset per call).
+zero_width_budget_resets_between_decodes_test() ->
+    Id = erlav_nif:erlav_init(path("robust_zero_width_array.avsc")),
+    Big = <<(idx(1000000))/binary, 0>>,
+    lists:foreach(
+      fun(_) ->
+              ?assertMatch(#{<<"a">> := _}, erlav_nif:erlav_decode_fast(Id, Big))
+      end, lists:seq(1, 5)).
+
 %% ------------------------------------- erlav_decode/2 (legacy, iterator based)
 %%
 %% Characterisation tests: they pin down what erlav_decode/2 does *today*.
@@ -526,7 +631,7 @@ legacy_varint_overflow_returns_error_tuple_test_() ->
         ?assertRejected(decode(erlav_decode, "robust_scalars.avsc", Bin))
     end}.
 
-%% ---------------------------- opt-in: open bugs (#40), see header
+%% ---------------------------- opt-in: open bugs (none at present), see header
 
 known_bug_test_() ->
     case os:getenv("ERLAV_KNOWN_BUGS") of
@@ -539,7 +644,7 @@ known_bug_test_() ->
             io:format(
                 user,
                 "~n[decode_robustness_test] ~p known-bug tests skipped "
-                "(#40); set ERLAV_KNOWN_BUGS=1 to run them~n",
+                "(none open); set ERLAV_KNOWN_BUGS=1 to run them~n",
                 [length(known_bug_cases())]
             ),
             [{"cleanup", fun stop_peer/0}]
@@ -547,25 +652,9 @@ known_bug_test_() ->
 
 known_bug_cases() ->
     %% Each case asserts the *desired* behaviour: {error, _, _}, no crash.
-    [
-            {"#40 " ++ Kind ++ " block count " ++ Name, fun() ->
-                ?assertRejected(
-                    decode_fast(File, <<Count/binary, ?PAD/binary>>)
-                )
-            end}
-         || {Kind, File} <- [
-                {"array", "robust_array.avsc"},
-                {"map", "robust_map.avsc"}
-            ],
-            {Name, Count} <- [
-                %% zigzag(2^62) ~ 2^63: a count no real payload could satisfy
-                {"~2^62", <<254, 255, 255, 255, 255, 255, 255, 255, 255, 1>>},
-                %% INT64_MIN: negating it overflows
-                {"INT64_MIN", <<255, 255, 255, 255, 255, 255, 255, 255, 255, 1>>},
-                %% negative form: count -2^40, followed by a block byte length
-                {"-2^40 with byte length", <<255, 255, 255, 255, 255, 31, 2>>}
-            ]
-        ].
+    %% Empty since #30, #38 and #40 are fixed; add a case here for any new
+    %% known-open bug, and delete this gate once none remain.
+    [].
 
 %% Every proper prefix of a valid encoding is truncated input and must be
 %% rejected (erlavro_rejects_every_proper_prefix_test_ confirms that is a
