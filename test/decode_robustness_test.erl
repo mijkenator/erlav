@@ -1,9 +1,9 @@
 %% Decoder robustness: malformed / truncated input, and erlav_decode/2
 %% (the legacy iterator-based decoder) behaviour.
 %%
-%% Malformed input can still crash the whole VM (union branch index: #38;
-%% block counts: #40; #30, truncated/overlong input, is fixed), which would
-%% take the eunit run down with it. So every
+%% Malformed input can still crash the whole VM (block counts: #40; #30,
+%% truncated/overlong input, and #38, union branch index, are fixed), which
+%% would take the eunit run down with it. So every
 %% malformed-input decode runs in a disposable `peer` node; the test sees one
 %% of:
 %%
@@ -332,6 +332,106 @@ int_decode_truncated_varint_test() ->
     ?assertError(badarg, erlav_nif:int_decode(<<1, 172>>)),
     ?assertError(badarg, erlav_nif:int_decode(<<128>>)).
 
+%% --------------------- always-on: union branch index out of range (#38)
+%%
+%% A union branch index names a member of the union. It used to index the
+%% schema's member vector with no range check (over-read / VM death), and the
+%% array-of-union lookup inserted an empty entry into the shared, cached
+%% schema for every unknown index. Valid indexes: ["null","long","string"]
+%% -> 0..2; ["long","string"] -> 0..1; array<["null","string"]> -> 0..1.
+
+zz(N) when N >= 0 -> N bsl 1;
+zz(N) -> ((-N) bsl 1) - 1.
+
+varint(N) when N < 128 -> <<N>>;
+varint(N) -> <<1:1, (N band 127):7, (varint(N bsr 7))/binary>>.
+
+idx(N) -> varint(zz(N)).
+
+union_branch_index_out_of_range_test_() ->
+    [
+        {File ++ " index " ++ integer_to_list(N),
+         {timeout, ?TEST_TIMEOUT, fun() ->
+              ?assertRejected(
+                  decode_fast(File, <<(idx(N))/binary, ?PAD/binary>>))
+          end}}
+     || {File, Bad} <- [
+            {"robust_union.avsc", [3, 4, 100, -1, -2]},
+            {"robust_union_nonnull.avsc", [2, 3, 100, -1]}
+        ],
+        N <- Bad
+    ].
+
+%% Same indexes but valid, so the range check is not simply rejecting everything.
+union_branch_index_in_range_test() ->
+    Id = erlav_nif:erlav_init(path("robust_union.avsc")),
+    ?assertEqual(#{<<"u">> => undefined},
+                 erlav_nif:erlav_decode_fast(Id, <<(idx(0))/binary, ?PAD/binary>>)),
+    ?assertEqual(#{<<"u">> => 7},
+                 erlav_nif:erlav_decode_fast(Id, <<(idx(1))/binary, (enc_long(7))/binary>>)),
+    ?assertEqual(#{<<"u">> => <<"ab">>},
+                 erlav_nif:erlav_decode_fast(Id, <<(idx(2))/binary, (idx(2))/binary, "ab">>)),
+    Id2 = erlav_nif:erlav_init(path("robust_union_nonnull.avsc")),
+    ?assertEqual(#{<<"u">> => 7},
+                 erlav_nif:erlav_decode_fast(Id2, <<(idx(0))/binary, (enc_long(7))/binary>>)),
+    ?assertEqual(#{<<"u">> => <<"a">>},
+                 erlav_nif:erlav_decode_fast(Id2, <<(idx(1))/binary, (idx(1))/binary, "a">>)).
+
+enc_long(N) -> idx(N).
+
+%% The branch index is a 32-bit value on the wire. A varint wider than 32
+%% bits used to be truncated, so 2^32+1 aliased to branch 1 and decoded as a
+%% valid value (defeating any range check).
+union_branch_index_wider_than_32_bits_test_() ->
+    [
+        {"index " ++ integer_to_list(N),
+         {timeout, ?TEST_TIMEOUT, fun() ->
+              ?assertRejected(
+                  decode_fast("robust_union.avsc",
+                              <<(idx(N))/binary, (enc_long(7))/binary, ?PAD/binary>>))
+          end}}
+     || N <- [(1 bsl 32) + 1, (1 bsl 32) + 2, 1 bsl 31, (1 bsl 40) + 1]
+    ].
+
+%% Array of union: same, for the per-element branch index (a 64-bit long on the
+%% wire here, looked up in an int-keyed map).
+array_union_branch_index_out_of_range_sweep_test_() ->
+    [
+        {"index " ++ integer_to_list(N),
+         {timeout, ?TEST_TIMEOUT, fun() ->
+              %% block count 1, branch index N, then a string "x"
+              Bin = <<(idx(1))/binary, (idx(N))/binary, (idx(1))/binary, "x", 0, ?PAD/binary>>,
+              ?assertRejected(decode_fast("robust_array_union.avsc", Bin))
+          end}}
+     || N <- [2, 3, 99, -1, 1 bsl 31, (1 bsl 32) + 1, (1 bsl 33) + 1, 1 bsl 62]
+    ].
+
+%% A bad index followed by a good payload on the same cached schema id, several
+%% times over: the good payload must keep decoding. This is a smoke test only.
+%% The #38 side effect it is named after (operator[] inserting an empty entry
+%% into the shared schema's member map for every unknown index) is NOT
+%% observable from Erlang: an unfixed build passes this test too, because a
+%% repeated bad index fails the same way with or without the stray entry. The
+%% fix for that is a code-level change (find() instead of operator[]).
+bad_union_index_then_good_payload_on_same_schema_test() ->
+    Id = erlav_nif:erlav_init(path("robust_array_union.avsc")),
+    Good = erlav_nif:erlav_encode(Id, #{<<"a">> => [<<"a">>, undefined, <<"bcd">>]}),
+    Bad = fun(N) -> <<(idx(1))/binary, (idx(N))/binary, (idx(1))/binary, "x", 0>> end,
+    lists:foreach(
+      fun(N) ->
+              ?assertMatch({error, _, _}, erlav_nif:erlav_decode_fast(Id, Bad(N))),
+              ?assertEqual(#{<<"a">> => [<<"a">>, undefined, <<"bcd">>]},
+                           erlav_nif:erlav_decode_fast(Id, Good))
+      end, [2, 99, 1000, -1, 99, 99]).
+
+%% Enum indexes use the same 32-bit varint reader: same aliasing, same fix.
+enum_index_wider_than_32_bits_test_() ->
+    {timeout, ?TEST_TIMEOUT, fun() ->
+        %% enum.avsc has fewer than 100 symbols, so 2^32+1 -> 1 would be "valid"
+        ?assertRejected(
+            decode_fast("enum.avsc", <<(idx((1 bsl 32) + 1))/binary, ?PAD/binary>>))
+    end}.
+
 %% ------------------------------------- erlav_decode/2 (legacy, iterator based)
 %%
 %% Characterisation tests: they pin down what erlav_decode/2 does *today*.
@@ -426,7 +526,7 @@ legacy_varint_overflow_returns_error_tuple_test_() ->
         ?assertRejected(decode(erlav_decode, "robust_scalars.avsc", Bin))
     end}.
 
-%% ---------------------------- opt-in: open bugs (#38, #40), see header
+%% ---------------------------- opt-in: open bugs (#40), see header
 
 known_bug_test_() ->
     case os:getenv("ERLAV_KNOWN_BUGS") of
@@ -439,7 +539,7 @@ known_bug_test_() ->
             io:format(
                 user,
                 "~n[decode_robustness_test] ~p known-bug tests skipped "
-                "(#38 #40); set ERLAV_KNOWN_BUGS=1 to run them~n",
+                "(#40); set ERLAV_KNOWN_BUGS=1 to run them~n",
                 [length(known_bug_cases())]
             ),
             [{"cleanup", fun stop_peer/0}]
@@ -448,19 +548,6 @@ known_bug_test_() ->
 known_bug_cases() ->
     %% Each case asserts the *desired* behaviour: {error, _, _}, no crash.
     [
-            {"#38 union branch index " ++ Name, fun() ->
-                ?assertRejected(
-                    decode_fast("robust_union.avsc", <<Idx/binary, ?PAD/binary>>)
-                )
-            end}
-         || {Name, Idx} <- [
-                %% schema is ["null","long","string"]: valid indexes are 0..2
-                {"3 (one past the last member)", <<6>>},
-                {"100", <<200, 1>>},
-                {"-1 (becomes 4294967295 as uint32)", <<1>>}
-            ]
-        ] ++
-        [
             {"#40 " ++ Kind ++ " block count " ++ Name, fun() ->
                 ?assertRejected(
                     decode_fast(File, <<Count/binary, ?PAD/binary>>)

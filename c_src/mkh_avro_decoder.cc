@@ -1,5 +1,7 @@
 #include "mkh_avro_decoder.hh"
 
+#include <climits>
+
 
 namespace mkh_avro2 {
 
@@ -30,6 +32,17 @@ static constexpr const char* TRUNCATED_MSG = "Decode: unexpected end of input";
 static constexpr uint32_t TRUNCATED_CODE = 13;
 static constexpr const char* NEGATIVE_LENGTH_MSG = "Decode: invalid negative length or count";
 static constexpr uint32_t NEGATIVE_LENGTH_CODE = 14;
+// A union branch index read off the wire that names no member of the union
+// (#38). 15 follows the codes above.
+static constexpr uint32_t UNION_INDEX_CODE = 15;
+
+[[noreturn]] static void throw_union_index(int64_t index, size_t first, size_t last_plus_one) {
+    throw mkh_avro::AvroException(
+        "Decode: union branch index " + std::to_string(index) +
+            " out of range (valid " + std::to_string(first) + ".." +
+            std::to_string(last_plus_one == 0 ? 0 : last_plus_one - 1) + ")",
+        UNION_INDEX_CODE);
+}
 
 ERL_NIF_TERM  decode(ErlNifEnv* env, SchemaItem* si, std::vector<uint8_t>::iterator& it, std::vector<uint8_t>::iterator end) {
     ERL_NIF_TERM ret = enif_make_new_map(env);
@@ -368,7 +381,20 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const u
             for (int64_t i = 0; i < arrayLen; i++) {
                 int64_t type_index = decodeLong(it, end);
                 //std::cout << "Type index:" << std::to_string(type_index) << "\r\n";
-                std::string eletype = si->array_multi_type_reverse[type_index];
+                // find(), not operator[]: operator[] inserts an empty entry
+                // for an unknown key into this *shared, cached* SchemaItem
+                // (permanent growth per distinct bad index, and a data race
+                // when two schedulers decode at once). The range test comes
+                // first because the map's key is an int: a 64-bit wire value
+                // of 2^32+1 would otherwise narrow to 1. See #38.
+                const auto member =
+                    (type_index >= 0 && type_index <= INT_MAX)
+                        ? si->array_multi_type_reverse.find(static_cast<int>(type_index))
+                        : si->array_multi_type_reverse.end();
+                if (member == si->array_multi_type_reverse.end()) {
+                    throw_union_index(type_index, 0, si->array_multi_type_reverse.size());
+                }
+                const std::string& eletype = member->second;
                 //std::cout << "Type name:" << eletype << "\r\n";
                 if((eletype == "string")||(eletype == "long")||(eletype == "double")){
                     decoded_list.push_back(decode_scalar(env, get_scalar_type(eletype), it, end));
@@ -457,39 +483,32 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const u
 }
 
 ERL_NIF_TERM decode_union(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const uint8_t* end) {
-    uint32_t childNumber = decodeInt32(it, end);
+    // The branch index comes straight off the wire. It used to index
+    // si->childItems with no range check (heap over-read / wild pointer
+    // dereference on a bad index -- #38). A negative index wraps to a huge
+    // unsigned value here and is rejected by the same size comparison.
+    const uint32_t childNumber = static_cast<uint32_t>(decodeInt32(it, end));
+    SchemaItem* child;
     if(si->is_nullable == 1){
-        //std::cout << "Nullable Child number: " << childNumber << "\r\n";
+        // Wire index 0 is the null branch; the non-null members follow, so
+        // index i maps to childItems[i - 1] and the valid range is 0..size.
         if(childNumber == 0){
-            return atom_undefined(env); 
-        }else{
-            auto sctype = si->childItems[childNumber - 1]->scalar_type;
-            //std::cout << "SCTYPE: " << sctype << "\r\n";
-            /*std::cout << "complex ARRAY union type " << si->childItems[childNumber - 1]->array_type << "\r\n";
-            std::cout << "si->obj_type:" << std::to_string(si->childItems[childNumber - 1]->obj_type) << "\r\n";
-            std::cout << "si->scalar_type:" << std::to_string(si->childItems[childNumber - 1]->scalar_type) << "\r\n";
-            std::cout << "si->obj_field:" << si->childItems[childNumber - 1]->obj_field << "\r\n";
-            std::cout << "si->obj_simple_type:" << std::to_string(si->childItems[childNumber - 1]->obj_simple_type) << "\r\n";
-            std::cout << "si->array_type:" << std::to_string(si->childItems[childNumber - 1]->array_type) << "\r\n"; */
-            if(sctype >= 0 && si->childItems[childNumber - 1]->obj_type == 0){
-                //std::cout << "DECODE SCALAR" << "\r\n";
-                return decode_scalar(env, sctype, it, end);
-            } else {
-                return decodevalue(env, si->childItems[childNumber - 1], it, end);
-            }
+            return atom_undefined(env);
         }
+        if(childNumber > si->childItems.size()){
+            throw_union_index(static_cast<int32_t>(childNumber), 0, si->childItems.size() + 1);
+        }
+        child = si->childItems[childNumber - 1];
     } else {
-        //std::cout << "NOT Nullable Child number: " << childNumber << "\r\n";
-        auto sctype = si->childItems[childNumber]->scalar_type;
-        //std::cout << "SCTYPE: " << sctype << "\r\n";
-        if(sctype >= 0  && si->childItems[childNumber]->obj_type == 0){
-            //std::cout << "DECODE SCALAR" << "\r\n";
-            return decode_scalar(env, sctype, it, end);
-        } else {
-            return decodevalue(env, si->childItems[childNumber], it, end);
+        if(childNumber >= si->childItems.size()){
+            throw_union_index(static_cast<int32_t>(childNumber), 0, si->childItems.size());
         }
+        child = si->childItems[childNumber];
     }
-    return atom_undefined(env); 
+    if(child->scalar_type >= 0 && child->obj_type == 0){
+        return decode_scalar(env, child->scalar_type, it, end);
+    }
+    return decodevalue(env, child, it, end);
 }
 
 ERL_NIF_TERM decode_nullable_scalar(ErlNifEnv* env, int sctype, uint8_t*& it, const uint8_t* end) {
@@ -616,6 +635,12 @@ int32_t decodeInt32(uint8_t*& it, const uint8_t* end) {
         }
         u = *it;
         ++it;
+        // The 5th byte carries bits 28..34; bits 32..34 do not fit and used
+        // to be dropped silently, so a wire value of 2^32+1 aliased to 1 --
+        // enough to slip a bogus union/enum index past a range check (#38).
+        if (shift == 28 && (u & 0x70)) {
+            throw std::invalid_argument("Invalid Avro varint");
+        }
         encoded |= static_cast<uint64_t>(u & 0x7f) << shift;
         shift += 7;
     } while (u & 0x80);
