@@ -204,7 +204,7 @@ erlav_decode_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
     std::vector<uint8_t>::iterator it = encdata.begin();
 
     try {
-        ret_map = mkh_avro2::decode(env, schema, it);
+        ret_map = mkh_avro2::decode(env, schema, it, encdata.end());
     } catch (mkh_avro::AvroException const& ae) {
         ERL_NIF_TERM t1 = enif_make_atom(env, "error");
         ERL_NIF_TERM t2 =
@@ -267,7 +267,7 @@ erlav_decode_nif_fast(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
     uint8_t* p = sbin.data;
 
     try {
-        ret_map = mkh_avro2::decode(env, schema, p);
+        ret_map = mkh_avro2::decode(env, schema, p, sbin.data + sbin.size);
     } catch (mkh_avro::AvroException const& ae) {
         ERL_NIF_TERM t1 = enif_make_atom(env, "error");
         ERL_NIF_TERM t2 =
@@ -330,9 +330,14 @@ int_decode_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
     }
     uint8_t* p = sbin.data;
     uint8_t* end = sbin.data + sbin.size;
-    while ( p < end ){
-        uint64_t ri = mkh_avro2::decodeVarint(p);
-        retv.push_back(enif_make_int64(env, ri));
+    try {
+        while ( p < end ){
+            uint64_t ri = mkh_avro2::decodeVarint(p, end);
+            retv.push_back(enif_make_int64(env, ri));
+        }
+    } catch (...) {
+        // Truncated or over-long varint: a C++ exception must not escape a NIF.
+        return enif_make_badarg(env);
     }
 
     return enif_make_list_from_array(env, retv.data(), retv.size());

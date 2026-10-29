@@ -1,8 +1,9 @@
 %% Decoder robustness: malformed / truncated input, and erlav_decode/2
 %% (the legacy iterator-based decoder) behaviour.
 %%
-%% Malformed input can crash the whole VM today (no bounds checking: #30,
-%% #38, #40), which would take the eunit run down with it. So every
+%% Malformed input can still crash the whole VM (union branch index: #38;
+%% block counts: #40; #30, truncated/overlong input, is fixed), which would
+%% take the eunit run down with it. So every
 %% malformed-input decode runs in a disposable `peer` node; the test sees one
 %% of:
 %%
@@ -238,6 +239,99 @@ array_union_branch_index_out_of_range_test_() ->
         ?assertRejected(decode_fast("robust_array_union.avsc", Bin))
     end}.
 
+%% ----------------------- always-on: truncated / overlong input (#30)
+%%
+%% The decoder checks every read against the end of the input and returns
+%% {error, Msg, Code} instead of reading past it (before: garbage terms, a
+%% VM abort on a huge allocation, or an out-of-bounds read).
+
+empty_input_test_() ->
+    [
+        {File, {timeout, ?TEST_TIMEOUT, fun() ->
+            ?assertRejected(decode_fast(File, <<>>))
+        end}}
+     || File <- ["robust_scalars.avsc", "robust_string.avsc"]
+    ].
+
+truncation_at_every_offset_test_() ->
+    [
+        {File, {timeout, ?TEST_TIMEOUT, fun() -> truncation_sweep(Fixture) end}}
+     || {File, _} = Fixture <- [fixture_all(), fixture_array_union()]
+    ].
+
+negative_string_length_test_() ->
+    {timeout, ?TEST_TIMEOUT, fun() ->
+        %% zigzag(-2) = 3
+        ?assertRejected(decode_fast("robust_string.avsc", <<3, ?PAD/binary>>))
+    end}.
+
+%% Length far past the buffer: used to hang or abort on the allocation.
+string_length_past_end_of_buffer_test_() ->
+    {timeout, ?TEST_TIMEOUT, fun() ->
+        Len = <<128, 128, 128, 128, 128, 64>>,
+        ?assertRejected(
+            decode_fast("robust_string.avsc", <<Len/binary, ?PAD/binary>>)
+        )
+    end}.
+
+%% Off by one: claims 5 bytes but only 4 remain / exactly 5 remain (valid).
+string_length_exactly_at_the_end_test_() ->
+    {timeout, ?TEST_TIMEOUT, fun() ->
+        ?assertEqual(
+            {ok, #{<<"s">> => <<"abcde">>}},
+            decode_fast("robust_string.avsc", <<10, "abcde">>)
+        ),
+        ?assertRejected(decode_fast("robust_string.avsc", <<10, "abcd">>))
+    end}.
+
+%% Fixed-width values: one byte short is rejected, the exact width is not.
+truncated_float_and_double_test_() ->
+    {timeout, ?TEST_TIMEOUT, fun() ->
+        %% robust_scalars is l:long i:int d:double f:float. With l = i = 1
+        %% (one byte each) the layout is: l(1) i(1) d(8) f(4) = 14 bytes.
+        Full = encode("robust_scalars.avsc",
+                      #{<<"l">> => 1, <<"i">> => 1, <<"d">> => 2.5, <<"f">> => 1.5}),
+        ?assertEqual(14, byte_size(Full)),
+        ?assertMatch({ok, #{<<"d">> := 2.5, <<"f">> := 1.5}},
+                     decode_fast("robust_scalars.avsc", Full)),
+        %% one byte short of the float, then one byte short of the double
+        ?assertRejected(decode_fast("robust_scalars.avsc", binary:part(Full, 0, 13))),
+        ?assertRejected(decode_fast("robust_scalars.avsc", binary:part(Full, 0, 9)))
+    end}.
+
+truncated_boolean_test_() ->
+    {timeout, ?TEST_TIMEOUT, fun() ->
+        ?assertEqual({ok, #{<<"v">> => true}},
+                     decode_fast("robust_boolean.avsc", <<1>>)),
+        ?assertRejected(decode_fast("robust_boolean.avsc", <<>>))
+    end}.
+
+truncated_fixed_test_() ->
+    {timeout, ?TEST_TIMEOUT, fun() ->
+        Term = #{<<"beforeField">> => 1, <<"fixedField">> => binary:copy(<<7>>, 16),
+                 <<"afterField">> => 2},
+        Full = encode("fixed_type.avsc", Term),
+        ?assertEqual({ok, Term}, decode_fast("fixed_type.avsc", Full)),
+        %% cut inside the 16 fixed bytes
+        ?assertRejected(decode_fast("fixed_type.avsc", binary:part(Full, 0, 10)))
+    end}.
+
+%% A block-count of INT64_MIN cannot be negated; used to be undefined behaviour.
+%% (The array case is also exercised, nondeterministically, by #40's cases.)
+negative_block_count_with_int64_min_test_() ->
+    {timeout, ?TEST_TIMEOUT, fun() ->
+        %% zigzag(INT64_MIN) = 2^64 - 1, followed by a block byte length
+        Count = <<255, 255, 255, 255, 255, 255, 255, 255, 255, 1>>,
+        ?assertRejected(decode_fast("robust_array.avsc", <<Count/binary, 0>>))
+    end}.
+
+%% int_decode/1 walks a bare varint stream: a trailing truncated varint must
+%% raise badarg, not read past the end or throw a C++ exception out of the NIF.
+int_decode_truncated_varint_test() ->
+    ?assertEqual([1, 300], erlav_nif:int_decode(<<1, 172, 2>>)),
+    ?assertError(badarg, erlav_nif:int_decode(<<1, 172>>)),
+    ?assertError(badarg, erlav_nif:int_decode(<<128>>)).
+
 %% ------------------------------------- erlav_decode/2 (legacy, iterator based)
 %%
 %% Characterisation tests: they pin down what erlav_decode/2 does *today*.
@@ -312,13 +406,27 @@ non_binary_input_returns_empty_map_test() ->
     ?assertEqual(#{}, erlav_nif:erlav_decode(Id, not_a_binary)),
     ?assertEqual(#{}, erlav_nif:erlav_decode_fast(Id, not_a_binary)).
 
+legacy_empty_input_returns_error_tuple_test_() ->
+    {timeout, ?TEST_TIMEOUT, fun() ->
+        ?assertRejected(decode(erlav_decode, "robust_scalars.avsc", <<>>))
+    end}.
+
+legacy_truncated_double_returns_error_tuple_test_() ->
+    {timeout, ?TEST_TIMEOUT, fun() ->
+        Full = encode("robust_scalars.avsc",
+                      #{<<"l">> => 1, <<"i">> => 1, <<"d">> => 2.5, <<"f">> => 1.5}),
+        %% 9 bytes: l(1) i(1) + 7 of the double's 8 bytes
+        ?assertRejected(decode(erlav_decode, "robust_scalars.avsc",
+                               binary:part(Full, 0, 9)))
+    end}.
+
 legacy_varint_overflow_returns_error_tuple_test_() ->
     {timeout, ?TEST_TIMEOUT, fun() ->
         Bin = <<(binary:copy(<<255>>, 12))/binary, 1>>,
         ?assertRejected(decode(erlav_decode, "robust_scalars.avsc", Bin))
     end}.
 
-%% ---------------------------- opt-in: open bugs (#30, #38, #40), see header
+%% ---------------------------- opt-in: open bugs (#38, #40), see header
 
 known_bug_test_() ->
     case os:getenv("ERLAV_KNOWN_BUGS") of
@@ -331,7 +439,7 @@ known_bug_test_() ->
             io:format(
                 user,
                 "~n[decode_robustness_test] ~p known-bug tests skipped "
-                "(#30 #38 #40); set ERLAV_KNOWN_BUGS=1 to run them~n",
+                "(#38 #40); set ERLAV_KNOWN_BUGS=1 to run them~n",
                 [length(known_bug_cases())]
             ),
             [{"cleanup", fun stop_peer/0}]
@@ -340,35 +448,6 @@ known_bug_test_() ->
 known_bug_cases() ->
     %% Each case asserts the *desired* behaviour: {error, _, _}, no crash.
     [
-        {"#30 empty input", fun() ->
-            ?assertRejected(decode_fast("robust_scalars.avsc", <<>>))
-        end},
-        {"#30 empty input, record with string", fun() ->
-            ?assertRejected(decode_fast("robust_string.avsc", <<>>))
-        end},
-        {"#30 truncation at every offset: all field types", fun() ->
-            truncation_sweep(fixture_all())
-        end},
-        {"#30 truncation at every offset: array of union", fun() ->
-            truncation_sweep(fixture_array_union())
-        end},
-        {"#30 negative string length", fun() ->
-            %% zigzag(-2) = 3
-            ?assertRejected(
-                decode_fast("robust_string.avsc", <<3, ?PAD/binary>>)
-            )
-        end},
-        {"#30 string length 2^40 (far past the buffer)", fun() ->
-            Len = <<128, 128, 128, 128, 128, 64>>,
-            ?assertRejected(
-                decode_fast("robust_string.avsc", <<Len/binary, ?PAD/binary>>)
-            )
-        end},
-        {"#30 legacy erlav_decode/2 on empty input", fun() ->
-            ?assertRejected(decode(erlav_decode, "robust_scalars.avsc", <<>>))
-        end}
-    ] ++
-        [
             {"#38 union branch index " ++ Name, fun() ->
                 ?assertRejected(
                     decode_fast("robust_union.avsc", <<Idx/binary, ?PAD/binary>>)
