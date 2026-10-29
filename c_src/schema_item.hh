@@ -103,6 +103,84 @@ struct SchemaItem {
         return it == field_index_by_name.end() ? SIZE_MAX : it->second;
     }
 
+    // Lower bound, in bytes, on this value's encoding on the wire (0 for a
+    // value that can be encoded in no bytes at all: null, an empty record,
+    // fixed(0), ...). For an array/map SchemaItem, min_item_wire_size is the
+    // lower bound for ONE element/entry (a map entry also counts its key).
+    // The decoder uses these to reject a block count that the remaining input
+    // cannot possibly satisfy (#40): count * min_item_wire_size > bytes left.
+    // Only ever an under-estimate, so it can reject nothing that is valid.
+    // Filled in once by compute_wire_sizes() at schema-init time (never
+    // lazily: a SchemaItem is shared by all schedulers).
+    size_t min_wire_size = 0;
+    size_t min_item_wire_size = 0;
+
+    static size_t scalar_min_wire_size(int scalar_type) {
+        switch (scalar_type) {
+            case 2: return 8;  // double
+            case 3: return 4;  // float
+            case 0: case 1: case 4: case 5: case 6:
+                return 1;      // int, long, boolean, string, bytes
+            default:
+                return 0;      // not a scalar we decode
+        }
+    }
+
+    void compute_wire_sizes() {
+        for (auto* child : childItems) {
+            child->compute_wire_sizes();
+        }
+        switch (obj_type) {
+            case 0:
+                min_wire_size = scalar_min_wire_size(scalar_type);
+                break;
+            case 1: // union: the branch index
+            case 2: // array: the terminating block
+            case 4: // map:   the terminating block
+            case 5: // enum:  the symbol index
+                min_wire_size = 1;
+                break;
+            case 3: { // record: its fields, mirroring what decode() skips
+                size_t sum = 0;
+                for (auto* f : childItems) {
+                    if (f->obj_type == 0 && f->scalar_type < 0) continue;
+                    if (f->obj_type < 0 || f->obj_type > 6) continue;
+                    sum += f->min_wire_size;
+                }
+                min_wire_size = sum;
+                break;
+            }
+            case 6:
+                min_wire_size = fixed_size > 0 ? static_cast<size_t>(fixed_size) : 0;
+                break;
+            default:
+                min_wire_size = 0;
+        }
+        if (obj_type == 2) {
+            if (obj_field != "complex") {
+                min_item_wire_size = scalar_min_wire_size(scalar_type);
+            } else if (array_type == 1) {
+                min_item_wire_size = 1; // union item: the branch index
+            } else if (childItems.size() == 1) {
+                min_item_wire_size = childItems[0]->min_wire_size;
+            } else {
+                min_item_wire_size = 0;
+            }
+        } else if (obj_type == 4) {
+            size_t value;
+            if (values_are_union) {
+                value = 1;
+            } else if (obj_field != "complex") {
+                value = scalar_min_wire_size(scalar_type);
+            } else if (!childItems.empty()) {
+                value = childItems[0]->min_wire_size;
+            } else {
+                value = 0;
+            }
+            min_item_wire_size = 1 + value; // key: a string, at least its length byte
+        }
+    }
+
     // When true, encodearray/encodemap (mkh_avro2.hh) write the Avro
     // "negative block count" form -- a negative item count followed by the
     // block's encoded byte length, then the items -- instead of the

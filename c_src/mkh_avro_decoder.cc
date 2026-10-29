@@ -36,6 +36,27 @@ static constexpr uint32_t NEGATIVE_LENGTH_CODE = 14;
 // (#38). 15 follows the codes above.
 static constexpr uint32_t UNION_INDEX_CODE = 15;
 
+// An array/map block whose elements cannot fit in the remaining input, or
+// more zero-width items than the per-decode budget allows (#40). 16 follows
+// the codes above.
+static constexpr uint32_t BLOCK_COUNT_CODE = 16;
+static constexpr const char* BLOCK_COUNT_MSG =
+    "Decode: array/map block count exceeds the remaining input";
+
+// Items that occupy no bytes on the wire (an empty record, fixed(0), ...) are
+// the one case a block count cannot be bounded by the remaining input: a few
+// bytes can claim any number of them, and each still costs a term here. So
+// they draw on a budget shared by the whole decode call, not per array (an
+// array of arrays of them would otherwise multiply). 2^20 items is ~16 MB of
+// terms and far beyond any realistic use. A NIF runs to completion on one
+// scheduler thread without re-entering the decoder, so a thread_local is safe.
+static constexpr uint64_t ZERO_WIDTH_ITEM_BUDGET = 1u << 20;
+static thread_local uint64_t zero_width_items_left = ZERO_WIDTH_ITEM_BUDGET;
+
+void reset_decode_budget() {
+    zero_width_items_left = ZERO_WIDTH_ITEM_BUDGET;
+}
+
 [[noreturn]] static void throw_union_index(int64_t index, size_t first, size_t last_plus_one) {
     throw mkh_avro::AvroException(
         "Decode: union branch index " + std::to_string(index) +
@@ -291,7 +312,7 @@ ERL_NIF_TERM decode_map(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const uin
         // cursor for everything decoded after (previously a VM-crashing
         // garbage length handed to enif_make_new_binary). See #32.
         for (;;) {
-            int64_t mapLen = decode_block_count(it, end);
+            int64_t mapLen = decode_block_count(it, end, si->min_item_wire_size);
             if (mapLen == 0) break;
             for (int64_t i = 0; i < mapLen; i++) {
                 ERL_NIF_TERM k = decode_scalar(env, 5, it, end); // map keys always strings
@@ -300,7 +321,7 @@ ERL_NIF_TERM decode_map(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const uin
         }
     } else if (si->obj_field != "complex") { // map of scalars
         for (;;) {
-            int64_t mapLen = decode_block_count(it, end);
+            int64_t mapLen = decode_block_count(it, end, si->min_item_wire_size);
             if (mapLen == 0) break;
             for (int64_t i = 0; i < mapLen; i++) {
                 ERL_NIF_TERM k = decode_scalar(env, 5, it, end); // map keys always strings
@@ -309,7 +330,7 @@ ERL_NIF_TERM decode_map(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const uin
         }
     } else {
         for (;;) {
-            int64_t mapLen = decode_block_count(it, end);
+            int64_t mapLen = decode_block_count(it, end, si->min_item_wire_size);
             if (mapLen == 0) break;
             for (int64_t i = 0; i < mapLen; i++) {
                 ERL_NIF_TERM k = decode_scalar(env, 5, it, end); // map keys always strings
@@ -365,7 +386,7 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const u
         auto st = get_scalar_type(si->obj_field);
         //std::cout << "simple array: type --> " << st << " \r\n";
         for (;;) {
-            int64_t arrayLen = decode_block_count(it, end);
+            int64_t arrayLen = decode_block_count(it, end, si->min_item_wire_size);
             if (arrayLen == 0) break;
             for (int64_t i = 0; i < arrayLen; i++) {
                 decoded_list.push_back(decode_scalar(env, st, it, end));
@@ -376,7 +397,7 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const u
     } else if ((si->obj_field == "complex") && si->array_type == 1) {
         //std::cout << "complex ARRAY \r\n";
         for (;;) {
-            int64_t arrayLen = decode_block_count(it, end);
+            int64_t arrayLen = decode_block_count(it, end, si->min_item_wire_size);
             if (arrayLen == 0) break;
             for (int64_t i = 0; i < arrayLen; i++) {
                 int64_t type_index = decodeLong(it, end);
@@ -441,7 +462,7 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const u
            (si->childItems[0]->obj_field != "complex")){
             // array of simple arrays
             for (;;) {
-                int64_t arrayLen = decode_block_count(it, end);
+                int64_t arrayLen = decode_block_count(it, end, si->min_item_wire_size);
                 if (arrayLen == 0) break;
                 for (int64_t i = 0; i < arrayLen; i++) {
                     decoded_list.push_back(decode_array(env, si->childItems[0], it, end));
@@ -467,7 +488,7 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const u
             // decoded every element to an empty map instead of throwing or
             // reading the right bytes. See #44.
             for (;;) {
-                int64_t arrayLen = decode_block_count(it, end);
+                int64_t arrayLen = decode_block_count(it, end, si->min_item_wire_size);
                 if (arrayLen == 0) break;
                 for (int64_t i = 0; i < arrayLen; i++) {
                     decoded_list.push_back(decodevalue(env, si->childItems[0], it, end));
@@ -608,15 +629,47 @@ int64_t decodeLong(uint8_t*& it, const uint8_t* end) {
 // essentially every array/map it writes (see #15), so decode_array/
 // decode_map must handle both. Returns the item count for this block; 0
 // means "no more blocks" -- the array/map terminator.
-int64_t decode_block_count(uint8_t*& it, const uint8_t* end) {
+int64_t decode_block_count(uint8_t*& it, const uint8_t* end, size_t min_item_wire_size) {
     int64_t count = decodeLong(it, end);
+    int64_t block_bytes = -1; // only present in the negative form
     if (count < 0) {
-        decodeLong(it, end); // block byte-length, unused
+        block_bytes = decodeLong(it, end);
         if (count == INT64_MIN) {
             // -INT64_MIN is not representable (signed overflow).
             throw mkh_avro::AvroException(NEGATIVE_LENGTH_MSG, NEGATIVE_LENGTH_CODE);
         }
         count = -count;
+    }
+    if (count == 0) {
+        return 0; // terminator
+    }
+
+    const uint64_t remaining = static_cast<uint64_t>(end - it);
+    // The negative form's byte length is the size of the items that follow:
+    // it cannot be negative or larger than what is left of the input (it used
+    // to be read and ignored).
+    if (block_bytes != -1 && (block_bytes < 0 || static_cast<uint64_t>(block_bytes) > remaining)) {
+        throw mkh_avro::AvroException(BLOCK_COUNT_MSG, BLOCK_COUNT_CODE);
+    }
+
+    if (min_item_wire_size > 0) {
+        // Every item takes at least min_item_wire_size bytes, so a block of
+        // `count` items needs count * min_item_wire_size bytes of input.
+        // Divide instead of multiplying so a huge count cannot overflow. The
+        // common case (min size 1: longs, strings, unions...) needs no
+        // division, which matters because this runs for every non-empty
+        // array and a 64-bit divide is ~30 cycles.
+        const uint64_t max_items =
+            (min_item_wire_size == 1) ? remaining : remaining / min_item_wire_size;
+        if (static_cast<uint64_t>(count) > max_items) {
+            throw mkh_avro::AvroException(BLOCK_COUNT_MSG, BLOCK_COUNT_CODE);
+        }
+    } else {
+        // Zero-width items: the input says nothing about how many there are.
+        if (static_cast<uint64_t>(count) > zero_width_items_left) {
+            throw mkh_avro::AvroException(BLOCK_COUNT_MSG, BLOCK_COUNT_CODE);
+        }
+        zero_width_items_left -= static_cast<uint64_t>(count);
     }
     return count;
 }

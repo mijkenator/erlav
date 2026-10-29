@@ -266,6 +266,7 @@ erlav_decode_nif_fast(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
 
     uint8_t* p = sbin.data;
 
+    mkh_avro2::reset_decode_budget();
     try {
         ret_map = mkh_avro2::decode(env, schema, p, sbin.data + sbin.size);
     } catch (mkh_avro::AvroException const& ae) {
