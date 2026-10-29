@@ -79,14 +79,18 @@ long_min_roundtrip_test() ->
 
 bool_false_test() ->
     SchemaId = erlav_nif:erlav_init(<<"test/tschema_bool.avsc">>),
-    Term = #{<<"boolField">> => false},
+    %% longField is required by the schema; leaving it out makes the encoder emit
+    %% no bytes for it, and the decoder (rightly, since #30) reports truncation.
+    Term = #{<<"boolField">> => false, <<"longField">> => 0},
     Encoded = erlav_nif:erlav_encode(SchemaId, Term),
     Re1 = erlav_nif:erlav_decode_fast(SchemaId, Encoded),
     ?assertEqual(false, maps:get(<<"boolField">>, Re1)).
 
 bool_true_test() ->
     SchemaId = erlav_nif:erlav_init(<<"test/tschema_bool.avsc">>),
-    Term = #{<<"boolField">> => true},
+    %% longField is required by the schema; leaving it out makes the encoder emit
+    %% no bytes for it, and the decoder (rightly, since #30) reports truncation.
+    Term = #{<<"boolField">> => true, <<"longField">> => 0},
     Encoded = erlav_nif:erlav_encode(SchemaId, Term),
     Re1 = erlav_nif:erlav_decode_fast(SchemaId, Encoded),
     ?assertEqual(true, maps:get(<<"boolField">>, Re1)).

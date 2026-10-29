@@ -1,0 +1,2 @@
+{"type": "record", "name": "RobustUnionNonNull", "namespace": "erlav.test",
+ "fields": [{"name": "u", "type": ["long", "string"]}]}
