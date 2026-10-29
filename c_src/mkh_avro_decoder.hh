@@ -16,7 +16,10 @@ int64_t decodeZigzag64(uint64_t) noexcept;
 int32_t decodeZigzag32(uint32_t) noexcept;
 int64_t decodeLong( std::vector<uint8_t>::iterator&, std::vector<uint8_t>::iterator );
 int64_t decodeLong(uint8_t*& it, const uint8_t* end);
-int64_t decode_block_count(uint8_t*& it, const uint8_t* end);
+int64_t decode_block_count(uint8_t*& it, const uint8_t* end, size_t min_item_wire_size);
+// Called at the start of every decode: resets the per-decode budget for
+// array/map items that occupy no bytes on the wire (see #40).
+void reset_decode_budget();
 float decode_float(std::vector<uint8_t>::iterator&, std::vector<uint8_t>::iterator );
 float decode_float(uint8_t*& it, const uint8_t* end);
 double decode_double(std::vector<uint8_t>::iterator&, std::vector<uint8_t>::iterator );
