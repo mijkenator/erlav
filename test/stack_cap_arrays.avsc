@@ -1,0 +1,6 @@
+{"type": "record", "name": "StackCapArrays", "namespace": "test",
+  "fields": [
+      {"name": "l", "type": {"type": "array", "items": "long"}},
+      {"name": "i", "type": {"type": "array", "items": "int"}}
+  ]
+}

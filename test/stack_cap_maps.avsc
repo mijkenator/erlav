@@ -1,0 +1,7 @@
+{"type": "record", "name": "StackCapMaps", "namespace": "test",
+  "fields": [
+      {"name": "mi", "type": {"type": "map", "values": "int"}},
+      {"name": "ml", "type": {"type": "map", "values": "long"}},
+      {"name": "ms", "type": {"type": "map", "values": "string"}}
+  ]
+}
