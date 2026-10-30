@@ -62,8 +62,8 @@ form, unchanged.
 
 By default `erlav_decode_fast/2` copies every decoded string and `bytes` value
 into a new binary. For values of 65 bytes or more the BEAM has to allocate a
-reference-counted binary for each copy, which is about half of the decode time
-for string-heavy messages. Pass `decode_sub_binaries` to return those values as
+reference-counted binary for each copy, which is most of the decode time for
+string-heavy messages. Pass `decode_sub_binaries` to return those values as
 sub-binaries of the input instead (no copy, no allocation):
 
 ```erlang
@@ -71,10 +71,13 @@ SchemaId = erlav_nif:erlav_init(<<"priv/tschema2.avsc">>, [decode_sub_binaries])
 Decoded = erlav_nif:erlav_decode_fast(SchemaId, Binary)
 ```
 
-Measured on `array<string>` (100 strings per array): 136-byte strings decode
-about 2.3x faster (17.3 -> 7.3 us); 32-byte strings are unchanged, because
-values under 65 bytes are still copied (a heap binary is cheaper than a
-sub-binary reference). The decoded values compare equal either way.
+Measured on `array<string>` (100 strings per array): strings of 65 bytes or
+more decode about 4-5x faster (136 bytes: ~17 -> ~4 us; 2000 bytes: ~25 -> ~5 us),
+and the decode time stays flat as strings get longer. Strings under 65 bytes are
+unchanged, because they are still copied (a heap binary is cheaper than a
+sub-binary reference). This is close to a best case, since the benchmark is
+almost pure string decoding; messages that mix many other field types gain
+less. The decoded values compare equal either way.
 
 **The trade-off: memory.** A sub-binary keeps the *entire input binary* alive for
 as long as any decoded value is referenced. If you keep one 136-byte string out
