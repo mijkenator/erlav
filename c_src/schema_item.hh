@@ -190,6 +190,13 @@ struct SchemaItem {
     // default so erlav_init/1 keeps today's byte output unchanged.
     bool use_negative_block_count = false;
 
+    // Set on the root SchemaItem by erlav_init/2 with the
+    // `decode_sub_binaries` option (#74). When true, erlav_decode_fast/2
+    // returns long strings/bytes as sub-binaries of the input binary instead
+    // of copying them. Default off: a sub-binary keeps the WHOLE input alive
+    // for as long as any decoded value is held.
+    bool decode_sub_binaries = false;
+
     // Propagates the schema-init-time encoding choice to every node in the
     // tree (including union-member children in childItems), so
     // encodearray/encodemap can read si->use_negative_block_count directly
