@@ -78,7 +78,13 @@ else ifeq ($(UNAME_SYS), Linux)
 	CFLAGS ?= -O3 -std=c99 -finline-functions -funroll-loops -Wall -Wmissing-prototypes
 	CXXFLAGS ?= -O3 -finline-functions -funroll-loops -Wall
 endif
-CXXFLAGS += -std=c++17
+# C++20 is only used when the toolchain supports unordered_map heterogeneous
+# lookup (GCC >= 11, libc++ >= 16 -- see #25 and schema_item.hh); otherwise
+# build as C++17 with the allocating std::string fallback. Override with
+# CXX_STD=c++17 (or c++20) to skip the probe.
+CXX20_PROBE_SRC = \#include <unordered_map>\n\#include <string_view>\n\#if !defined(__cpp_lib_generic_unordered_lookup) || __cpp_lib_generic_unordered_lookup < 201811L\n\#error no heterogeneous unordered lookup\n\#endif\nint main() { return 0; }\n
+CXX_STD ?= $(shell printf '$(CXX20_PROBE_SRC)' | $(CXX) -std=c++20 -x c++ -fsyntax-only - >/dev/null 2>&1 && echo c++20 || echo c++17)
+CXXFLAGS += -std=$(CXX_STD)
 
 # -flto lets the linker inline across translation units (e.g. decode_scalar/
 # decodeLong into the decode/decode_array hot loops in mkh_avro_decoder.cc).

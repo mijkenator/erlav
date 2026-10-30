@@ -1,0 +1,3 @@
+{"type": "record", "name": "RobustZeroWidthMap", "namespace": "erlav.test",
+ "fields": [{"name": "m", "type": {"type": "map",
+   "values": {"type": "record", "name": "EmptyValue", "fields": []}}}]}

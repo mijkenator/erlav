@@ -14,31 +14,34 @@
 namespace mkh_avro2 {
 int64_t decodeZigzag64(uint64_t) noexcept;
 int32_t decodeZigzag32(uint32_t) noexcept;
-int64_t decodeLong( std::vector<uint8_t>::iterator& );
-int64_t decodeLong(uint8_t*& it);
-int64_t decode_block_count(uint8_t*& it);
-float decode_float(std::vector<uint8_t>::iterator& );
-float decode_float(uint8_t*& it);
-double decode_double(std::vector<uint8_t>::iterator& );
-double decode_double(uint8_t*& it);
-int64_t decodeVarint(uint8_t*& it);
-int32_t decodeInt32(uint8_t*& it);
-ERL_NIF_TERM decode_string(ErlNifEnv* env, uint8_t*& it);
-ERL_NIF_TERM decode_boolean(ErlNifEnv* env, uint8_t*& it);
+int64_t decodeLong( std::vector<uint8_t>::iterator&, std::vector<uint8_t>::iterator );
+int64_t decodeLong(uint8_t*& it, const uint8_t* end);
+int64_t decode_block_count(uint8_t*& it, const uint8_t* end, size_t min_item_wire_size);
+// Called at the start of every decode: resets the per-decode budget for
+// array/map items that occupy no bytes on the wire (see #40).
+void reset_decode_budget();
+float decode_float(std::vector<uint8_t>::iterator&, std::vector<uint8_t>::iterator );
+float decode_float(uint8_t*& it, const uint8_t* end);
+double decode_double(std::vector<uint8_t>::iterator&, std::vector<uint8_t>::iterator );
+double decode_double(uint8_t*& it, const uint8_t* end);
+int64_t decodeVarint(uint8_t*& it, const uint8_t* end);
+int32_t decodeInt32(uint8_t*& it, const uint8_t* end);
+ERL_NIF_TERM decode_string(ErlNifEnv* env, uint8_t*& it, const uint8_t* end);
+ERL_NIF_TERM decode_boolean(ErlNifEnv* env, uint8_t*& it, const uint8_t* end);
 
-ERL_NIF_TERM decode_scalar(ErlNifEnv*, int , std::vector<uint8_t>::iterator&);
-ERL_NIF_TERM decode_scalar(ErlNifEnv*, int , uint8_t*&);
-ERL_NIF_TERM decode_nullable_scalar(ErlNifEnv*, int, uint8_t*&);
-ERL_NIF_TERM decode_union(ErlNifEnv*, SchemaItem*, uint8_t*&);
-ERL_NIF_TERM decodevalue(ErlNifEnv*, SchemaItem*, uint8_t*&);
-ERL_NIF_TERM decode_array(ErlNifEnv*, SchemaItem*, uint8_t*&);
-ERL_NIF_TERM decode_record(ErlNifEnv*, SchemaItem*, uint8_t*&);
-ERL_NIF_TERM decode_map(ErlNifEnv*, SchemaItem*, uint8_t*&);
-ERL_NIF_TERM decode_enum(ErlNifEnv*, SchemaItem*, uint8_t*&);
-ERL_NIF_TERM decode_fixed(ErlNifEnv*, SchemaItem*, uint8_t*&);
+ERL_NIF_TERM decode_scalar(ErlNifEnv*, int , std::vector<uint8_t>::iterator&, std::vector<uint8_t>::iterator);
+ERL_NIF_TERM decode_scalar(ErlNifEnv*, int , uint8_t*&, const uint8_t*);
+ERL_NIF_TERM decode_nullable_scalar(ErlNifEnv*, int, uint8_t*&, const uint8_t*);
+ERL_NIF_TERM decode_union(ErlNifEnv*, SchemaItem*, uint8_t*&, const uint8_t*);
+ERL_NIF_TERM decodevalue(ErlNifEnv*, SchemaItem*, uint8_t*&, const uint8_t*);
+ERL_NIF_TERM decode_array(ErlNifEnv*, SchemaItem*, uint8_t*&, const uint8_t*);
+ERL_NIF_TERM decode_record(ErlNifEnv*, SchemaItem*, uint8_t*&, const uint8_t*);
+ERL_NIF_TERM decode_map(ErlNifEnv*, SchemaItem*, uint8_t*&, const uint8_t*);
+ERL_NIF_TERM decode_enum(ErlNifEnv*, SchemaItem*, uint8_t*&, const uint8_t*);
+ERL_NIF_TERM decode_fixed(ErlNifEnv*, SchemaItem*, uint8_t*&, const uint8_t*);
 
-ERL_NIF_TERM  decode(ErlNifEnv*, SchemaItem*, std::vector<uint8_t>::iterator&);
-ERL_NIF_TERM  decode(ErlNifEnv*, SchemaItem*, uint8_t*&);
+ERL_NIF_TERM  decode(ErlNifEnv*, SchemaItem*, std::vector<uint8_t>::iterator&, std::vector<uint8_t>::iterator);
+ERL_NIF_TERM  decode(ErlNifEnv*, SchemaItem*, uint8_t*&, const uint8_t*);
 
 }
 

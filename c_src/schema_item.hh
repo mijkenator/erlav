@@ -2,6 +2,10 @@
 #include <vector>
 #include <map>
 #include <unordered_map>
+#include <string>
+#include <string_view>
+#include <cstdint>
+#include <functional>
 #include <iostream>
 #include <erl_nif.h>
 #include "include/json.hpp"
@@ -9,6 +13,38 @@
 using json = nlohmann::json;
 
 namespace mkh_avro2 {
+
+// Every "name -> position" lookup on a SchemaItem uses NameIndexMap (#27):
+// union member type name -> union tag (array_multi_type), non-scalar union
+// member name -> childItems position (array_multi_type_child_index), enum
+// symbol -> ordinal (also array_multi_type), and record field name ->
+// childItems position (field_index_by_name). One container (hashed, O(1))
+// and one value type (size_t) instead of a std::map<string,int> here and an
+// unordered_map<string,size_t> there; a new name-indexed lookup should reuse
+// this rather than add another ad-hoc structure.
+//
+// std::unordered_map::find(const K&) heterogeneous lookup is C++20
+// (P0919/P2077), advertised by __cpp_lib_generic_unordered_lookup. With it,
+// encoderecord can probe field_index_by_name straight from the input map's
+// key bytes via a std::string_view; without it, every probe has to build a
+// temporary std::string, which heap-allocates for names past the SSO
+// cutoff (22 bytes on libc++; see #25). c_src/Makefile compiles with
+// -std=c++20 only when the toolchain passes a probe for this feature, so
+// older compilers keep building (as C++17) with the allocating fallback.
+#if defined(__cpp_lib_generic_unordered_lookup) && \
+    __cpp_lib_generic_unordered_lookup >= 201811L
+#define ERLAV_HETEROGENEOUS_LOOKUP 1
+struct StringViewHash {
+    using is_transparent = void;
+    size_t operator()(std::string_view sv) const noexcept {
+        return std::hash<std::string_view>{}(sv);
+    }
+};
+using NameIndexMap =
+    std::unordered_map<std::string, size_t, StringViewHash, std::equal_to<>>;
+#else
+using NameIndexMap = std::unordered_map<std::string, size_t>;
+#endif
 
 bool is_scalar(std::string);
 int get_scalar_type(std::string);
@@ -39,11 +75,11 @@ struct SchemaItem {
     std::string obj_name;
     std::vector<SchemaItem*> childItems;
     std::string obj_field = "complex";
-    std::map<std::string, int> array_multi_type;
+    NameIndexMap array_multi_type;
     std::map<int, std::string> array_multi_type_reverse;
     // For non-scalar union members (array/map/record/enum), maps the
     // member's type name to its position in childItems.
-    std::map<std::string, int> array_multi_type_child_index;
+    NameIndexMap array_multi_type_child_index;
     ErlNifEnv* key_env = nullptr; // Only set on root object for cleanup
     std::vector<ERL_NIF_TERM> cached_keys;
     // Maps a record field's name to its position in childItems/cached_keys.
@@ -53,7 +89,97 @@ struct SchemaItem {
     // turn -- lets a single pass over the input map's entries replace the
     // previous nfields separate enif_get_map_value scans (each an
     // independent O(map_size) walk of Erlang's flatmap representation).
-    std::unordered_map<std::string, size_t> field_index_by_name;
+    NameIndexMap field_index_by_name;
+
+    // Returns the index of the field named by the `len` bytes at `name`, or
+    // SIZE_MAX if there is no such field. Allocation-free when
+    // ERLAV_HETEROGENEOUS_LOOKUP is set.
+    size_t find_field_index(const char* name, size_t len) const {
+#ifdef ERLAV_HETEROGENEOUS_LOOKUP
+        auto it = field_index_by_name.find(std::string_view(name, len));
+#else
+        auto it = field_index_by_name.find(std::string(name, len));
+#endif
+        return it == field_index_by_name.end() ? SIZE_MAX : it->second;
+    }
+
+    // Lower bound, in bytes, on this value's encoding on the wire (0 for a
+    // value that can be encoded in no bytes at all: null, an empty record,
+    // fixed(0), ...). For an array/map SchemaItem, min_item_wire_size is the
+    // lower bound for ONE element/entry (a map entry also counts its key).
+    // The decoder uses these to reject a block count that the remaining input
+    // cannot possibly satisfy (#40): count * min_item_wire_size > bytes left.
+    // Only ever an under-estimate, so it can reject nothing that is valid.
+    // Filled in once by compute_wire_sizes() at schema-init time (never
+    // lazily: a SchemaItem is shared by all schedulers).
+    size_t min_wire_size = 0;
+    size_t min_item_wire_size = 0;
+
+    static size_t scalar_min_wire_size(int scalar_type) {
+        switch (scalar_type) {
+            case 2: return 8;  // double
+            case 3: return 4;  // float
+            case 0: case 1: case 4: case 5: case 6:
+                return 1;      // int, long, boolean, string, bytes
+            default:
+                return 0;      // not a scalar we decode
+        }
+    }
+
+    void compute_wire_sizes() {
+        for (auto* child : childItems) {
+            child->compute_wire_sizes();
+        }
+        switch (obj_type) {
+            case 0:
+                min_wire_size = scalar_min_wire_size(scalar_type);
+                break;
+            case 1: // union: the branch index
+            case 2: // array: the terminating block
+            case 4: // map:   the terminating block
+            case 5: // enum:  the symbol index
+                min_wire_size = 1;
+                break;
+            case 3: { // record: its fields, mirroring what decode() skips
+                size_t sum = 0;
+                for (auto* f : childItems) {
+                    if (f->obj_type == 0 && f->scalar_type < 0) continue;
+                    if (f->obj_type < 0 || f->obj_type > 6) continue;
+                    sum += f->min_wire_size;
+                }
+                min_wire_size = sum;
+                break;
+            }
+            case 6:
+                min_wire_size = fixed_size > 0 ? static_cast<size_t>(fixed_size) : 0;
+                break;
+            default:
+                min_wire_size = 0;
+        }
+        if (obj_type == 2) {
+            if (obj_field != "complex") {
+                min_item_wire_size = scalar_min_wire_size(scalar_type);
+            } else if (array_type == 1) {
+                min_item_wire_size = 1; // union item: the branch index
+            } else if (childItems.size() == 1) {
+                min_item_wire_size = childItems[0]->min_wire_size;
+            } else {
+                min_item_wire_size = 0;
+            }
+        } else if (obj_type == 4) {
+            size_t value;
+            if (values_are_union) {
+                value = 1;
+            } else if (obj_field != "complex") {
+                value = scalar_min_wire_size(scalar_type);
+            } else if (!childItems.empty()) {
+                value = childItems[0]->min_wire_size;
+            } else {
+                value = 0;
+            }
+            min_item_wire_size = 1 + value; // key: a string, at least its length byte
+        }
+    }
 
     // When true, encodearray/encodemap (mkh_avro2.hh) write the Avro
     // "negative block count" form -- a negative item count followed by the

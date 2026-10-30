@@ -1,0 +1,23 @@
+{
+ "type": "record",
+ "name": "RobustScalars",
+ "namespace": "erlav.test",
+ "fields": [
+  {
+   "name": "l",
+   "type": "long"
+  },
+  {
+   "name": "i",
+   "type": "int"
+  },
+  {
+   "name": "d",
+   "type": "double"
+  },
+  {
+   "name": "f",
+   "type": "float"
+  }
+ ]
+}
