@@ -244,6 +244,61 @@ not building terms, so they are biggest on wide records with large unwanted
 parts and smallest when you select most of the record or skip only small
 scalars. Measure on your own schema.
 
+#### Example: a big schema (OpenRTB), a couple of fields
+
+`test/opnrtb_test1.avsc` is a bid request/response schema with ~425 named
+fields once nested records are counted. Real consumers usually want a few of
+them: a routing key, an id, a device field. Time per call against a full
+`erlav_decode_fast/2`, on two messages: the 900-byte fixture
+(`test/opnrtb_perf.data`) and the same message with 25 `imp` entries (about
+2.8 KB; the first `imp` repeated with distinct ids, so a stand-in for a larger
+real request). Ranges cover two runs.
+
+Messages with **negative block counts** (what `erlavro` writes, or `erlav` with
+`use_negative_block_count`):
+
+| What you need | Spec | 900 B message | 25 imps (2.8 KB) |
+|---|---|---|---|
+| Full decode | (all fields) | ~43 us | ~175 us |
+| Routing keys | `[<<"event">>, {<<"bid_request">>, [<<"id">>]}]` | ~1.6 us (**~27x**) | ~1.6 us (**~110x**) |
+| Event + device | `[<<"event">>, {<<"bid_request">>, [{<<"device">>, [<<"ip">>, <<"ua">>]}]}]` | ~2.0 us (**~21x**) | ~2.1 us (**~85x**) |
+| Three ids | `[{<<"bid_request">>, [{<<"user">>, [<<"id">>]}, {<<"app">>, [<<"id">>]}, {<<"site">>, [<<"id">>]}]}]` | ~2.9 us (**~15x**) | 2.9-3.4 us (**~50-60x**) |
+| A field near the end | `[<<"maxtime">>]` | ~3.1-3.7 us (**~11-14x**) | ~3.6 us (**~49x**) |
+| Fields of every `imp` | `[{<<"bid_request">>, [{<<"imp">>, [<<"id">>, {<<"banner">>, [<<"w">>, <<"h">>]}]}]}]` | ~2.2 us (**~19x**) | ~15-16 us (**~11x**) |
+
+Messages with **positive block counts** (`erlav`'s default output):
+
+| What you need | 900 B message | 25 imps (2.8 KB) |
+|---|---|---|
+| Full decode | ~44 us | ~179 us |
+| Routing keys | ~1.6 us (**~27x**) | ~1.5 us (**~115x**) |
+| Event + device | 2.6-3.0 us (**~15-17x**) | 9.6-10.3 us (**~17-19x**) |
+| Three ids | 3.8-4.1 us (**~11x**) | 11.7-12.4 us (**~14-15x**) |
+| A field near the end | ~5.3 us (**~8.5x**) | 12-14.6 us (**~12-15x**) |
+| Fields of every `imp` | ~2.3 us (**~19x**) | 16-17 us (**~10-11x**) |
+
+How to read this:
+
+- **The win grows with the message, not with the schema.** A selection that
+  stops early costs the same whether the message is 900 bytes or 2.8 KB
+  ("Routing keys": ~1.6 us in both), while the full decode gets 4x slower. That
+  is where the ~100x comes from; it is a ratio against a long full decode, not a
+  claim that anything got 100x cheaper than before.
+- **Block counts matter for big arrays and maps.** With negative counts an
+  unwanted array is skipped in one step, so "A field near the end" stays at
+  ~3.6 us for 25 imps. With positive counts the skipper has to walk every item
+  of the unwanted arrays (still without building terms), so it grows to
+  12-15 us. If you control the writer, `use_negative_block_count` makes
+  selective decoding of large messages several times faster.
+- **Selecting inside a big array is the slowest case.** "Fields of every `imp`"
+  has to visit every element, so it scales with the number of `imp`s
+  (~11x faster than a full decode, not ~100x).
+- **These are best cases for "a couple of fields".** They time `erlav_decode_fast/2`
+  against `erlav_decode_projected/2` in a tight loop on one machine (Apple
+  clang, OTP 26), results already in memory, no message parsing or I/O. If you
+  select most of a record the gain shrinks to nothing (all 13 top-level fields:
+  ~1x). Measure your own schema and messages before relying on the numbers.
+
 **Differences from a full decode to be aware of:**
 
 - Bytes after the last selected field are **not validated**. A truncated or
