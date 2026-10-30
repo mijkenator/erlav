@@ -134,6 +134,94 @@ a sub-spec on something that is not a record, an array of records or a nullable
 one of those (115, e.g. a scalar, a map, a multi-member union), an empty
 sub-spec (116), or a malformed spec (110, 111).
 
+#### Examples
+
+These use `test/projection_types.avsc`; `Bin` is an encoded message whose full
+decode (`erlav_decode_fast/2`) contains, among other fields:
+
+```erlang
+#{<<"fInt">> => 7,
+  <<"fNullRec">> => #{<<"x">> => 3,
+                      <<"inner">> => #{<<"y">> => 4, <<"z">> => <<"zz">>},
+                      <<"w">> => <<"ww">>},
+  <<"fArrRec">> => [#{<<"id">> => 1, <<"tag">> => <<"t1">>},
+                    #{<<"id">> => 2, <<"tag">> => <<"t2">>, <<"note">> => <<"n">>}],
+  <<"fLast">> => <<"last">>,
+  ...}
+```
+
+A small helper keeps the examples short:
+
+```erlang
+SchemaId = erlav_nif:erlav_init(<<"test/projection_types.avsc">>),
+Decode = fun(Spec) ->
+    {ok, ProjId} = erlav_nif:erlav_projection(SchemaId, Spec),
+    erlav_nif:erlav_decode_projected(ProjId, Bin)
+end.
+```
+
+(In real code, compile each projection once, at start-up or in a `persistent_term`,
+and keep the `ProjId`. Only `erlav_decode_projected/2` belongs on the hot path.)
+
+Top-level fields. Fields you skip are never built, whatever their type:
+
+```erlang
+1> Decode([<<"fInt">>, <<"fLast">>]).
+#{<<"fInt">> => 7, <<"fLast">> => <<"last">>}
+```
+
+A field inside a nested record. A bare name takes the whole value; a tuple takes
+only the listed sub-fields, at any depth:
+
+```erlang
+2> Decode([{<<"fNullRec">>, [<<"x">>, {<<"inner">>, [<<"z">>]}]}]).
+#{<<"fNullRec">> => #{<<"inner">> => #{<<"z">> => <<"zz">>}, <<"x">> => 3}}
+```
+
+An array of records. The sub-spec applies to every element, and a nullable field
+that is absent comes back as `undefined`, as in a full decode:
+
+```erlang
+3> Decode([{<<"fArrRec">>, [<<"id">>, <<"note">>]}]).
+#{<<"fArrRec">> => [#{<<"id">> => 1, <<"note">> => undefined},
+                    #{<<"id">> => 2, <<"note">> => <<"n">>}]}
+```
+
+A null nested record. If the message has `fNullRec` set to null, the whole
+sub-spec collapses to `undefined`, as in a full decode:
+
+```erlang
+4> {ok, P} = erlav_nif:erlav_projection(SchemaId, [{<<"fNullRec">>, [<<"x">>]}]),
+   erlav_nif:erlav_decode_projected(P, BinWithNullRec).
+#{<<"fNullRec">> => undefined}
+```
+
+The same selection always gives the same id, so compiling twice is harmless:
+
+```erlang
+5> {ok, P} =:= erlav_nif:erlav_projection(SchemaId, [{<<"fNullRec">>, [<<"x">>]}]).
+true
+```
+
+A bad spec fails when you compile it, not on every decode:
+
+```erlang
+6> erlav_nif:erlav_projection(SchemaId, [<<"nope">>]).
+{error,"erlav_projection: unknown field 'nope' in record 'ProjTypes'",112}
+
+7> erlav_nif:erlav_projection(SchemaId, [{<<"fInt">>, [<<"x">>]}]).
+{error,"erlav_projection: field 'fInt' is not a record, an array of records, or a nullable one of those, so it cannot have a sub-spec",115}
+```
+
+The result matches a full decode followed by picking the same keys, which is a
+handy check when you adopt a projection:
+
+```erlang
+Full = erlav_nif:erlav_decode_fast(SchemaId, Bin),
+Part = Decode([<<"fInt">>, <<"fLast">>]),
+Part = maps:with([<<"fInt">>, <<"fLast">>], Full).
+```
+
 Avro records carry no field offsets, so a projection cannot jump to a field. It
 *skips* the fields it does not want (walking their bytes, building no terms) and
 *stops* after the last one it wants. Arrays and maps written with negative block
