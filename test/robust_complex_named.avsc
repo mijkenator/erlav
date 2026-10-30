@@ -1,0 +1,5 @@
+{"type": "record", "name": "complex", "namespace": "erlav.test",
+ "fields": [
+   {"name": "v", "type": "long"},
+   {"name": "kids", "type": {"type": "array", "items": "complex"}},
+   {"name": "z", "type": "long"}]}

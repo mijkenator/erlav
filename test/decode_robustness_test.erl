@@ -537,6 +537,33 @@ zero_width_budget_resets_between_decodes_test() ->
               ?assertMatch(#{<<"a">> := _}, erlav_nif:erlav_decode_fast(Id, Big))
       end, lists:seq(1, 5)).
 
+%% ----------- always-on: array whose item type the decoder cannot handle (#41)
+%%
+%% decode_array's last fallback branch used to return `undefined` without
+%% consuming any input, so the field silently came back wrong and every field
+%% after the array decoded from the wrong offset. The only schema found to
+%% reach it is a record named "complex" that refers to itself in an array: a
+%% self-reference is left as the bare name "complex", which is also the
+%% internal marker for "has child schema items". It now fails loudly.
+
+%% An empty array never decodes an item, so it still works.
+complex_named_recursive_empty_array_test() ->
+    Id = erlav_nif:erlav_init(path("robust_complex_named.avsc")),
+    ?assertEqual(#{<<"v">> => 1, <<"kids">> => [], <<"z">> => 7},
+                 erlav_nif:erlav_decode_fast(Id, <<(idx(1))/binary, 0, (idx(7))/binary>>)).
+
+%% One item: used to return {kids => [#{kids => undefined, ...}]} with z read
+%% from the wrong place; now an error, with the field after the array intact
+%% in the empty case above.
+complex_named_recursive_array_item_is_rejected_test_() ->
+    {timeout, ?TEST_TIMEOUT, fun() ->
+        %% v=1, kids: 1 item {v=2, kids=[], z=0}, z=7
+        Bin = <<(idx(1))/binary, (idx(1))/binary, (idx(2))/binary, 0,
+                (idx(0))/binary, 0, (idx(7))/binary>>,
+        ?assertMatch({ok, {error, "Array decode: unsupported item type" ++ _, 17}},
+                     decode_fast("robust_complex_named.avsc", Bin))
+    end}.
+
 %% ------------------------------------- erlav_decode/2 (legacy, iterator based)
 %%
 %% Characterisation tests: they pin down what erlav_decode/2 does *today*.

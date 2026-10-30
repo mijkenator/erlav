@@ -40,6 +40,8 @@ static constexpr uint32_t UNION_INDEX_CODE = 15;
 // more zero-width items than the per-decode budget allows (#40). 16 follows
 // the codes above.
 static constexpr uint32_t BLOCK_COUNT_CODE = 16;
+// An array whose item type the decoder cannot handle (#41). 17 follows above.
+static constexpr uint32_t UNSUPPORTED_ITEMS_CODE = 17;
 static constexpr const char* BLOCK_COUNT_MSG =
     "Decode: array/map block count exceeds the remaining input";
 
@@ -496,11 +498,23 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const u
             }
             return enif_make_list_from_array(env, decoded_list.data(), decoded_list.size());
         }else{
-            // complex array multiple types -- unimplemented, see #41
+            // No children (or several) and not a union: nothing here knows
+            // how to decode the items. This used to fall through to
+            // `return undefined` without consuming any input, which both
+            // reported a value that was never decoded and desynced every
+            // field after the array (#41). The only schema that gets here
+            // today is an array whose item type is the bare name "complex"
+            // -- e.g. a record named "complex" referring to itself, since a
+            // self-reference is left as a bare name and "complex" is also the
+            // sentinel obj_field value for "has child schema items".
+            throw mkh_avro::AvroException(
+                "Array decode: unsupported item type (" +
+                    std::to_string(child_len) +
+                    " child schema items; a recursive or unresolved type "
+                    "reference named 'complex'?)",
+                UNSUPPORTED_ITEMS_CODE);
         }
     }
-
-    return atom_undefined(env);
 }
 
 ERL_NIF_TERM decode_union(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const uint8_t* end) {
