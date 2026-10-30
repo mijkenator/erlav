@@ -58,6 +58,36 @@ DecodedTerm = erlav_nif:erlav_decode_fast(SchemaId, Ret)
 Plain `erlav_init/1` (no options) keeps emitting today's positive-count
 form, unchanged.
 
+### Decoding long strings without copying: `decode_sub_binaries`
+
+By default `erlav_decode_fast/2` copies every decoded string and `bytes` value
+into a new binary. For values of 65 bytes or more the BEAM has to allocate a
+reference-counted binary for each copy, which is about half of the decode time
+for string-heavy messages. Pass `decode_sub_binaries` to return those values as
+sub-binaries of the input instead (no copy, no allocation):
+
+```erlang
+SchemaId = erlav_nif:erlav_init(<<"priv/tschema2.avsc">>, [decode_sub_binaries]),
+Decoded = erlav_nif:erlav_decode_fast(SchemaId, Binary)
+```
+
+Measured on `array<string>` (100 strings per array): 136-byte strings decode
+about 2.3x faster (17.3 -> 7.3 us); 32-byte strings are unchanged, because
+values under 65 bytes are still copied (a heap binary is cheaper than a
+sub-binary reference). The decoded values compare equal either way.
+
+**The trade-off: memory.** A sub-binary keeps the *entire input binary* alive for
+as long as any decoded value is referenced. If you keep one 136-byte string out
+of a 1.4 MB message, the process holds on to the whole 1.4 MB until that string
+is dropped. If your code stores slices of decoded messages long-term (a cache,
+a long-lived process state), either leave this option off or copy what you keep
+with `binary:copy/1`. (`erlavro`'s decoder behaves like the option: it returns
+sub-binaries.) It is off by default for this reason.
+
+Options are part of a schema's identity: the same file initialised with
+different options gets a different `SchemaId`. `decode_sub_binaries` affects
+`erlav_decode_fast/2` only; the legacy `erlav_decode/2` does not decode strings.
+
 
 Performance
 -----

@@ -21,7 +21,7 @@ namespace mkh_avro2 {
 
 extern const std::vector<std::string> scalars;
 
-SchemaItem* read_schema(std::string, bool use_negative_block_count = false);
+SchemaItem* read_schema(std::string, bool use_negative_block_count = false, bool decode_sub_binaries = false);
 ERL_NIF_TERM encode(ErlNifEnv*, SchemaItem*, const ERL_NIF_TERM*);
 int encodevalue(SchemaItem*, ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*);
 int encodescalar(int, ErlNifEnv*, ERL_NIF_TERM*, std::vector<uint8_t>*);
@@ -914,7 +914,7 @@ resolve_user_types(json& data) {
 }
 
 SchemaItem*
-read_schema(std::string schemaName, bool use_negative_block_count) {
+read_schema(std::string schemaName, bool use_negative_block_count, bool decode_sub_binaries) {
     SchemaItem* si;
     std::ifstream f(schemaName);
     json data = json::parse(f);
@@ -923,6 +923,7 @@ read_schema(std::string schemaName, bool use_negative_block_count) {
     si->init_keys();
     si->compute_wire_sizes();
     si->set_negative_block_count(use_negative_block_count);
+    si->decode_sub_binaries = decode_sub_binaries;
     return si;
 }
 

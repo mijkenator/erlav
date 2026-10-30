@@ -156,7 +156,7 @@ double decode_double(std::vector<uint8_t>::iterator& it, std::vector<uint8_t>::i
 //
 
 
-ERL_NIF_TERM  decode(ErlNifEnv* env, SchemaItem* si, uint8_t*& it, const uint8_t* end) {
+ERL_NIF_TERM  decode(ErlNifEnv* env, SchemaItem* si, uint8_t*& it, const DecodeCtx& ctx) {
     // Collect keys/values and build the map once with
     // enif_make_map_from_arrays, instead of one enif_make_map_put per field
     // (each put re-walks/copies the partial map and re-compares keys -- the
@@ -187,7 +187,7 @@ ERL_NIF_TERM  decode(ErlNifEnv* env, SchemaItem* si, uint8_t*& it, const uint8_t
         auto len = si_e->obj_name.length();
         unsigned char* key_data = enif_make_new_binary(env, len, &keys[n]);
         memcpy(key_data, si_e->obj_name.data(), len);
-        vals[n] = decodevalue(env, si_e, it, end);
+        vals[n] = decodevalue(env, si_e, it, ctx);
         n++;
     }
 
@@ -198,36 +198,36 @@ ERL_NIF_TERM  decode(ErlNifEnv* env, SchemaItem* si, uint8_t*& it, const uint8_t
     return ret;
 }
 
-ERL_NIF_TERM decodevalue(ErlNifEnv* env, SchemaItem* si, uint8_t*& it, const uint8_t* end) {
+ERL_NIF_TERM decodevalue(ErlNifEnv* env, SchemaItem* si, uint8_t*& it, const DecodeCtx& ctx) {
     switch (si->obj_type) {
         case 0:
-            return decode_scalar(env, si->scalar_type, it, end);
+            return decode_scalar(env, si->scalar_type, it, ctx);
         case 1:
-            return decode_union(env, si, it, end);
+            return decode_union(env, si, it, ctx);
         case 2:
-            return decode_array(env, si, it, end);
+            return decode_array(env, si, it, ctx);
         case 3:
-            return decode_record(env, si, it, end);
+            return decode_record(env, si, it, ctx);
         case 4:
-            return decode_map(env, si, it, end);
+            return decode_map(env, si, it, ctx);
         case 5: // enym
-            return decode_enum(env, si, it, end);
+            return decode_enum(env, si, it, ctx);
         case 6: // fixed
-            return decode_fixed(env, si, it, end);
+            return decode_fixed(env, si, it, ctx);
         default:
             break;
     }
     return 0;
 }
 
-ERL_NIF_TERM decode_record(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const uint8_t* end) {
+ERL_NIF_TERM decode_record(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const DecodeCtx& ctx) {
     //std::cout << "Decode record" << " \r\n";
-    return decode(env, si, it, end);
+    return decode(env, si, it, ctx);
 }
 
-ERL_NIF_TERM decode_enum(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const uint8_t* end) {
+ERL_NIF_TERM decode_enum(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const DecodeCtx& ctx) {
     ERL_NIF_TERM str_ret;
-    uint32_t valueNumber = decodeInt32(it, end);
+    uint32_t valueNumber = decodeInt32(it, ctx.end);
     // const& -- this used to copy the symbol's std::string on every decode.
     const auto& val = si->array_multi_type_reverse.at(valueNumber);
 
@@ -242,11 +242,11 @@ ERL_NIF_TERM decode_enum(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const ui
 // Avro "fixed" -- exactly si->fixed_size bytes, with no wire-encoded
 // length prefix (unlike decode_string's bytes/string, whose length is
 // read from the data). See #39.
-ERL_NIF_TERM decode_fixed(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const uint8_t* end) {
+ERL_NIF_TERM decode_fixed(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const DecodeCtx& ctx) {
     ERL_NIF_TERM bin_ret;
     unsigned char* bin_data;
     if (si->fixed_size < 0 ||
-        static_cast<uint64_t>(si->fixed_size) > static_cast<uint64_t>(end - it)) {
+        static_cast<uint64_t>(si->fixed_size) > static_cast<uint64_t>(ctx.end - it)) {
         throw mkh_avro::AvroException(TRUNCATED_MSG, TRUNCATED_CODE);
     }
     bin_data = enif_make_new_binary(env, si->fixed_size, &bin_ret);
@@ -283,7 +283,7 @@ struct MapEntries {
     ERL_NIF_TERM* vals() { return n <= STACK_CAP ? svals : hvals.data(); }
 };
 
-ERL_NIF_TERM decode_map(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const uint8_t* end) {
+ERL_NIF_TERM decode_map(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const DecodeCtx& ctx) {
     // Entries are gathered, then the map is built once for larger maps (see
     // decode() for why enif_make_map_put per entry is slow). Unlike record
     // field names, map keys on the wire are not guaranteed unique;
@@ -312,29 +312,29 @@ ERL_NIF_TERM decode_map(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const uin
         // cursor for everything decoded after (previously a VM-crashing
         // garbage length handed to enif_make_new_binary). See #32.
         for (;;) {
-            int64_t mapLen = decode_block_count(it, end, si->min_item_wire_size);
+            int64_t mapLen = decode_block_count(it, ctx.end, si->min_item_wire_size);
             if (mapLen == 0) break;
             for (int64_t i = 0; i < mapLen; i++) {
-                ERL_NIF_TERM k = decode_scalar(env, 5, it, end); // map keys always strings
-                entries.add(k, decode_union(env, si, it, end));
+                ERL_NIF_TERM k = decode_scalar(env, 5, it, ctx); // map keys always strings
+                entries.add(k, decode_union(env, si, it, ctx));
             }
         }
     } else if (si->obj_field != "complex") { // map of scalars
         for (;;) {
-            int64_t mapLen = decode_block_count(it, end, si->min_item_wire_size);
+            int64_t mapLen = decode_block_count(it, ctx.end, si->min_item_wire_size);
             if (mapLen == 0) break;
             for (int64_t i = 0; i < mapLen; i++) {
-                ERL_NIF_TERM k = decode_scalar(env, 5, it, end); // map keys always strings
-                entries.add(k, decode_scalar(env, si->scalar_type, it, end));
+                ERL_NIF_TERM k = decode_scalar(env, 5, it, ctx); // map keys always strings
+                entries.add(k, decode_scalar(env, si->scalar_type, it, ctx));
             }
         }
     } else {
         for (;;) {
-            int64_t mapLen = decode_block_count(it, end, si->min_item_wire_size);
+            int64_t mapLen = decode_block_count(it, ctx.end, si->min_item_wire_size);
             if (mapLen == 0) break;
             for (int64_t i = 0; i < mapLen; i++) {
-                ERL_NIF_TERM k = decode_scalar(env, 5, it, end); // map keys always strings
-                entries.add(k, decodevalue(env, si->childItems[0], it, end));
+                ERL_NIF_TERM k = decode_scalar(env, 5, it, ctx); // map keys always strings
+                entries.add(k, decodevalue(env, si->childItems[0], it, ctx));
             }
         }
     }
@@ -364,7 +364,7 @@ ERL_NIF_TERM decode_map(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const uin
     return ret;
 }
 
-ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const uint8_t* end) {
+ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const DecodeCtx& ctx) {
     std::vector<ERL_NIF_TERM> decoded_list;
     /*std::cout << "complex ARRAY union type " << si->array_type << "\r\n";
     std::cout << "si->obj_type:" << std::to_string(si->obj_type) << "\r\n";
@@ -386,10 +386,10 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const u
         auto st = get_scalar_type(si->obj_field);
         //std::cout << "simple array: type --> " << st << " \r\n";
         for (;;) {
-            int64_t arrayLen = decode_block_count(it, end, si->min_item_wire_size);
+            int64_t arrayLen = decode_block_count(it, ctx.end, si->min_item_wire_size);
             if (arrayLen == 0) break;
             for (int64_t i = 0; i < arrayLen; i++) {
-                decoded_list.push_back(decode_scalar(env, st, it, end));
+                decoded_list.push_back(decode_scalar(env, st, it, ctx));
             }
         }
         return enif_make_list_from_array(env, decoded_list.data(), decoded_list.size());
@@ -397,10 +397,10 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const u
     } else if ((si->obj_field == "complex") && si->array_type == 1) {
         //std::cout << "complex ARRAY \r\n";
         for (;;) {
-            int64_t arrayLen = decode_block_count(it, end, si->min_item_wire_size);
+            int64_t arrayLen = decode_block_count(it, ctx.end, si->min_item_wire_size);
             if (arrayLen == 0) break;
             for (int64_t i = 0; i < arrayLen; i++) {
-                int64_t type_index = decodeLong(it, end);
+                int64_t type_index = decodeLong(it, ctx.end);
                 //std::cout << "Type index:" << std::to_string(type_index) << "\r\n";
                 // find(), not operator[]: operator[] inserts an empty entry
                 // for an unknown key into this *shared, cached* SchemaItem
@@ -418,15 +418,15 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const u
                 const std::string& eletype = member->second;
                 //std::cout << "Type name:" << eletype << "\r\n";
                 if((eletype == "string")||(eletype == "long")||(eletype == "double")){
-                    decoded_list.push_back(decode_scalar(env, get_scalar_type(eletype), it, end));
+                    decoded_list.push_back(decode_scalar(env, get_scalar_type(eletype), it, ctx));
                 }else if(eletype == "null"){
                     decoded_list.push_back(atom_undefined(env));
                 }else if(eletype == "array"){
                     int child_idx = si->array_multi_type_child_index.at("array");
-                    decoded_list.push_back(decode_array(env, si->childItems[child_idx], it, end));
+                    decoded_list.push_back(decode_array(env, si->childItems[child_idx], it, ctx));
                 }else if((eletype == "record")||(eletype == "map")||(eletype == "enum")){
                     int child_idx = si->array_multi_type_child_index.at(eletype);
-                    decoded_list.push_back(decodevalue(env, si->childItems[child_idx], it, end));
+                    decoded_list.push_back(decodevalue(env, si->childItems[child_idx], it, ctx));
                 }else{
                     // Unresolved/unrecognized union member name -- fail loudly
                     // rather than silently skipping the element (which would
@@ -462,10 +462,10 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const u
            (si->childItems[0]->obj_field != "complex")){
             // array of simple arrays
             for (;;) {
-                int64_t arrayLen = decode_block_count(it, end, si->min_item_wire_size);
+                int64_t arrayLen = decode_block_count(it, ctx.end, si->min_item_wire_size);
                 if (arrayLen == 0) break;
                 for (int64_t i = 0; i < arrayLen; i++) {
-                    decoded_list.push_back(decode_array(env, si->childItems[0], it, end));
+                    decoded_list.push_back(decode_array(env, si->childItems[0], it, ctx));
                 }
             }
             return enif_make_list_from_array(env, decoded_list.data(), decoded_list.size());
@@ -488,10 +488,10 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const u
             // decoded every element to an empty map instead of throwing or
             // reading the right bytes. See #44.
             for (;;) {
-                int64_t arrayLen = decode_block_count(it, end, si->min_item_wire_size);
+                int64_t arrayLen = decode_block_count(it, ctx.end, si->min_item_wire_size);
                 if (arrayLen == 0) break;
                 for (int64_t i = 0; i < arrayLen; i++) {
-                    decoded_list.push_back(decodevalue(env, si->childItems[0], it, end));
+                    decoded_list.push_back(decodevalue(env, si->childItems[0], it, ctx));
                 }
             }
             return enif_make_list_from_array(env, decoded_list.data(), decoded_list.size());
@@ -503,12 +503,12 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const u
     return atom_undefined(env);
 }
 
-ERL_NIF_TERM decode_union(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const uint8_t* end) {
+ERL_NIF_TERM decode_union(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const DecodeCtx& ctx) {
     // The branch index comes straight off the wire. It used to index
     // si->childItems with no range check (heap over-read / wild pointer
     // dereference on a bad index -- #38). A negative index wraps to a huge
     // unsigned value here and is rejected by the same size comparison.
-    const uint32_t childNumber = static_cast<uint32_t>(decodeInt32(it, end));
+    const uint32_t childNumber = static_cast<uint32_t>(decodeInt32(it, ctx.end));
     SchemaItem* child;
     if(si->is_nullable == 1){
         // Wire index 0 is the null branch; the non-null members follow, so
@@ -527,13 +527,13 @@ ERL_NIF_TERM decode_union(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const u
         child = si->childItems[childNumber];
     }
     if(child->scalar_type >= 0 && child->obj_type == 0){
-        return decode_scalar(env, child->scalar_type, it, end);
+        return decode_scalar(env, child->scalar_type, it, ctx);
     }
-    return decodevalue(env, child, it, end);
+    return decodevalue(env, child, it, ctx);
 }
 
-ERL_NIF_TERM decode_nullable_scalar(ErlNifEnv* env, int sctype, uint8_t*& it, const uint8_t* end) {
-    if (it >= end) {
+ERL_NIF_TERM decode_nullable_scalar(ErlNifEnv* env, int sctype, uint8_t*& it, const DecodeCtx& ctx) {
+    if (it >= ctx.end) {
         throw mkh_avro::AvroException(TRUNCATED_MSG, TRUNCATED_CODE);
     }
     auto union_byte = *it;
@@ -541,28 +541,28 @@ ERL_NIF_TERM decode_nullable_scalar(ErlNifEnv* env, int sctype, uint8_t*& it, co
     if(union_byte == 0){
         return atom_undefined(env); 
     } else {
-        return decode_scalar(env, sctype, it, end);
+        return decode_scalar(env, sctype, it, ctx);
     }
 }
 
-ERL_NIF_TERM decode_scalar(ErlNifEnv* env, int sctype, uint8_t*& it, const uint8_t* end) {
+ERL_NIF_TERM decode_scalar(ErlNifEnv* env, int sctype, uint8_t*& it, const DecodeCtx& ctx) {
     if((sctype == 1) || (sctype == 0)){
-        int64_t ret = decodeLong(it, end);
+        int64_t ret = decodeLong(it, ctx.end);
         ErlNifSInt64 retn = ret;
         return enif_make_int64(env, retn);
     }else if(sctype == 2){ // double
-        double ret = decode_double(it, end);
+        double ret = decode_double(it, ctx.end);
         return enif_make_double(env, ret);
     }else if(sctype == 3){ // float
-        float ret = decode_float(it, end);
+        float ret = decode_float(it, ctx.end);
         double retd = ret;
         return enif_make_double(env, retd);
     }else if(sctype == 4){ // boolean
-        return decode_boolean(env, it, end);
+        return decode_boolean(env, it, ctx.end);
     }else if(sctype == 5){ // string
-        return decode_string(env, it, end);
+        return decode_string(env, it, ctx);
     }else if(sctype == 6){ // bytes
-        return decode_string(env, it, end);
+        return decode_string(env, it, ctx);
     }
     return enif_make_badarg(env);
 }
@@ -576,20 +576,33 @@ ERL_NIF_TERM decode_boolean(ErlNifEnv* env, uint8_t*& it, const uint8_t* end) {
     return bool_val == 1 ? atom_true(env) : atom_false(env);
 }
 
-ERL_NIF_TERM decode_string(ErlNifEnv* env, uint8_t*& it, const uint8_t* end) {
-    ERL_NIF_TERM str_ret;
-    
-    auto len = decodeLong(it, end);
-    //std::cout << "decode string with length :" << len << "\r\n";
+// Strings at least this long are returned as sub-binaries of the input when
+// the schema was initialised with `decode_sub_binaries` (#74). 65 is the
+// smallest size the BEAM stores as a reference-counted binary: below that a
+// heap binary is cheaper than a sub-binary reference, and copying is faster.
+static constexpr uint64_t SUB_BINARY_MIN_LEN = 65;
 
-    // A negative length, or one larger than what is left of the input, used
-    // to be handed straight to enif_make_new_binary/memcpy (VM abort on a
-    // huge allocation, or an out-of-bounds read). See #30.
+ERL_NIF_TERM decode_string(ErlNifEnv* env, uint8_t*& it, const DecodeCtx& ctx) {
+    ERL_NIF_TERM str_ret;
+
+    auto len = decodeLong(it, ctx.end);
+
     if (len < 0) {
         throw mkh_avro::AvroException(NEGATIVE_LENGTH_MSG, NEGATIVE_LENGTH_CODE);
     }
-    if (static_cast<uint64_t>(len) > static_cast<uint64_t>(end - it)) {
+    if (static_cast<uint64_t>(len) > static_cast<uint64_t>(ctx.end - it)) {
         throw mkh_avro::AvroException(TRUNCATED_MSG, TRUNCATED_CODE);
+    }
+
+    // Opt-in: point into the input binary instead of allocating and copying a
+    // refc binary (about half of the decode time for long strings is the
+    // BEAM allocator). The result keeps the whole input binary alive.
+    if (ctx.sub_binaries && static_cast<uint64_t>(len) >= SUB_BINARY_MIN_LEN) {
+        str_ret = enif_make_sub_binary(env, ctx.input,
+                                       static_cast<size_t>(it - ctx.base),
+                                       static_cast<size_t>(len));
+        it += len;
+        return str_ret;
     }
 
     unsigned char* str_data;
