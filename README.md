@@ -166,6 +166,9 @@ scalars. Measure on your own schema.
 - Strings and `bytes` are always copied, even if the schema was initialised with
   `decode_sub_binaries`: a projection usually keeps a few fields of a large
   message, and a sub-binary would keep the whole input alive for them.
+- A schema the full decoder cannot decode, such as an array whose `items` is a
+  bare `"array"` with no item type, fails with `{error, _, 17}` instead of
+  returning a value read from the wrong offset.
 
 The design is in [docs/design-partial-decode.md](docs/design-partial-decode.md).
 

@@ -780,8 +780,9 @@ double decode_double(uint8_t*& it, const uint8_t* end){
 // consumes nothing; a record field without a decodable type is not on the
 // wire). Every function below mirrors the decoder of the same name.
 
-// A shape decode_array() cannot decode (#41: it returns `undefined` without
-// consuming a byte, desyncing the cursor). Skipping must not guess.
+// A shape or scalar type the full decoder cannot decode (#41: decode_array
+// returns `undefined` without consuming a byte; an unknown scalar type makes
+// decode_scalar return a badarg). Skipping must not guess.
 static constexpr uint32_t UNSUPPORTED_SHAPE_CODE = 17;
 
 static inline void skip_bytes(uint8_t*& it, const DecodeCtx& ctx, uint64_t n) {
@@ -806,7 +807,13 @@ static void skip_scalar(int sctype, uint8_t*& it, const DecodeCtx& ctx) {
         case 3: skip_bytes(it, ctx, 4); break;          // float
         case 4: skip_bytes(it, ctx, 1); break;          // boolean
         case 5: case 6: skip_string(it, ctx); break;    // string, bytes
-        default: break; // decode_scalar consumes nothing for these
+        default:
+            // decode_scalar hands the BEAM a badarg for a scalar type it does
+            // not know (e.g. "items": "array" with no items), so the full
+            // decode fails. Skipping must fail too: carrying on would leave
+            // the cursor wherever the garbage schema put it.
+            throw mkh_avro::AvroException(
+                "Decode: scalar type not supported", UNSUPPORTED_SHAPE_CODE);
     }
 }
 
