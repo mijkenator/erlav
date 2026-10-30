@@ -71,13 +71,24 @@ SchemaId = erlav_nif:erlav_init(<<"priv/tschema2.avsc">>, [decode_sub_binaries])
 Decoded = erlav_nif:erlav_decode_fast(SchemaId, Binary)
 ```
 
-Measured on `array<string>` (100 strings per array): strings of 65 bytes or
-more decode about 4-5x faster (136 bytes: ~17 -> ~4 us; 2000 bytes: ~25 -> ~5 us),
-and the decode time stays flat as strings get longer. Strings under 65 bytes are
-unchanged, because they are still copied (a heap binary is cheaper than a
-sub-binary reference). This is close to a best case, since the benchmark is
-almost pure string decoding; messages that mix many other field types gain
-less. The decoded values compare equal either way.
+Measured on `array<string>` (100 strings per array), time per
+`erlav_decode_fast/2` call (range over two runs):
+
+| String length | Copy (default) | `decode_sub_binaries` | Speedup |
+|---|---|---|---|
+| 32 B | 4.7-5.2 us | 4.8-5.4 us | none (both copy) |
+| 64 B | 6.6-6.8 us | 6.7-7.0 us | none (both copy) |
+| 65 B | 16-17 us | 4.0-4.2 us | 3.9-4.2x |
+| 136 B | 16.5-18.6 us | ~3.9 us | 4.3-4.7x |
+| 500 B | 17.5-19 us | ~4.0 us | 4.4-4.8x |
+| 2000 B | 25-26 us | 4.7 us | 5.3-5.7x |
+
+Strings of 65 bytes or more decode about 4-5x faster, and the decode time stays
+flat as strings get longer. Strings under 65 bytes are unchanged, because they
+are still copied (a heap binary is cheaper than a sub-binary reference). This
+is close to a best case, since the benchmark is almost pure string decoding;
+messages that mix many other field types gain less. The decoded values compare
+equal either way.
 
 **The trade-off: memory.** A sub-binary keeps the *entire input binary* alive for
 as long as any decoded value is referenced. If you keep one 136-byte string out
