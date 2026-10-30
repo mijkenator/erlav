@@ -323,6 +323,29 @@ projected_strings_are_copied_test() ->
     end),
     receive {pinned, KeepSize, Pinned} -> ?assertEqual({136, 136}, {KeepSize, Pinned}) end.
 
+%% -------------------------------------------------- unsupported schema shapes
+
+%% "items": "array" (no item type) is a scalar type decode_scalar does not
+%% know, so a full decode of a non-empty array fails with badarg. Skipping such
+%% an array must fail too (code 17): without that, the item consumed no bytes
+%% and the projection returned a value read from the wrong offset.
+unsupported_scalar_type_is_an_error_test_() ->
+    Id = erlav_nif:erlav_init(<<"test/projection_bad_scalar.avsc">>),
+    Z = compile(Id, [<<"z">>]),
+    Empty = <<0, 0, 10>>,                      %% a = [], m = #{}, z = 5
+    NonEmptyArray = <<2, 2, 0, 0, 10>>,        %% a has one item
+    NonEmptyMap = <<0, 2, 2, $k, 2, 0, 10>>,   %% m has one entry
+    [%% nothing to skip: both decoders are fine
+     ?_assertEqual(#{<<"z">> => 5}, erlav_nif:erlav_decode_projected(Z, Empty)),
+     ?_assertEqual(#{<<"a">> => [], <<"m">> => #{}, <<"z">> => 5},
+                   erlav_nif:erlav_decode_fast(Id, Empty)),
+     %% the full decode cannot handle these ...
+     ?_assertError(badarg, erlav_nif:erlav_decode_fast(Id, NonEmptyArray)),
+     ?_assertError(badarg, erlav_nif:erlav_decode_fast(Id, NonEmptyMap)),
+     %% ... and the projection reports it instead of guessing
+     ?_assertMatch({error, _, 17}, erlav_nif:erlav_decode_projected(Z, NonEmptyArray)),
+     ?_assertMatch({error, _, 17}, erlav_nif:erlav_decode_projected(Z, NonEmptyMap))].
+
 %% ----------------------------------------------------------- malformed input
 
 %% A negative-count block whose byte length cannot be right must not be jumped.
