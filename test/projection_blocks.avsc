@@ -1,0 +1,9 @@
+{"type": "record", "name": "Blocks", "namespace": "erlav.test",
+  "fields": [
+      {"name": "head", "type": "long"},
+      {"name": "arr", "type": {"type": "array", "items": "long"}},
+      {"name": "m", "type": {"type": "map", "values": "string"}},
+      {"name": "sarr", "type": {"type": "array", "items": "string"}},
+      {"name": "tail", "type": "long"}
+  ]
+}

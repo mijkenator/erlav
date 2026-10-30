@@ -102,6 +102,73 @@ Options are part of a schema's identity: the same file initialised with
 different options gets a different `SchemaId`. `decode_sub_binaries` affects
 `erlav_decode_fast/2` only; the legacy `erlav_decode/2` does not decode strings.
 
+### Decoding only some fields: `erlav_projection` / `erlav_decode_projected`
+
+If you read a handful of fields out of a large record, building the whole Erlang
+map is wasted work. Compile a *projection* once, then decode with it:
+
+```erlang
+SchemaId = erlav_nif:erlav_init(<<"test/opnrtb_test1.avsc">>),
+{ok, ProjId} = erlav_nif:erlav_projection(SchemaId, [
+    <<"event">>,                                      % the field's whole value
+    {<<"bid_request">>, [                             % only these sub-fields
+        {<<"imp">>, [{<<"banner">>, [<<"w">>]}]},     % of every element of an array of records
+        {<<"user">>, [<<"id">>]}
+    ]}
+]),
+#{<<"event">> := _, <<"bid_request">> := #{<<"imp">> := [#{<<"banner">> := #{<<"w">> := _}} | _]}} =
+    erlav_nif:erlav_decode_projected(ProjId, Binary)
+```
+
+A spec is a list of `<<"field">>` (the whole value) and `{<<"field">>, SubSpec}`
+(only the listed fields of a record, of every record in an array of records, or
+of a nullable one of those). The result is a map with exactly the selected keys,
+equal to picking those keys out of `erlav_decode_fast/2`'s result, including
+`undefined` for a null record or an absent nullable field. A projection belongs
+to one `SchemaId`; compiling the same selection twice returns the same
+`ProjId`.
+
+`erlav_projection/2` checks the spec against the schema and returns
+`{error, Message, Code}` for an unknown field (112), a field listed twice (113),
+a sub-spec on something that is not a record, an array of records or a nullable
+one of those (115, e.g. a scalar, a map, a multi-member union), an empty
+sub-spec (116), or a malformed spec (110, 111).
+
+Avro records carry no field offsets, so a projection cannot jump to a field. It
+*skips* the fields it does not want (walking their bytes, building no terms) and
+*stops* after the last one it wants. Arrays and maps written with negative block
+counts (`use_negative_block_count`, and what `erlavro` emits) are skipped in one
+step. Measured on the 900-byte OpenRTB fixture (full `erlav_decode_fast/2`:
+~41 us):
+
+| Selection | Projected decode | Speedup |
+|---|---|---|
+| 1 early top-level field | ~1.3 us | ~30x |
+| `bid_request.id` | ~1.4-1.7 us | ~25-30x |
+| `event` + `bid_request.imp[].banner.w` + `bid_request.user.id` | ~3.0-3.6 us | ~11-14x |
+| 3 spread top-level fields, the last one near the end | 3.5-5.3 us | 8-12x |
+| 1 field near the end | 3.2-5.1 us | 8-13x |
+| all 13 top-level fields | ~41-42 us | none (same work as a full decode) |
+
+(Ranges cover two runs, with and without negative block counts; the
+negative-count encoding skips large arrays/maps faster.) The savings come from
+not building terms, so they are biggest on wide records with large unwanted
+parts and smallest when you select most of the record or skip only small
+scalars. Measure on your own schema.
+
+**Differences from a full decode to be aware of:**
+
+- Bytes after the last selected field are **not validated**. A truncated or
+  corrupt tail that `erlav_decode_fast/2` rejects can still decode successfully
+  here. Everything up to and including the last selected field is checked, and
+  skipped fields are checked as far as skipping them needs (a bad length, a
+  truncated value), not fully.
+- Strings and `bytes` are always copied, even if the schema was initialised with
+  `decode_sub_binaries`: a projection usually keeps a few fields of a large
+  message, and a sub-binary would keep the whole input alive for them.
+
+The design is in [docs/design-partial-decode.md](docs/design-partial-decode.md).
+
 
 Performance
 -----
