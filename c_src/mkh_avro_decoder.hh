@@ -11,6 +11,8 @@
 #include "schema_item.hh"
 #endif
 
+#include "projection.hh"
+
 namespace mkh_avro2 {
 // What the pointer-based decoder needs to know about the input beyond the
 // cursor, passed down by const reference. The input term and options travel
@@ -30,7 +32,11 @@ int64_t decodeZigzag64(uint64_t) noexcept;
 int32_t decodeZigzag32(uint32_t) noexcept;
 int64_t decodeLong( std::vector<uint8_t>::iterator&, std::vector<uint8_t>::iterator );
 int64_t decodeLong(uint8_t*& it, const uint8_t* end);
-int64_t decode_block_count(uint8_t*& it, const uint8_t* end, size_t min_item_wire_size);
+// If block_bytes_out is given, it receives the block's encoded byte length for
+// a negative-count block (already checked against the remaining input) and -1
+// for a plain positive-count block. skipvalue uses it to jump over a block.
+int64_t decode_block_count(uint8_t*& it, const uint8_t* end, size_t min_item_wire_size,
+                           int64_t* block_bytes_out = nullptr);
 // Called at the start of every decode: resets the per-decode budget for
 // array/map items that occupy no bytes on the wire (see #40).
 void reset_decode_budget();
@@ -56,6 +62,14 @@ ERL_NIF_TERM decode_fixed(ErlNifEnv*, SchemaItem*, uint8_t*&, const DecodeCtx&);
 
 ERL_NIF_TERM  decode(ErlNifEnv*, SchemaItem*, std::vector<uint8_t>::iterator&, std::vector<uint8_t>::iterator);
 ERL_NIF_TERM  decode(ErlNifEnv*, SchemaItem*, uint8_t*&, const DecodeCtx&);
+
+// Partial decode (#53). skipvalue advances the cursor over one value exactly as
+// decodevalue would, without building terms. project() decodes only the fields
+// `proj` selects out of the record `si`; project_value() reaches that record
+// through the nullable-union / array wrappers the spec descended through.
+void skipvalue(SchemaItem*, uint8_t*&, const DecodeCtx&);
+ERL_NIF_TERM project(ErlNifEnv*, SchemaItem*, const Projection*, uint8_t*&, const DecodeCtx&);
+ERL_NIF_TERM project_value(ErlNifEnv*, SchemaItem*, const Projection*, uint8_t*&, const DecodeCtx&);
 
 }
 

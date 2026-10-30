@@ -1,6 +1,7 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <mutex>
 #include <shared_mutex>
 #include <stdint.h>
@@ -302,6 +303,104 @@ erlav_decode_nif_fast(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
     return ret_map;
 }
 
+// ---------------------------------------------------------------- projections
+//
+// Partial decode (#53, docs/design-partial-decode.md): erlav_projection/2
+// compiles a field spec against a registered schema once; erlav_decode_projected/2
+// then decodes only those fields. Projections live in their own id space,
+// guarded by the same mutex as the schema maps (rare write, shared reads). A
+// Projection holds a SchemaItem* that is never freed (schemas are never
+// unregistered), and is immutable once registered.
+struct ProjectionEntry {
+    mkh_avro2::SchemaItem* schema;
+    mkh_avro2::Projection* projection;
+};
+static std::map<int, ProjectionEntry> erlav_projections_map;
+// (schema id, canonical resolved selection) -> projection id, so the same
+// spec compiled twice returns the same id instead of growing the registry.
+static std::map<std::pair<int, std::string>, int> erlav_projection_ids;
+
+ERL_NIF_TERM
+erlav_projection_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+    int schema_id = 0;
+    if (!enif_get_int(env, argv[0], &schema_id)) {
+        return enif_make_badarg(env);
+    }
+    auto* schema = find_schema(schema_id);
+    if (schema == nullptr) {
+        return enif_make_badarg(env);
+    }
+
+    // Compile outside the lock: it only reads the (immutable) schema tree.
+    std::unique_ptr<mkh_avro2::Projection> proj;
+    try {
+        proj.reset(mkh_avro2::compile_projection(env, schema, argv[1]));
+    } catch (mkh_avro::AvroException const& ae) {
+        return make_error_tuple(env, ae.message, ae.code);
+    } catch (...) {
+        return make_error_tuple(env, "erlav_projection: unknown error", 9991);
+    }
+
+    auto key = std::make_pair(schema_id, mkh_avro2::projection_canonical_form(*proj));
+    std::unique_lock<std::shared_mutex> lock(erlav_schema_mutex);
+    auto found = erlav_projection_ids.find(key);
+    int id;
+    if (found != erlav_projection_ids.end()) {
+        id = found->second;
+    } else {
+        try {
+            id = static_cast<int>(erlav_projections_map.size()) + 1;
+            erlav_projections_map.emplace(id, ProjectionEntry{schema, proj.get()});
+            try {
+                erlav_projection_ids.emplace(std::move(key), id);
+            } catch (...) {
+                erlav_projections_map.erase(id);
+                throw;
+            }
+            proj.release(); // now owned by the registry
+        } catch (...) {
+            return make_error_tuple(env, "erlav_projection: out of memory", 9991);
+        }
+    }
+    return enif_make_tuple2(env, enif_make_atom(env, "ok"), enif_make_int(env, id));
+}
+
+ERL_NIF_TERM
+erlav_decode_projected_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+    int proj_id = 0;
+    ErlNifBinary sbin;
+
+    if (!enif_get_int(env, argv[0], &proj_id) || !enif_inspect_binary(env, argv[1], &sbin)) {
+        return enif_make_badarg(env);
+    }
+
+    ProjectionEntry entry;
+    {
+        std::shared_lock<std::shared_mutex> lock(erlav_schema_mutex);
+        auto it = erlav_projections_map.find(proj_id);
+        if (it == erlav_projections_map.end()) {
+            return enif_make_badarg(env);
+        }
+        entry = it->second;
+    }
+
+    uint8_t* p = sbin.data;
+    mkh_avro2::reset_decode_budget();
+    // Strings are always copied, even for a schema initialised with
+    // decode_sub_binaries: a projection typically keeps a few fields out of a
+    // large message, and a sub-binary would pin the whole input for them.
+    const mkh_avro2::DecodeCtx ctx{sbin.data + sbin.size, sbin.data, argv[1], false};
+    try {
+        return mkh_avro2::project(env, entry.schema, entry.projection, p, ctx);
+    } catch (mkh_avro::AvroException const& ae) {
+        return make_error_tuple(env, ae.message, ae.code);
+    } catch (std::out_of_range const& ofr) {
+        return make_error_tuple(env, ofr.what(), 9990);
+    } catch (...) {
+        return make_error_tuple(env, "unknown error", 9991);
+    }
+}
+
 ERL_NIF_TERM
 int_encode_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
     ErlNifBinary retbin;
@@ -357,6 +456,8 @@ ErlNifFunc nif_funcs[] = {{"erlav_init", 1, erlav_init_nif},
                           {"erlav_init", 2, erlav_init_nif2},
                           {"erlav_encode", 2, erlav_encode_nif},
                           {"erlav_decode_fast", 2, erlav_decode_nif_fast},
+                          {"erlav_projection", 2, erlav_projection_nif},
+                          {"erlav_decode_projected", 2, erlav_decode_projected_nif},
                           {"int_encode", 1, int_encode_nif},
                           {"int_decode", 1, int_decode_nif},
                           {"erlav_decode", 2, erlav_decode_nif}};

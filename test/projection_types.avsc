@@ -1,0 +1,34 @@
+{"type": "record", "name": "ProjTypes", "namespace": "erlav.test",
+  "fields": [
+      {"name": "fInt", "type": "int"},
+      {"name": "fLong", "type": "long"},
+      {"name": "fFloat", "type": "float"},
+      {"name": "fDouble", "type": "double"},
+      {"name": "fBool", "type": "boolean"},
+      {"name": "fString", "type": "string"},
+      {"name": "fBytes", "type": "bytes"},
+      {"name": "fNullStr", "type": ["null", "string"]},
+      {"name": "fEnum", "type": {"type": "enum", "name": "Kind", "symbols": ["ONE", "TWO", "THREE"]}},
+      {"name": "fFixed", "type": {"type": "fixed", "name": "Md5", "size": 4}},
+      {"name": "fArrLong", "type": {"type": "array", "items": "long"}},
+      {"name": "fArrStr", "type": {"type": "array", "items": "string"}},
+      {"name": "fArrArr", "type": {"type": "array", "items": {"type": "array", "items": "long"}}},
+      {"name": "fMapLong", "type": {"type": "map", "values": "long"}},
+      {"name": "fMapUnion", "type": {"type": "map", "values": ["null", "string"]}},
+      {"name": "fMapRec", "type": {"type": "map", "values": {"type": "record", "name": "MapVal", "fields": [
+          {"name": "a", "type": "long"}, {"name": "b", "type": "string"}]}}},
+      {"name": "fArrRec", "type": {"type": "array", "items": {"type": "record", "name": "Item", "fields": [
+          {"name": "id", "type": "long"},
+          {"name": "tag", "type": "string"},
+          {"name": "note", "type": ["null", "string"]}]}}},
+      {"name": "fNullRec", "type": ["null", {"type": "record", "name": "Sub", "fields": [
+          {"name": "x", "type": "long"},
+          {"name": "inner", "type": ["null", {"type": "record", "name": "Inner", "fields": [
+              {"name": "y", "type": "long"}, {"name": "z", "type": "string"}]}]},
+          {"name": "w", "type": "string"}]}]},
+      {"name": "fNullArrRec", "type": ["null", {"type": "array", "items": {"type": "record", "name": "Elt", "fields": [
+          {"name": "k", "type": "long"}, {"name": "v", "type": "string"}]}}]},
+      {"name": "fUnion", "type": ["null", "long", "string"]},
+      {"name": "fLast", "type": "string"}
+  ]
+}
