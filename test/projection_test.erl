@@ -65,10 +65,6 @@ term_inner_null() ->
 terms() ->
     [{full, term_full()}, {nulls, term_nulls()}, {inner_null, term_inner_null()}].
 
-%% The decoder fills in `undefined` for absent nullable keys.
-expected(Id, T) ->
-    erlav_nif:erlav_decode_fast(Id, erlav_nif:erlav_encode(Id, T)).
-
 %% Two registrations of the same schema: plain, and negative block counts (so
 %% every array/map is written with a byte-length header the skip can jump).
 ids() ->
