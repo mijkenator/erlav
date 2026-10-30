@@ -1,7 +1,9 @@
 # Design proposal: partial (selective) decode
 
 Status: **proposal, no implementation**. Review of the current decoder plus a
-design for decoding only caller-selected fields.
+design for decoding only caller-selected fields. Updated after #54 (one-call
+map build) and #67 (bounds-checked decoder) landed; sections 1, 2, 5 and 9
+reflect that.
 
 ## 1. Motivation
 
@@ -11,13 +13,24 @@ read a handful of them: routing keys, a timestamp, a couple of ids. Today
 as an Erlang map. The cost is paid whether or not the caller looks at the
 result.
 
-Baseline measured once on one developer machine (Apple clang 15, `erlav_decode_fast`, 100k
-iterations): `test/opnrtb_test1.avsc` with `test/opnrtb_perf.data`
-(900 bytes encoded, 13 top-level fields, deeply nested) takes **~124 µs per decode**, versus
-~14.5 µs to *encode* the same term. Decode being ~8x slower than encode on
-this schema is not explained by wire work (it is the same 900 bytes), so most
-of the time is probably term construction, see 2.3. This is a hypothesis to
-confirm by profiling in phase 0, not a finding.
+Baseline, measured on one developer machine (Apple clang 15,
+`erlav_decode_fast`, 100k iterations, `test/opnrtb_test1.avsc` with
+`test/opnrtb_perf.data` encoded to 900 bytes, 13 top-level fields, deeply
+nested):
+
+| | decode | encode |
+|---|---|---|
+| when this proposal was first written | ~124 µs | ~14.5 µs |
+| current `master` (after #54, one-call map build) | **~45 µs** | ~16 µs |
+
+The original gap (decode ~8x slower than encode on the same 900 bytes) was
+term construction, not wire work: profiling in
+[decode-map-build-perf.md](decode-map-build-perf.md) put about half of the
+samples in key comparison and map building, and building each record's map in
+one call cut the decode from ~118 to ~38 µs there. Decode is now ~2.8x encode.
+Any projection speedup has to be measured against the ~45 µs baseline, not the
+old figure, and the remaining cost is mostly term construction for the whole
+value, which is what a projection avoids.
 
 ## 2. Review of the current decoder
 
@@ -27,11 +40,10 @@ confirm by profiling in phase 0, not a finding.
   a `std::vector<uint8_t>`) and `erlav_decode_nif_fast` (raw `uint8_t*` over
   the binary's own bytes) in `c_src/erlav_nif.cpp`. Both call
   `mkh_avro2::decode()`; the iterator variant is the legacy path.
-- `decode()` (`mkh_avro_decoder.cc:90`) is the record decoder. It loops over
-  `si->childItems` and, per field, builds the key binary, dispatches on
-  `obj_type`, and `enif_make_map_put`s the value. The seven `obj_type` branches
-  are copy-pasted and differ only in which `decode_*` they call;
-  `decodevalue()` (line 192) already contains that same switch.
+- The pointer-based `decode()` in `mkh_avro_decoder.cc` is the record decoder.
+  It loops over `si->childItems`, builds the key binary for each field, calls
+  `decodevalue()` (the single per-type dispatch) for the value, and builds the
+  map once at the end with `enif_make_map_from_arrays`.
 - Value decoders: `decode_scalar`, `decode_union`, `decode_array`,
   `decode_map`, `decode_enum`, `decode_fixed`, `decode_record` (which just
   calls `decode()`).
@@ -69,18 +81,26 @@ confirm by profiling in phase 0, not a finding.
 
 ### 2.3 Observations that bear on the design (and are worth fixing regardless)
 
-- **No bounds checking** against the input length: #30 (confirmed heap
-  overflow), #38 (unchecked union index), #40 (unbounded block count).
-  New skip code must not add a second unchecked reader (see 5).
-- **`enif_make_map_put` per field** returns a new map each time. For flatmaps
-  this is likely O(n) per put, so a record with n fields is O(n^2) to build.
-  Building from arrays in one call (`enif_make_map_from_arrays`, if available
-  at our minimum OTP; to be verified) would help full *and* partial decode.
-  Hypothesis, to be measured in phase 0.
-- **Key binaries are re-created on every decode** (`enif_make_new_binary` per
-  field per call). The encoder avoids this with `cached_keys`; the decoder
+- **Bounds checking: fixed (#30, #38, #40, via #67).** The pointer-based
+  decoder now takes an `end` pointer and checks every varint, string length,
+  fixed size, union index and block count (`decodeLong(it, end)`,
+  `decodeVarint`, `decode_block_count`, error codes `TRUNCATED`,
+  `NEGATIVE_LENGTH`, `UNION_INDEX`, `BLOCK_COUNT`). It also has a per-call
+  budget for zero-width items (`reset_decode_budget()`, thread-local, reset on
+  every NIF call) so an array of `null`s cannot be made to loop for billions of
+  iterations. New skip code should reuse these primitives, not add a second
+  reader (see 5).
+- **`enif_make_map_put` per field: fixed (#54).** `decode()` now collects keys
+  and values and builds each record map with one `enif_make_map_from_arrays`
+  call (`decode_map` does the same for 4+ entries, falling back to puts for
+  wire maps with duplicate keys). This was the dominant cost (see section 1),
+  and it applies to full and partial decode alike. `enif_make_map_from_arrays`
+  needs OTP >= 21; CI runs OTP 26.
+- **Key binaries are still re-created on every decode** (`enif_make_new_binary`
+  per field per call). The encoder avoids this with `cached_keys`; the decoder
   cannot reuse process-independent terms directly, but it should not be doing
-  more than one allocation per key.
+  more than one allocation per key. A projection builds keys only for selected
+  fields, so it benefits automatically.
 - `decode_array` still has an unimplemented multi-type branch that silently
   returns `undefined` and desyncs the cursor (#41). Skip must not inherit that:
   an unsupported shape must be an error, not a guess.
@@ -204,9 +224,10 @@ fields early in the record (early exit). Smallest win: wanted fields near the
 end of a record of small scalars, where skipping still touches every byte but
 avoids term construction.
 
-Prerequisite refactor: collapse `decode()`'s seven copy-pasted branches onto a
-single per-field dispatch (`decodevalue`) so `project()` and `decode()` share
-one value-decoding switch and cannot drift apart.
+`decode()` already dispatches every field through `decodevalue()`, so
+`project()` can call the same function for `whole` fields and the two cannot
+drift apart. (This was a prerequisite refactor in the first draft; it has
+since landed.)
 
 ### 4.6 Semantics to document
 
@@ -222,11 +243,17 @@ one value-decoding switch and cannot drift apart.
 Skipping is exactly the kind of code that turns a bad length into a wild
 pointer. The new code takes an `end` pointer from the start and checks every
 advance (varint length, string length, fixed size, block byte-length jump,
-block count against remaining bytes). That duplicates what #30/#38/#40 want
-for the existing decoder; ideally the shared primitives (`read_varint(p,end)`
-and friends) land first, or in the same effort, so there is one bounds-checked
-reader rather than two. A negative-count block's byte length must be validated
-against `end` before jumping. Unsupported shapes (#41) throw.
+block count against remaining bytes). The shared bounds-checked primitives now
+exist (#30/#38/#40, #67), so `skipvalue` is built on `decodeLong`,
+`decodeVarint` and `decode_block_count` rather than a second reader, and
+returns the same error codes as the full decoder. For a negative-count block,
+`decode_block_count` already rejects a byte length that is negative or larger
+than the remaining input, but it then discards the value because the full
+decoder walks item by item. Skipping needs that value returned (or an
+out-parameter) so it can jump `block_bytes` forward; the check before the jump
+is already there. Skipping zero-width items (arrays of `null`, empty records) must draw on
+the same per-call budget as decoding them. Unsupported shapes (#41, still open)
+throw.
 
 ## 6. Concurrency and lifecycle
 
@@ -266,10 +293,11 @@ more than noise). Compare against the full-decode baseline in section 1.
 
 ## 9. Phased plan
 
-0. **Baseline and prerequisites.** Profile full decode on the OpenRTB fixture
-   (confirm or refute the map-build hypothesis in 2.3); collapse `decode()`
-   branches onto `decodevalue`; agree with #30/#38/#40 on a shared
-   bounds-checked reader.
+0. **Baseline and prerequisites.** Largely done: the map-build cost is fixed
+   and measured (#54, section 1), `decode()` goes through `decodevalue`, and the
+   bounds-checked reader exists (#67). Remaining: re-take the ~45 µs OpenRTB
+   baseline in the same run as the projection benchmarks, and decide #41 (the
+   unimplemented multi-type array branch) before `skipvalue` has to handle it.
 1. `skipvalue` for all types + `erlav_projection/2` / `erlav_decode_projected/2`
    for **top-level** fields, with oracle tests.
 2. Nested records, nullable unions, arrays of records.
@@ -284,6 +312,15 @@ more than noise). Compare against the full-decode baseline in section 1.
   null: `undefined` (matches full decode) vs. key omitted.
 - Do callers want a values-in-spec-order tuple instead of a map (faster, no
   key hashing)?
-- Minimum supported OTP: is `enif_make_map_from_arrays` available there?
+- Minimum supported OTP: `enif_make_map_from_arrays` (OTP >= 21) is already
+  used by the full decoder and CI runs OTP 26, but no minimum is declared in
+  `rebar.config` or the docs. Worth stating explicitly.
+- Interaction with `decode_sub_binaries` (#74, PR #75, not merged at the time
+  of writing): that option makes the decoder return strings/bytes of 65+ bytes
+  as sub-binaries of the input, which pins the whole input binary. A projection
+  that keeps a few fields out of a large message would pin far more than it
+  returns, so projected decode should probably copy by default even when the
+  schema was initialised with that option. Decide when #75 lands, since it also
+  changes the decoder signatures (the input term travels in a `DecodeCtx`).
 - Should `erlav_projection/2` accept dotted-binary paths (`<<"user.id">>`) as
   sugar for the nested form?
