@@ -503,28 +503,37 @@ ERL_NIF_TERM decode_array(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const D
     return atom_undefined(env);
 }
 
-ERL_NIF_TERM decode_union(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const DecodeCtx& ctx) {
-    // The branch index comes straight off the wire. It used to index
-    // si->childItems with no range check (heap over-read / wild pointer
-    // dereference on a bad index -- #38). A negative index wraps to a huge
-    // unsigned value here and is rejected by the same size comparison.
+// Reads a union's branch index and returns the member it selects, or nullptr
+// for the null branch of a nullable union. Shared by decode_union, skipvalue
+// and project_value so all three treat a bad index identically.
+//
+// The branch index comes straight off the wire. It used to index
+// si->childItems with no range check (heap over-read / wild pointer
+// dereference on a bad index -- #38). A negative index wraps to a huge
+// unsigned value here and is rejected by the same size comparison.
+static inline SchemaItem* select_union_branch(SchemaItem* si, uint8_t*& it, const DecodeCtx& ctx) {
     const uint32_t childNumber = static_cast<uint32_t>(decodeInt32(it, ctx.end));
-    SchemaItem* child;
     if(si->is_nullable == 1){
         // Wire index 0 is the null branch; the non-null members follow, so
         // index i maps to childItems[i - 1] and the valid range is 0..size.
         if(childNumber == 0){
-            return atom_undefined(env);
+            return nullptr;
         }
         if(childNumber > si->childItems.size()){
             throw_union_index(static_cast<int32_t>(childNumber), 0, si->childItems.size() + 1);
         }
-        child = si->childItems[childNumber - 1];
-    } else {
-        if(childNumber >= si->childItems.size()){
-            throw_union_index(static_cast<int32_t>(childNumber), 0, si->childItems.size());
-        }
-        child = si->childItems[childNumber];
+        return si->childItems[childNumber - 1];
+    }
+    if(childNumber >= si->childItems.size()){
+        throw_union_index(static_cast<int32_t>(childNumber), 0, si->childItems.size());
+    }
+    return si->childItems[childNumber];
+}
+
+ERL_NIF_TERM decode_union(ErlNifEnv* env, SchemaItem * si, uint8_t*& it, const DecodeCtx& ctx) {
+    SchemaItem* child = select_union_branch(si, it, ctx);
+    if(child == nullptr){
+        return atom_undefined(env);
     }
     if(child->scalar_type >= 0 && child->obj_type == 0){
         return decode_scalar(env, child->scalar_type, it, ctx);
@@ -642,9 +651,11 @@ int64_t decodeLong(uint8_t*& it, const uint8_t* end) {
 // essentially every array/map it writes (see #15), so decode_array/
 // decode_map must handle both. Returns the item count for this block; 0
 // means "no more blocks" -- the array/map terminator.
-int64_t decode_block_count(uint8_t*& it, const uint8_t* end, size_t min_item_wire_size) {
+int64_t decode_block_count(uint8_t*& it, const uint8_t* end, size_t min_item_wire_size,
+                           int64_t* block_bytes_out) {
     int64_t count = decodeLong(it, end);
     int64_t block_bytes = -1; // only present in the negative form
+    if (block_bytes_out) *block_bytes_out = -1;
     if (count < 0) {
         block_bytes = decodeLong(it, end);
         if (count == INT64_MIN) {
@@ -684,6 +695,7 @@ int64_t decode_block_count(uint8_t*& it, const uint8_t* end, size_t min_item_wir
         }
         zero_width_items_left -= static_cast<uint64_t>(count);
     }
+    if (block_bytes_out) *block_bytes_out = block_bytes;
     return count;
 }
 
@@ -759,6 +771,254 @@ double decode_double(uint8_t*& it, const uint8_t* end){
     }
     const double* ret = reinterpret_cast<const double*>(&vect2);
     return *ret;
+}
+
+// ------------------------------------------------ partial decode (#53)
+//
+// skipvalue() must consume exactly the bytes decodevalue() would for the same
+// SchemaItem, including its quirks (a scalar_type decode_scalar does not know
+// consumes nothing; a record field without a decodable type is not on the
+// wire). Every function below mirrors the decoder of the same name.
+
+// A shape or scalar type the full decoder cannot decode (#41: decode_array
+// returns `undefined` without consuming a byte; an unknown scalar type makes
+// decode_scalar return a badarg). Skipping must not guess.
+static constexpr uint32_t UNSUPPORTED_SHAPE_CODE = 17;
+
+static inline void skip_bytes(uint8_t*& it, const DecodeCtx& ctx, uint64_t n) {
+    if (n > static_cast<uint64_t>(ctx.end - it)) {
+        throw mkh_avro::AvroException(TRUNCATED_MSG, TRUNCATED_CODE);
+    }
+    it += n;
+}
+
+static inline void skip_string(uint8_t*& it, const DecodeCtx& ctx) {
+    const int64_t len = decodeLong(it, ctx.end);
+    if (len < 0) {
+        throw mkh_avro::AvroException(NEGATIVE_LENGTH_MSG, NEGATIVE_LENGTH_CODE);
+    }
+    skip_bytes(it, ctx, static_cast<uint64_t>(len));
+}
+
+static void skip_scalar(int sctype, uint8_t*& it, const DecodeCtx& ctx) {
+    switch (sctype) {
+        case 0: case 1: decodeLong(it, ctx.end); break; // int, long
+        case 2: skip_bytes(it, ctx, 8); break;          // double
+        case 3: skip_bytes(it, ctx, 4); break;          // float
+        case 4: skip_bytes(it, ctx, 1); break;          // boolean
+        case 5: case 6: skip_string(it, ctx); break;    // string, bytes
+        default:
+            // decode_scalar hands the BEAM a badarg for a scalar type it does
+            // not know (e.g. "items": "array" with no items), so the full
+            // decode fails. Skipping must fail too: carrying on would leave
+            // the cursor wherever the garbage schema put it.
+            throw mkh_avro::AvroException(
+                "Decode: scalar type not supported", UNSUPPORTED_SHAPE_CODE);
+    }
+}
+
+// Walks the blocks of an array/map. A negative-count block carries its byte
+// length, which decode_block_count has already checked against the remaining
+// input, so the whole block is jumped in O(1); a positive-count block has to
+// be walked item by item. (A negative block whose byte length disagrees with
+// its items is not noticed: the items are not read. Valid encoders never emit
+// one.)
+template <typename SkipItem>
+static void skip_blocks(uint8_t*& it, const DecodeCtx& ctx, size_t min_item_wire_size,
+                        SkipItem&& skip_item) {
+    for (;;) {
+        int64_t block_bytes;
+        const int64_t count = decode_block_count(it, ctx.end, min_item_wire_size, &block_bytes);
+        if (count == 0) break;
+        if (block_bytes >= 0) {
+            it += block_bytes;
+            continue;
+        }
+        for (int64_t i = 0; i < count; i++) skip_item();
+    }
+}
+
+static void skip_union(SchemaItem* si, uint8_t*& it, const DecodeCtx& ctx) {
+    SchemaItem* child = select_union_branch(si, it, ctx);
+    if (child == nullptr) return;
+    if (child->scalar_type >= 0 && child->obj_type == 0) {
+        skip_scalar(child->scalar_type, it, ctx);
+    } else {
+        skipvalue(child, it, ctx);
+    }
+}
+
+static void skip_array(SchemaItem* si, uint8_t*& it, const DecodeCtx& ctx);
+
+static void skip_map(SchemaItem* si, uint8_t*& it, const DecodeCtx& ctx) {
+    if (si->values_are_union) {
+        skip_blocks(it, ctx, si->min_item_wire_size, [&] {
+            skip_string(it, ctx); // key
+            skip_union(si, it, ctx);
+        });
+    } else if (si->obj_field != "complex") {
+        skip_blocks(it, ctx, si->min_item_wire_size, [&] {
+            skip_string(it, ctx);
+            skip_scalar(si->scalar_type, it, ctx);
+        });
+    } else {
+        skip_blocks(it, ctx, si->min_item_wire_size, [&] {
+            skip_string(it, ctx);
+            skipvalue(si->childItems[0], it, ctx);
+        });
+    }
+}
+
+static void skip_array(SchemaItem* si, uint8_t*& it, const DecodeCtx& ctx) {
+    if (si->obj_field != "complex") {
+        const int st = get_scalar_type(si->obj_field);
+        skip_blocks(it, ctx, si->min_item_wire_size, [&] { skip_scalar(st, it, ctx); });
+    } else if (si->array_type == 1) {
+        // Items are a multi-type union, each prefixed by its branch index.
+        skip_blocks(it, ctx, si->min_item_wire_size, [&] {
+            const int64_t type_index = decodeLong(it, ctx.end);
+            const auto member =
+                (type_index >= 0 && type_index <= INT_MAX)
+                    ? si->array_multi_type_reverse.find(static_cast<int>(type_index))
+                    : si->array_multi_type_reverse.end();
+            if (member == si->array_multi_type_reverse.end()) {
+                throw_union_index(type_index, 0, si->array_multi_type_reverse.size());
+            }
+            const std::string& eletype = member->second;
+            if (eletype == "string" || eletype == "long" || eletype == "double") {
+                skip_scalar(get_scalar_type(eletype), it, ctx);
+            } else if (eletype == "null") {
+                // no bytes
+            } else if (eletype == "array") {
+                skip_array(si->childItems[si->array_multi_type_child_index.at("array")], it, ctx);
+            } else if (eletype == "record" || eletype == "map" || eletype == "enum") {
+                skipvalue(si->childItems[si->array_multi_type_child_index.at(eletype)], it, ctx);
+            } else {
+                throw mkh_avro::AvroException(
+                    "Array union: unresolved member type '" + eletype + "'", 10);
+            }
+        });
+    } else if (si->childItems.size() == 1) {
+        // Covers array<array<scalar>> as well: skipvalue on the inner array
+        // takes the scalar branch above, like decode_array's explicit case.
+        skip_blocks(it, ctx, si->min_item_wire_size,
+                    [&] { skipvalue(si->childItems[0], it, ctx); });
+    } else {
+        throw mkh_avro::AvroException(
+            "Decode: array shape not supported (see #41)", UNSUPPORTED_SHAPE_CODE);
+    }
+}
+
+void skipvalue(SchemaItem* si, uint8_t*& it, const DecodeCtx& ctx) {
+    switch (si->obj_type) {
+        case 0:
+            skip_scalar(si->scalar_type, it, ctx);
+            break;
+        case 1:
+            skip_union(si, it, ctx);
+            break;
+        case 2:
+            skip_array(si, it, ctx);
+            break;
+        case 3:
+            for (SchemaItem* f : si->childItems) {
+                if (field_is_decoded(f)) skipvalue(f, it, ctx);
+            }
+            break;
+        case 4:
+            skip_map(si, it, ctx);
+            break;
+        case 5: // enum: the symbol index, not range-checked when skipped
+            decodeInt32(it, ctx.end);
+            break;
+        case 6: // fixed
+            if (si->fixed_size < 0) {
+                throw mkh_avro::AvroException(TRUNCATED_MSG, TRUNCATED_CODE);
+            }
+            skip_bytes(it, ctx, static_cast<uint64_t>(si->fixed_size));
+            break;
+        default:
+            break; // decodevalue returns without consuming for these
+    }
+}
+
+// Decodes the fields of record `si` that `proj` selects. Fields before the
+// last selected one are walked (skipped or decoded); fields after it are only
+// skipped when someone downstream still needs the cursor past this record.
+ERL_NIF_TERM project(ErlNifEnv* env, SchemaItem* si, const Projection* proj, uint8_t*& it, const DecodeCtx& ctx) {
+    static constexpr size_t STACK_CAP = 64;
+    ERL_NIF_TERM stack_keys[STACK_CAP];
+    ERL_NIF_TERM stack_vals[STACK_CAP];
+    std::vector<ERL_NIF_TERM> heap_keys, heap_vals;
+    ERL_NIF_TERM* keys = stack_keys;
+    ERL_NIF_TERM* vals = stack_vals;
+    if (proj->nwanted > STACK_CAP) {
+        heap_keys.resize(proj->nwanted);
+        heap_vals.resize(proj->nwanted);
+        keys = heap_keys.data();
+        vals = heap_vals.data();
+    }
+    size_t n = 0;
+
+    const size_t nfields = si->childItems.size();
+    for (size_t i = 0; i < proj->scan_end; i++) {
+        SchemaItem* f = si->childItems[i];
+        if (!field_is_decoded(f)) continue;
+        const uint8_t w = proj->want[i];
+        if (w == Projection::SKIP) {
+            skipvalue(f, it, ctx);
+            continue;
+        }
+        const auto len = f->obj_name.length();
+        unsigned char* key_data = enif_make_new_binary(env, len, &keys[n]);
+        memcpy(key_data, f->obj_name.data(), len);
+        vals[n] = (w == Projection::WHOLE)
+                      ? decodevalue(env, f, it, ctx)
+                      : project_value(env, f, proj->sub[i], it, ctx);
+        n++;
+    }
+    if (proj->tail_needed) {
+        for (size_t i = proj->scan_end; i < nfields; i++) {
+            if (field_is_decoded(si->childItems[i])) skipvalue(si->childItems[i], it, ctx);
+        }
+    }
+
+    if (n == 0) return enif_make_new_map(env);
+    ERL_NIF_TERM ret;
+    if (!enif_make_map_from_arrays(env, keys, vals, n, &ret)) {
+        throw mkh_avro::AvroException("Record decode: duplicate field name", 12);
+    }
+    return ret;
+}
+
+// Reaches the record a sub-spec applies to through the wrappers the spec
+// compiler allows: the record itself, a union holding it, an array of it, or
+// a union holding that array. A null union branch is `undefined`, as in a full
+// decode.
+ERL_NIF_TERM project_value(ErlNifEnv* env, SchemaItem* si, const Projection* proj, uint8_t*& it, const DecodeCtx& ctx) {
+    switch (si->obj_type) {
+        case 3:
+            return project(env, si, proj, it, ctx);
+        case 1: {
+            SchemaItem* child = select_union_branch(si, it, ctx);
+            if (child == nullptr) return atom_undefined(env);
+            return project_value(env, child, proj, it, ctx);
+        }
+        case 2: {
+            std::vector<ERL_NIF_TERM> items;
+            for (;;) {
+                const int64_t count = decode_block_count(it, ctx.end, si->min_item_wire_size);
+                if (count == 0) break;
+                for (int64_t i = 0; i < count; i++) {
+                    items.push_back(project(env, si->childItems[0], proj, it, ctx));
+                }
+            }
+            return enif_make_list_from_array(env, items.data(), items.size());
+        }
+        default:
+            // compile_projection only builds sub-projections for the shapes above.
+            throw mkh_avro::AvroException("Projection: unexpected schema shape", 18);
+    }
 }
 
 }

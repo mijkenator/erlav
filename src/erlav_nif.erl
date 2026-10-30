@@ -6,13 +6,15 @@
     erlav_encode/2,
     erlav_decode/2,
     erlav_decode_fast/2,
+    erlav_projection/2,
+    erlav_decode_projected/2,
     erlav_safe_encode/2,
     int_decode/1,
     int_encode/1,
     replace_keys/1
 ]).
 
--nifs([erlav_init/1, erlav_init/2, erlav_encode/2, erlav_decode/2, erlav_decode_fast/2, int_encode/1, int_decode/1]).
+-nifs([erlav_init/1, erlav_init/2, erlav_encode/2, erlav_decode/2, erlav_decode_fast/2, erlav_projection/2, erlav_decode_projected/2, int_encode/1, int_decode/1]).
 
 -on_load(init/0).
 
@@ -60,6 +62,28 @@ erlav_decode(_SchemaId, _Bin) ->
 %% performance, not on how much you trust the input.
 -spec erlav_decode_fast(SchemaId :: integer(), Bin :: binary()) -> map() | {error, string(), integer()}.
 erlav_decode_fast(_SchemaId, _Bin) ->
+    not_loaded(?LINE).
+
+%% Partial (selective) decode, see docs/design-partial-decode.md. Compiles Spec
+%% against the schema once; the returned ProjId is then used with
+%% erlav_decode_projected/2. Spec is a list of <<"field">> (the field's whole
+%% value) and {<<"field">>, SubSpec} (only the listed fields of a record, of
+%% every record in an array of records, or of a nullable one of those). An
+%% unknown field, a duplicate, or a SubSpec on a field that is not a record or
+%% an array of records is an {error, Msg, Code} here, not at decode time.
+-spec erlav_projection(SchemaId :: integer(), Spec :: list()) ->
+    {ok, ProjId :: integer()} | {error, string(), integer()}.
+erlav_projection(_SchemaId, _Spec) ->
+    not_loaded(?LINE).
+
+%% Decodes only the fields selected by the projection. The result is a map with
+%% exactly the selected keys, equal to selecting them from erlav_decode_fast/2's
+%% result. Bytes after the last selected field are not validated, so a corrupt
+%% tail that a full decode rejects can still decode successfully here. Strings
+%% are always copied, even if the schema was initialised with decode_sub_binaries.
+-spec erlav_decode_projected(ProjId :: integer(), Bin :: binary()) ->
+    map() | {error, string(), integer()}.
+erlav_decode_projected(_ProjId, _Bin) ->
     not_loaded(?LINE).
 
 erlav_init(_A) ->
