@@ -110,6 +110,17 @@ CXXFLAGS += $(LTOFLAGS) -DNDEBUG $(ARCHFLAGS) -fvisibility=hidden \
 CFLAGS += -fPIC -I $(ERTS_INCLUDE_DIR) -I $(ERL_INTERFACE_INCLUDE_DIR)
 CXXFLAGS += -fPIC -I $(ERTS_INCLUDE_DIR) -I $(ERL_INTERFACE_INCLUDE_DIR)
 
+# Header dependency tracking. Most of the NIF lives in headers
+# (mkh_avro2.hh, schema_item.hh, mkh_avro_decoder.hh, include/json.hpp), but
+# the pattern rules below only name the .c/.cc/.cpp file as a prerequisite,
+# so without this an edit to a header left every .o "up to date" and the
+# build silently produced a stale .so. -MMD makes each compile also write
+# foo.d (a make rule listing the headers foo.o included, system headers
+# excluded); -MP adds a phony target per header so deleting or renaming one
+# doesn't break the build. The .d files are pulled in below.
+CFLAGS += -MMD -MP
+CXXFLAGS += -MMD -MP
+
 LDLIBS += -L $(ERL_INTERFACE_LIB_DIR) -lei
 LDFLAGS += -shared $(LTOFLAGS) $(PGOFLAGS)
 
@@ -152,5 +163,8 @@ $(C_SRC_OUTPUT): $(OBJECTS)
 %.o: %.cpp
 	$(COMPILE_CPP) $(OUTPUT_OPTION) $<
 
+DEPFILES = $(OBJECTS:.o=.d)
+-include $(DEPFILES)
+
 clean:
-	@rm -f $(C_SRC_OUTPUT) $(OBJECTS)
+	@rm -f $(C_SRC_OUTPUT) $(OBJECTS) $(DEPFILES)
