@@ -4,6 +4,7 @@
     compare_maps/2,
     compare_maps_deep/2,
     to_map/1,
+    normalize_erlavro/1,
     filter_null_values/1,
     compare_maps_extra_fields/2
 ]).
@@ -76,3 +77,18 @@ compare_maps_extra_fields(M1, M2) ->
     end, KL1),
     io:format("================================ ~n ~p ~n", [MR]),
     lists:all(fun(true) -> true; (_) -> false end, MR).
+
+%
+% Turns erlavro's decoded form into the form erlav_nif:erlav_decode_fast/2
+% returns, so the two can be compared with =:= :
+%   * a record / map is a proplist [{Key, Value}] in erlavro, a map here
+%   * an Avro null is `null` in erlavro, `undefined` here
+% Caveat: erlavro returns [] for an EMPTY map or record, which is
+% indistinguishable from an empty array, so an empty map does not normalise
+% to #{}. Keep empty maps out of terms compared through this function.
+%
+normalize_erlavro([{_, _} | _] = L) ->
+    maps:from_list([{K, normalize_erlavro(V)} || {K, V} <- L]);
+normalize_erlavro(L) when is_list(L) -> [normalize_erlavro(E) || E <- L];
+normalize_erlavro(null) -> undefined;
+normalize_erlavro(V) -> V.

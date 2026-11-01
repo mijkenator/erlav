@@ -14,6 +14,15 @@
     array_int_perf_tst/3,
     array_str_perf_tst/3,
     array_map_perf_tst/3,
+    decode_perf_tst2/3,
+    decode_perf_tst3/3,
+    decode_map_perf_tst1/3,
+    decode_map_perf_tst2/3,
+    decode_array_int_perf_tst/3,
+    decode_array_str_perf_tst/3,
+    decode_array_map_perf_tst/3,
+    all_encode_tests/3,
+    all_decode_tests/3,
     all_tests/3,
     all_tests/0,
     long_run/1,
@@ -521,24 +530,44 @@ array_map_perf_tst(NumIterations, _StrLen, IsNullable) ->
 % all perf test run
 all_tests() -> all_tests(10000, 50, null).
 
+%% Encode and decode benchmarks in one table. The CI perf check
+%% (ci/perf_check.sh) runs this, so both directions are covered by its
+%% speedup floor and output-equality check.
 all_tests(NumIterations, StrLen, IsNullable) ->
-    Funs = [erlav_perf_tst2, erlav_perf_tst3, map_perf_tst1, map_perf_tst2, array_int_perf_tst, array_str_perf_tst, array_map_perf_tst],
+    print_summary_table(
+      run_benchmarks(encode_funs(), NumIterations, StrLen, IsNullable)
+      ++ run_benchmarks(decode_funs(), NumIterations, StrLen, IsNullable)).
+
+all_encode_tests(NumIterations, StrLen, IsNullable) ->
+    print_summary_table(run_benchmarks(encode_funs(), NumIterations, StrLen, IsNullable)).
+
+all_decode_tests(NumIterations, StrLen, IsNullable) ->
+    print_summary_table(run_benchmarks(decode_funs(), NumIterations, StrLen, IsNullable)).
+
+encode_funs() ->
+    [erlav_perf_tst2, erlav_perf_tst3, map_perf_tst1, map_perf_tst2,
+     array_int_perf_tst, array_str_perf_tst, array_map_perf_tst].
+
+decode_funs() ->
+    [decode_perf_tst2, decode_perf_tst3, decode_map_perf_tst1, decode_map_perf_tst2,
+     decode_array_int_perf_tst, decode_array_str_perf_tst, decode_array_map_perf_tst].
+
+run_benchmarks(Funs, NumIterations, StrLen, IsNullable) ->
     Report = lists:map(fun(FName) ->
         {IsSame, ErlTime, CppTime2} = apply(erlav_perf, FName, [NumIterations, StrLen, IsNullable]),
         io:format("~p, equal: ~p, erltime: ~p, cpptime2: ~p ~n~n", [FName, IsSame, ErlTime,  CppTime2]),
         {IsSame, ErlTime,  CppTime2}
     end, Funs),
-    Ret = lists:zip(Funs, Report),
-    print_summary_table(Ret).
+    lists:zip(Funs, Report).
 
 print_summary_table(Ret) ->
-    Sep = "+" ++ lists:duplicate(24, $-) ++ "+"
+    Sep = "+" ++ lists:duplicate(30, $-) ++ "+"
        ++ lists:duplicate(9, $-) ++ "+"
        ++ lists:duplicate(14, $-) ++ "+"
        ++ lists:duplicate(14, $-) ++ "+"
        ++ lists:duplicate(10, $-) ++ "+",
     io:format("~n~s~n", [Sep]),
-    io:format("| ~-22s | ~-7s | ~-12s | ~-12s | ~-8s |~n",
+    io:format("| ~-28s | ~-7s | ~-12s | ~-12s | ~-8s |~n",
               ["Test", "Equal", "Erlavro us", "Erlav us", "Speedup"]),
     io:format("~s~n", [Sep]),
     lists:foreach(fun({Test, {IsSame, ErlTime, CppTime}}) ->
@@ -547,7 +576,7 @@ print_summary_table(Ret) ->
             true  -> ErlTime / CppTime
         end,
         Name = atom_to_list(Test),
-        io:format("| ~-22s | ~-7s | ~12.2f | ~12.2f | ~7.2fx |~n",
+        io:format("| ~-28s | ~-7s | ~12.2f | ~12.2f | ~7.2fx |~n",
                   [Name, atom_to_list(IsSame), ErlTime, CppTime, Speedup])
     end, Ret),
     io:format("~s~n", [Sep]).
@@ -637,6 +666,98 @@ generare_rnd(SchemaId) ->
     Pairs = [{<<"intField1">>, rand:uniform(99999999) }, {<<"floatField2">>, rand:uniform_real()}, {<<"intField3">>, rand:uniform(99999999)}, {<<"doubleField4">>, rand:uniform_real()}, {<<"intField5">>, rand:uniform(99999999)}, {<<"intField6">>, rand:uniform(99999999)}, {<<"intField7">>, rand:uniform(99999999)}],
     Term = maps:from_list(Pairs),
     erlav_nif:erlav_encode(SchemaId, Term).
+
+%% ---------------------------------------------------------------------------
+%% Decode benchmarks: erlavro's decoder vs erlav_nif:erlav_decode_fast/2.
+%%
+%% Same schemas and data shapes as the encode benchmarks above. The binaries
+%% are produced once, up front, by erlavro's encoder (not timed), so both
+%% decoders read exactly the same bytes. Each returns
+%% {IsSame, ErlavroUsPerOp, ErlavUsPerOp}, like the encode benchmarks.
+%%
+%% IsSame: the first CompareCount binaries decode to the same term in both
+%% libraries, after tst_utils:normalize_erlavro/1 turns erlavro's proplists
+%% and `null` into erlav's maps and `undefined`.
+%% ---------------------------------------------------------------------------
+
+-define(DECODE_COMPARE_COUNT, 50).
+
+decode_bench(SchemaFile, Terms) ->
+    {ok, SchemaJSON} = file:read_file(SchemaFile),
+    Encoder  = avro:make_simple_encoder(SchemaJSON, []),
+    Decoder  = avro:make_simple_decoder(SchemaJSON, []),
+    SchemaId = erlav_nif:erlav_init(list_to_binary(SchemaFile)),
+    Bins = [iolist_to_binary(Encoder(Term)) || Term <- Terms],
+    N = length(Bins),
+
+    T1 = erlang:system_time(microsecond),
+    lists:foreach(fun(Bin) -> Decoder(Bin) end, Bins),
+    ErlavroUs = erlang:system_time(microsecond) - T1,
+
+    T2 = erlang:system_time(microsecond),
+    lists:foreach(fun(Bin) -> erlav_nif:erlav_decode_fast(SchemaId, Bin) end, Bins),
+    ErlavUs = erlang:system_time(microsecond) - T2,
+
+    Sample = lists:sublist(Bins, ?DECODE_COMPARE_COUNT),
+    IsSame = lists:all(fun(Bin) ->
+        tst_utils:normalize_erlavro(Decoder(Bin)) =:= erlav_nif:erlav_decode_fast(SchemaId, Bin)
+    end, Sample),
+    io:format("Decode ~s: ~p binaries, ~p bytes each (first); same: ~p~n",
+              [SchemaFile, N, byte_size(hd(Bins)), IsSame]),
+    {IsSame, ErlavroUs / N, ErlavUs / N}.
+
+decode_perf_tst2(Num, _, _) ->
+    {ok, [Term]} = file:consult("test/opnrtb_perf.data"),
+    decode_bench("test/opnrtb_test1.avsc", [randomize(Term) || _ <- lists:seq(1, Num)]).
+
+decode_perf_tst3(Num, _, _) ->
+    {ok, [Term]} = file:consult("test/field_test.data"),
+    decode_bench("test/opnrtb.avsc", [randomize(Term) || _ <- lists:seq(1, Num)]).
+
+decode_map_perf_tst1(Num, _StrLen, IsNullable) ->
+    Schema = case IsNullable of
+        null -> "test/map_int_null.avsc";
+        _    -> "test/tschema_map.avsc"
+    end,
+    Maps = [maps:from_list([{base64:encode(crypto:strong_rand_bytes(20)), rand:uniform(9999999)}
+                            || _ <- lists:seq(1, 100)]) || _ <- lists:seq(1, Num)],
+    decode_bench(Schema, [#{<<"mapField">> => M} || M <- Maps]).
+
+decode_map_perf_tst2(Num, _StrLen, IsNullable) ->
+    Schema = case IsNullable of
+        null -> "test/map_str_null.avsc";
+        _    -> "test/tschema_map_str.avsc"
+    end,
+    Maps = [maps:from_list([{base64:encode(crypto:strong_rand_bytes(20)),
+                             base64:encode(crypto:strong_rand_bytes(100))}
+                            || _ <- lists:seq(1, 100)]) || _ <- lists:seq(1, Num)],
+    decode_bench(Schema, [#{<<"mapField">> => M} || M <- Maps]).
+
+decode_array_int_perf_tst(Num, _StrLen, IsNullable) ->
+    Schema = case IsNullable of
+        null -> "test/tschema_array_null.avsc";
+        _    -> "test/tschema_array.avsc"
+    end,
+    Arrays = [[rand:uniform(9999999) || _ <- lists:seq(1, 100)] || _ <- lists:seq(1, Num)],
+    decode_bench(Schema, [#{<<"arrayField">> => A} || A <- Arrays]).
+
+decode_array_str_perf_tst(Num, _StrLen, IsNullable) ->
+    Schema = case IsNullable of
+        null -> "test/tschema_array_null_str.avsc";
+        _    -> "test/tschema_array_str.avsc"
+    end,
+    Arrays = [[base64:encode(crypto:strong_rand_bytes(100)) || _ <- lists:seq(1, 100)]
+              || _ <- lists:seq(1, Num)],
+    decode_bench(Schema, [#{<<"arrayField">> => A} || A <- Arrays]).
+
+decode_array_map_perf_tst(Num, _StrLen, _IsNullable) ->
+    MakeMap = fun() ->
+        maps:from_list([{base64:encode(crypto:strong_rand_bytes(20)),
+                         base64:encode(crypto:strong_rand_bytes(200))}
+                        || _ <- lists:seq(1, 20)])
+    end,
+    Arrays = [[MakeMap() || _ <- lists:seq(1, 10)] || _ <- lists:seq(1, Num)],
+    decode_bench("test/array_map.avsc", [#{<<"arrayField">> => A} || A <- Arrays]).
 
 decode_tests() ->
     SchemaId = erlav_nif:erlav_init(<<"test/prims.avsc">>),
