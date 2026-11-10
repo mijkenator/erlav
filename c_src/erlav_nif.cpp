@@ -5,6 +5,7 @@
 #include <shared_mutex>
 #include <stdint.h>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "include/json.hpp"
@@ -19,7 +20,7 @@ std::map<int, mkh_avro2::SchemaItem*> erlav_encoders_map;
 // be registered twice -- once for each encoding mode -- and get distinct
 // schema ids, rather than the second erlav_init call silently returning the
 // first mode's id.
-std::map<std::pair<std::string, bool>, int> erlav_schema_map;
+std::map<std::tuple<std::string, bool, bool>, int> erlav_schema_map;
 
 // Guards both global maps above. BEAM schedulers can call erlav_init/1
 // concurrently from different threads (nothing in OTP serializes NIF calls
@@ -61,7 +62,7 @@ make_error_tuple(ErlNifEnv* env, const std::string& msg, int code) {
 // between the two arities is whether use_negative_block_count is on, so
 // both NIF entry points parse their own arguments and delegate here.
 ERL_NIF_TERM
-erlav_init_impl(ErlNifEnv* env, ERL_NIF_TERM filename_term, bool use_negative_block_count) {
+erlav_init_impl(ErlNifEnv* env, ERL_NIF_TERM filename_term, bool use_negative_block_count, bool decode_sub_binaries) {
     ErlNifBinary sbin;
     std::string filename;
     int ret;
@@ -75,7 +76,7 @@ erlav_init_impl(ErlNifEnv* env, ERL_NIF_TERM filename_term, bool use_negative_bl
         return make_error_tuple(env, "erlav_init: argument is not a binary", 100);
     }
     filename.assign((const char*) sbin.data, sbin.size);
-    auto key = std::make_pair(filename, use_negative_block_count);
+    auto key = std::make_tuple(filename, use_negative_block_count, decode_sub_binaries);
 
     std::unique_lock<std::shared_mutex> lock(erlav_schema_mutex);
 
@@ -95,7 +96,7 @@ erlav_init_impl(ErlNifEnv* env, ERL_NIF_TERM filename_term, bool use_negative_bl
     // scheduler) and can crash the whole VM, not just fail this call.
     try {
         ret = static_cast<int>(erlav_schema_map.size()) + 1;
-        auto* schema = mkh_avro2::read_schema(filename, use_negative_block_count);
+        auto* schema = mkh_avro2::read_schema(filename, use_negative_block_count, decode_sub_binaries);
         // Only register the new id once parsing has fully succeeded --
         // registering `key` first and filling in erlav_encoders_map after
         // (the previous order) meant a throw here left erlav_schema_map
@@ -122,19 +123,22 @@ erlav_init_impl(ErlNifEnv* env, ERL_NIF_TERM filename_term, bool use_negative_bl
 
 ERL_NIF_TERM
 erlav_init_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
-    return erlav_init_impl(env, argv[0], false);
+    return erlav_init_impl(env, argv[0], false, false);
 }
 
 // erlav_init/2 -- argv[1] is an options list. The only option recognized
 // today is the atom `use_negative_block_count`, which registers the schema
 // so encodearray/encodemap (mkh_avro2.hh) emit Avro's negative block-count
 // form instead of the default plain positive count (see #15 -- this is the
-// form erlavro's own encoder emits for essentially every array/map).
+// form erlavro's own encoder emits for essentially every array/map). The
+// atom `decode_sub_binaries` makes erlav_decode_fast/2 return strings/bytes
+// of 65+ bytes as sub-binaries of the input (see #74).
 ERL_NIF_TERM
 erlav_init_nif2(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
     ERL_NIF_TERM list = argv[1];
     ERL_NIF_TERM head;
     bool use_negative_block_count = false;
+    bool decode_sub_binaries = false;
 
     if (!enif_is_list(env, list)) {
         return enif_make_badarg(env);
@@ -144,10 +148,13 @@ erlav_init_nif2(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
         if (enif_get_atom(env, head, atom, sizeof(atom), ERL_NIF_LATIN1) &&
             std::strcmp(atom, "use_negative_block_count") == 0) {
             use_negative_block_count = true;
+        } else if (enif_get_atom(env, head, atom, sizeof(atom), ERL_NIF_LATIN1) &&
+                   std::strcmp(atom, "decode_sub_binaries") == 0) {
+            decode_sub_binaries = true;
         }
     }
 
-    return erlav_init_impl(env, argv[0], use_negative_block_count);
+    return erlav_init_impl(env, argv[0], use_negative_block_count, decode_sub_binaries);
 }
 
 ERL_NIF_TERM
@@ -267,8 +274,10 @@ erlav_decode_nif_fast(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
     uint8_t* p = sbin.data;
 
     mkh_avro2::reset_decode_budget();
+    const mkh_avro2::DecodeCtx ctx{sbin.data + sbin.size, sbin.data, argv[1],
+                                   schema->decode_sub_binaries};
     try {
-        ret_map = mkh_avro2::decode(env, schema, p, sbin.data + sbin.size);
+        ret_map = mkh_avro2::decode(env, schema, p, ctx);
     } catch (mkh_avro::AvroException const& ae) {
         ERL_NIF_TERM t1 = enif_make_atom(env, "error");
         ERL_NIF_TERM t2 =
