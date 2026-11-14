@@ -554,10 +554,6 @@ decode_funs() ->
 
 run_benchmarks(Funs, NumIterations, StrLen, IsNullable) ->
     Report = lists:map(fun(FName) ->
-        % Start each benchmark from a collected heap: otherwise it inherits the
-        % previous ones' garbage, and decode_perf_tst3 occasionally ran ~4x
-        % slower with a runaway test-process heap.
-        erlang:garbage_collect(),
         {IsSame, ErlTime, CppTime2} = apply(erlav_perf, FName, [NumIterations, StrLen, IsNullable]),
         io:format("~p, equal: ~p, erltime: ~p, cpptime2: ~p ~n~n", [FName, IsSame, ErlTime,  CppTime2]),
         {IsSame, ErlTime,  CppTime2}
