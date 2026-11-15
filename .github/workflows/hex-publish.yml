@@ -4,13 +4,21 @@ name: Publish to Hex
 # hex.pm. Needs the repository secret HEX_API_KEY ( `rebar3 hex user key
 # generate`, with write access to the `erlav` package ).
 #
-# Run it by hand ( Actions > Publish to Hex > Run workflow ) to build and check
-# the package without publishing: publish is off unless the run is from a tag.
+# Pull requests that touch packaging, and manual runs ( Actions > Publish to
+# Hex > Run workflow ), build and check the package without publishing: only a
+# tag run reaches the publish step, and HEX_API_KEY is only passed to that step.
 on:
   push:
     tags:
       - "[0-9]+.[0-9]+"
       - "[0-9]+.[0-9]+.[0-9]+"
+  pull_request:
+    paths:
+      - ".github/workflows/hex-publish.yml"
+      - "ci/check_hex_version.sh"
+      - "src/erlav_nif.app.src"
+      - "rebar.config"
+      - "rebar.lock"
   workflow_dispatch:
 
 permissions:
