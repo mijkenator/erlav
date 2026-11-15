@@ -554,11 +554,26 @@ decode_funs() ->
 
 run_benchmarks(Funs, NumIterations, StrLen, IsNullable) ->
     Report = lists:map(fun(FName) ->
-        {IsSame, ErlTime, CppTime2} = apply(erlav_perf, FName, [NumIterations, StrLen, IsNullable]),
+        {IsSame, ErlTime, CppTime2} = run_isolated(FName, [NumIterations, StrLen, IsNullable]),
         io:format("~p, equal: ~p, erltime: ~p, cpptime2: ~p ~n~n", [FName, IsSame, ErlTime,  CppTime2]),
         {IsSame, ErlTime,  CppTime2}
     end, Funs),
     lists:zip(Funs, Report).
+
+%% Each benchmark runs in its own process, so it starts from a fresh heap
+%% instead of inheriting the previous benchmarks' garbage (see #79: in a
+%% shared process some benchmarks ran 3-4x slower, GC-bound).
+run_isolated(FName, Args) ->
+    Parent = self(),
+    {Pid, Ref} = spawn_opt(fun() -> Parent ! {self(), apply(erlav_perf, FName, Args)} end,
+                           [monitor]),
+    receive
+        {Pid, Result} ->
+            erlang:demonitor(Ref, [flush]),
+            Result;
+        {'DOWN', Ref, process, Pid, Reason} ->
+            erlang:error({benchmark_crashed, FName, Reason})
+    end.
 
 print_summary_table(Ret) ->
     Sep = "+" ++ lists:duplicate(30, $-) ++ "+"
