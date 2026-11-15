@@ -81,4 +81,8 @@ jobs:
         if: github.ref_type == 'tag'
         env:
           HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
+          # The first tag run died with "Uncaught error in rebar_core" and no
+          # reason; this prints the stack trace. rebar3.crashdump is not
+          # uploaded as an artifact, it may contain the key.
+          DIAGNOSTIC: "1"
         run: rebar3 hex publish package --yes
