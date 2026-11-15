@@ -1,0 +1,76 @@
+name: Publish to Hex
+
+# Pushing a version tag ( 1.26 or 1.26.0 ) tests the code and publishes it to
+# hex.pm. Needs the repository secret HEX_API_KEY ( `rebar3 hex user key
+# generate`, with write access to the `erlav` package ).
+#
+# Run it by hand ( Actions > Publish to Hex > Run workflow ) to build and check
+# the package without publishing: publish is off unless the run is from a tag.
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+"
+      - "[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "26"
+          rebar3-version: "3.22"
+
+      # The tag has to match src/erlav_nif.app.src, otherwise the Hex version
+      # would differ from the tag. Skipped for manual runs, which have no tag.
+      - name: Check tag matches app version
+        if: github.ref_type == 'tag'
+        run: ci/check_hex_version.sh "${GITHUB_REF_NAME}"
+
+      # Same snappyer/GCC 13 workaround as ci.yml.
+      - name: Compile
+        env:
+          CXXFLAGS: -O3 -finline-functions -funroll-loops -Wall -include cstdint
+        run: rebar3 compile
+
+      - name: EUnit
+        run: rebar3 eunit
+
+      - name: Build package
+        run: rebar3 hex build -o hex-out -u
+
+      # Fails if anything that must not ship ( build output, test data ) ended
+      # up in the tarball, or if a source file the NIF needs is missing.
+      - name: Check package contents
+        run: |
+          pkg=$(ls -d hex-out/tmp/erlav-*)
+          echo "Package: $pkg"
+          find "$pkg" -type f | sort
+          # Not `! find | grep`: bash -e ignores a negated pipeline.
+          bad=$(find "$pkg" -type f \( -name '*.o' -o -name '*.so' -o -name '*.d' -o -path '*/pgo-data/*' -o -path '*/test/*' \))
+          if [ -n "$bad" ]; then
+            echo "Files that must not be in the package:" >&2
+            echo "$bad" >&2
+            exit 1
+          fi
+          test -f "$pkg/c_src/Makefile"
+          test -f "$pkg/c_src/erlav_nif.cpp"
+          test -f "$pkg/LICENSE"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hex-package
+          path: hex-out/
+
+      # `publish package` skips docs ( there is no doc provider configured ).
+      - name: Publish to Hex
+        if: github.ref_type == 'tag'
+        env:
+          HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
+        run: rebar3 hex publish package --yes
