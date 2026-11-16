@@ -54,8 +54,18 @@ jobs:
           fi
           rebar3 compile
 
+      # erlavro, and with it snappyer, is a test-profile dependency, so on a
+      # cache miss snappyer is first built here and needs the same GCC 13
+      # workaround as Compile (and CXX_STD, so the NIF is not rebuilt).
       - name: EUnit
-        run: rebar3 eunit
+        run: |
+          if [ "${{ matrix.cxx_std }}" != "auto" ]; then
+            export CXX_STD="${{ matrix.cxx_std }}"
+          fi
+          if [ -n "${{ matrix.cxxflags }}" ]; then
+            export CXXFLAGS="${{ matrix.cxxflags }}"
+          fi
+          rebar3 eunit
 
   perf:
     name: perf (speedup vs erlavro)
