@@ -106,10 +106,13 @@ different options gets a different `SchemaId`. `decode_sub_binaries` affects
 Performance
 -----
 
-run erlang shell
+The benchmarks compare against `erlavro`, which is a test-only dependency (the
+published package has no dependencies), so build with the test profile and run
+erlang shell
 
 ```bash
-erl -pa _build/default/lib/*/ebin
+rebar3 as test compile
+erl -pa _build/test/lib/*/ebin
 ```
 
 run performance test ( it will generate report at the end )

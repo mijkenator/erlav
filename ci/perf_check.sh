@@ -19,6 +19,11 @@ ITER="${1:-5000}"
 MIN_SPEEDUP="${2:-2.0}"
 ATTEMPTS="${3:-3}"
 
+if ! ls _build/test/lib/*/ebin/erlav_perf.beam >/dev/null 2>&1; then
+    echo "perf_check: _build/test has no erlav_perf; run \`rebar3 as test compile\` first" >&2
+    exit 2
+fi
+
 : > perf.log
 best=$(mktemp)
 trap 'rm -f "$best" "$best.new"' EXIT
@@ -61,7 +66,7 @@ while [ "$attempt" -lt "$ATTEMPTS" ]; do
     attempt=$((attempt + 1))
     echo "=== perf attempt ${attempt}/${ATTEMPTS} ===" | tee -a perf.log
     attempt_log=$(mktemp)
-    erl -noshell -pa _build/*/lib/*/ebin \
+    erl -noshell -pa _build/test/lib/*/ebin \
         -eval "erlav_perf:all_tests(${ITER}, 50, null), halt()." | tee "$attempt_log" | tee -a perf.log >/dev/null
     rows=$(extract_rows "$attempt_log")
     rm -f "$attempt_log"

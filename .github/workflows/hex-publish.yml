@@ -47,7 +47,11 @@ jobs:
           CXXFLAGS: -O3 -finline-functions -funroll-loops -Wall -include cstdint
         run: rebar3 compile
 
+      # erlavro, and with it snappyer, is a test-profile dependency, so snappyer
+      # is first built here and needs the same GCC 13 workaround as above.
       - name: EUnit
+        env:
+          CXXFLAGS: -O3 -finline-functions -funroll-loops -Wall -include cstdint
         run: rebar3 eunit
 
       - name: Build package
