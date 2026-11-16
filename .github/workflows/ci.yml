@@ -67,11 +67,12 @@ jobs:
           otp-version: "26"
           rebar3-version: "3.22"
 
-      # Same snappyer/GCC 13 workaround as the test job.
+      # Same snappyer/GCC 13 workaround as the test job. The test profile is
+      # needed: erlav_perf and erlavro (its comparison baseline) live there.
       - name: Compile
         env:
           CXXFLAGS: -O3 -finline-functions -funroll-loops -Wall -include cstdint
-        run: rebar3 compile
+        run: rebar3 as test compile
 
       # Each benchmark times erlav and erlavro in the same run, so the
       # speedup ratio is far less sensitive to shared-runner speed than
