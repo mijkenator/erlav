@@ -39,7 +39,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: _build
-          key: rebar-${{ matrix.os }}-${{ hashFiles('rebar.lock') }}
+          # rebar.lock is empty (test-profile deps are not locked), so the
+          # dependency versions have to come from rebar.config.
+          key: rebar-${{ matrix.os }}-${{ hashFiles('rebar.config', 'rebar.lock') }}
           restore-keys: rebar-${{ matrix.os }}-
 
       - name: Compile
