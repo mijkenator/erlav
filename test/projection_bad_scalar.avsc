@@ -1,0 +1,7 @@
+{"type": "record", "name": "BadScalar", "namespace": "erlav.test",
+  "fields": [
+      {"name": "a", "type": {"type": "array", "items": "array"}},
+      {"name": "m", "type": {"type": "map", "values": "array"}},
+      {"name": "z", "type": "long"}
+  ]
+}
