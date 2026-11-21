@@ -1,6 +1,6 @@
 {application, erlav_nif,
  [{description, "Fast Avro binary encoding/decoding for Erlang, implemented as a C++ NIF"},
-  {vsn, "1.26.0"},
+  {vsn, "1.27.0"},
   {registered, []},
   {applications,
    [kernel,
