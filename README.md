@@ -127,28 +127,29 @@ encoder with `erlav_encode/2`; `decode_*` rows compare erlavro's decoder with
 (`ci/perf_check.sh`) runs the whole table and fails if any speedup drops below
 a floor or any `Equal` is false.
 
-Numbers below are one run on one machine ( Linux, GCC 14, 5000 iterations ) and
-vary a lot between runs and machines; the ratio is what is meaningful.
+Numbers below are one run on one machine ( Linux x86_64 container, GCC 12,
+OTP 26, 5000 iterations ) and vary a lot between runs and machines; the ratio
+is what is meaningful.
 
 ```bash
 
 +------------------------------+---------+--------------+--------------+----------+
 | Test                         | Equal   | Erlavro us   | Erlav us     | Speedup  |
 +------------------------------+---------+--------------+--------------+----------+
-| erlav_perf_tst2              | true    |      1051.28 |       190.85 |    5.51x |
-| erlav_perf_tst3              | true    |      1700.04 |       114.33 |   14.87x |
-| map_perf_tst1                | true    |       174.90 |        53.39 |    3.28x |
-| map_perf_tst2                | true    |       168.76 |        43.71 |    3.86x |
-| array_int_perf_tst           | true    |        24.92 |         2.74 |    9.10x |
-| array_str_perf_tst           | true    |       175.31 |        28.86 |    6.07x |
-| array_map_perf_tst           | true    |       451.78 |        94.88 |    4.76x |
-| decode_perf_tst2             | true    |       555.57 |        93.43 |    5.95x |
-| decode_perf_tst3             | true    |      1127.38 |       169.36 |    6.66x |
-| decode_map_perf_tst1         | true    |        60.08 |        17.01 |    3.53x |
-| decode_map_perf_tst2         | true    |        81.91 |        32.46 |    2.52x |
-| decode_array_int_perf_tst    | true    |        26.73 |         2.22 |   12.03x |
-| decode_array_str_perf_tst    | true    |        42.11 |        23.24 |    1.81x |
-| decode_array_map_perf_tst    | true    |       171.52 |        70.62 |    2.43x |
+| erlav_perf_tst2              | true    |       997.22 |        70.96 |   14.05x |
+| erlav_perf_tst3              | true    |      1697.20 |       131.53 |   12.90x |
+| map_perf_tst1                | true    |       166.72 |        20.21 |    8.25x |
+| map_perf_tst2                | true    |       227.09 |        48.91 |    4.64x |
+| array_int_perf_tst           | true    |        25.94 |         2.78 |    9.32x |
+| array_str_perf_tst           | true    |       188.75 |        34.43 |    5.48x |
+| array_map_perf_tst           | true    |       428.74 |       101.94 |    4.21x |
+| decode_perf_tst2             | true    |       682.11 |        84.32 |    8.09x |
+| decode_perf_tst3             | true    |      1430.03 |       155.26 |    9.21x |
+| decode_map_perf_tst1         | true    |        82.87 |        16.49 |    5.02x |
+| decode_map_perf_tst2         | true    |        97.85 |        34.85 |    2.81x |
+| decode_array_int_perf_tst    | true    |        43.49 |         2.62 |   16.58x |
+| decode_array_str_perf_tst    | true    |        61.37 |        19.25 |    3.19x |
+| decode_array_map_perf_tst    | true    |       213.74 |        63.51 |    3.37x |
 +------------------------------+---------+--------------+--------------+----------+
 
 ```
