@@ -227,19 +227,20 @@ Avro records carry no field offsets, so a projection cannot jump to a field. It
 *stops* after the last one it wants. Arrays and maps written with negative block
 counts (`use_negative_block_count`, and what `erlavro` emits) are skipped in one
 step. Measured on the 900-byte OpenRTB fixture (full `erlav_decode_fast/2`:
-~41 us):
+~36 us):
 
 | Selection | Projected decode | Speedup |
 |---|---|---|
-| 1 early top-level field | ~1.3 us | ~30x |
-| `bid_request.id` | ~1.4-1.7 us | ~25-30x |
-| `event` + `bid_request.imp[].banner.w` + `bid_request.user.id` | ~3.0-3.6 us | ~11-14x |
-| 3 spread top-level fields, the last one near the end | 3.5-5.3 us | 8-12x |
-| 1 field near the end | 3.2-5.1 us | 8-13x |
-| all 13 top-level fields | ~41-42 us | none (same work as a full decode) |
+| 1 early top-level field (`event`) | 0.12-0.14 us | ~260-310x |
+| `bid_request.id` | 0.21-0.22 us | ~165-180x |
+| `event` + `bid_request.imp[].banner.w` + `bid_request.user.id` | 1.6-1.7 us | ~21-24x |
+| 3 spread top-level fields, the last one near the end (`event`, `seller_request_cpm`, `maxtime`) | 1.9-3.4 us | ~11-20x |
+| 1 field near the end (`maxtime`) | 1.7-3.2 us | ~11-22x |
+| all 13 top-level fields | ~34-35 us | none (same work as a full decode) |
 
 (Ranges cover two runs, with and without negative block counts; the
-negative-count encoding skips large arrays/maps faster.) The savings come from
+negative-count encoding skips large arrays/maps faster, so it gives the low end
+of the times and the high end of the speedups.) The savings come from
 not building terms, so they are biggest on wide records with large unwanted
 parts and smallest when you select most of the record or skip only small
 scalars. Measure on your own schema.
@@ -259,45 +260,49 @@ Messages with **negative block counts** (what `erlavro` writes, or `erlav` with
 
 | What you need | Spec | 900 B message | 25 imps (2.8 KB) |
 |---|---|---|---|
-| Full decode | (all fields) | ~43 us | ~175 us |
-| Routing keys | `[<<"event">>, {<<"bid_request">>, [<<"id">>]}]` | ~1.6 us (**~27x**) | ~1.6 us (**~110x**) |
-| Event + device | `[<<"event">>, {<<"bid_request">>, [{<<"device">>, [<<"ip">>, <<"ua">>]}]}]` | ~2.0 us (**~21x**) | ~2.1 us (**~85x**) |
-| Three ids | `[{<<"bid_request">>, [{<<"user">>, [<<"id">>]}, {<<"app">>, [<<"id">>]}, {<<"site">>, [<<"id">>]}]}]` | ~2.9 us (**~15x**) | 2.9-3.4 us (**~50-60x**) |
-| A field near the end | `[<<"maxtime">>]` | ~3.1-3.7 us (**~11-14x**) | ~3.6 us (**~49x**) |
-| Fields of every `imp` | `[{<<"bid_request">>, [{<<"imp">>, [<<"id">>, {<<"banner">>, [<<"w">>, <<"h">>]}]}]}]` | ~2.2 us (**~19x**) | ~15-16 us (**~11x**) |
+| Full decode | (all fields) | ~36 us | ~182-189 us |
+| Routing keys | `[<<"event">>, {<<"bid_request">>, [<<"id">>]}]` | 0.25-0.26 us (**~138-150x**) | 0.25-0.26 us (**~700-750x**) |
+| Event + device | `[<<"event">>, {<<"bid_request">>, [{<<"device">>, [<<"ip">>, <<"ua">>]}]}]` | 0.59-0.60 us (**~60-63x**) | 0.56-0.61 us (**~300-340x**) |
+| Three ids | `[{<<"bid_request">>, [{<<"user">>, [<<"id">>]}, {<<"app">>, [<<"id">>]}, {<<"site">>, [<<"id">>]}]}]` | 1.3-1.4 us (**~26-28x**) | ~1.3 us (**~140x**) |
+| A field near the end | `[<<"maxtime">>]` | 1.7-2.0 us (**~18-22x**) | 1.7-1.8 us (**~100-108x**) |
+| Fields of every `imp` | `[{<<"bid_request">>, [{<<"imp">>, [<<"id">>, {<<"banner">>, [<<"w">>, <<"h">>]}]}]}]` | ~0.77 us (**~47-49x**) | 12.2-13.0 us (**~14-15x**) |
 
 Messages with **positive block counts** (`erlav`'s default output):
 
 | What you need | 900 B message | 25 imps (2.8 KB) |
 |---|---|---|
-| Full decode | ~44 us | ~179 us |
-| Routing keys | ~1.6 us (**~27x**) | ~1.5 us (**~115x**) |
-| Event + device | 2.6-3.0 us (**~15-17x**) | 9.6-10.3 us (**~17-19x**) |
-| Three ids | 3.8-4.1 us (**~11x**) | 11.7-12.4 us (**~14-15x**) |
-| A field near the end | ~5.3 us (**~8.5x**) | 12-14.6 us (**~12-15x**) |
-| Fields of every `imp` | ~2.3 us (**~19x**) | 16-17 us (**~10-11x**) |
+| Full decode | ~36-37 us | ~174-185 us |
+| Routing keys | 0.26-0.31 us (**~116-142x**) | 0.26-0.27 us (**~645-710x**) |
+| Event + device | 0.96-1.0 us (**~36-38x**) | 7.9-8.1 us (**~22-23x**) |
+| Three ids | ~2.0 us (**~18x**) | 9.1-9.5 us (**~18-20x**) |
+| A field near the end | ~3.2 us (**~11x**) | ~10.1-10.2 us (**~17-18x**) |
+| Fields of every `imp` | 0.79-0.82 us (**~44-47x**) | 12.9-13.0 us (**~13-14x**) |
 
 How to read this:
 
 - **The win grows with the message, not with the schema.** A selection that
   stops early costs the same whether the message is 900 bytes or 2.8 KB
-  ("Routing keys": ~1.6 us in both), while the full decode gets 4x slower. That
-  is where the ~100x comes from; it is a ratio against a long full decode, not a
-  claim that anything got 100x cheaper than before.
+  ("Routing keys": ~0.26 us in both), while the full decode gets about 5x
+  slower. That is where the hundreds-of-x ratios come from; they are ratios
+  against a long full decode, not a claim that anything got that much cheaper
+  than before.
 - **Block counts matter for big arrays and maps.** With negative counts an
   unwanted array is skipped in one step, so "A field near the end" stays at
-  ~3.6 us for 25 imps. With positive counts the skipper has to walk every item
-  of the unwanted arrays (still without building terms), so it grows to
-  12-15 us. If you control the writer, `use_negative_block_count` makes
+  ~1.7-1.8 us for 25 imps. With positive counts the skipper has to walk every
+  item of the unwanted arrays (still without building terms), so it grows to
+  ~10 us. If you control the writer, `use_negative_block_count` makes
   selective decoding of large messages several times faster.
 - **Selecting inside a big array is the slowest case.** "Fields of every `imp`"
   has to visit every element, so it scales with the number of `imp`s
-  (~11x faster than a full decode, not ~100x).
+  (~13-15x faster than a full decode on 25 imps, not hundreds of x).
 - **These are best cases for "a couple of fields".** They time `erlav_decode_fast/2`
-  against `erlav_decode_projected/2` in a tight loop on one machine (Apple
-  clang, OTP 26), results already in memory, no message parsing or I/O. If you
-  select most of a record the gain shrinks to nothing (all 13 top-level fields:
-  ~1x). Measure your own schema and messages before relying on the numbers.
+  against `erlav_decode_projected/2` in a tight loop on one machine, results
+  already in memory, no message parsing or I/O. The figures above come from two
+  runs in separate VMs on an Intel Core i9-9980HK (macOS, Apple clang 15,
+  OTP 26); every projection was first checked to equal the same fields picked
+  out of the full decode. If you select most of a record the gain shrinks to
+  nothing (all 13 top-level fields: ~1x). Measure your own schema and messages
+  before relying on the numbers.
 
 **Differences from a full decode to be aware of:**
 
