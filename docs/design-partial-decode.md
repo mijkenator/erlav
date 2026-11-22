@@ -1,9 +1,10 @@
 # Design proposal: partial (selective) decode
 
-Status: **proposal, no implementation**. Review of the current decoder plus a
-design for decoding only caller-selected fields. Updated after #54 (one-call
-map build) and #67 (bounds-checked decoder) landed; sections 1, 2, 5 and 9
-reflect that.
+Status: **implemented** in #76 (`erlav_projection/2`, `erlav_decode_projected/2`).
+This document is the design as proposed; where the implementation differs, the
+code and the README are authoritative. Review of the decoder plus a design for
+decoding only caller-selected fields. Updated after #54 (one-call map build)
+and #67 (bounds-checked decoder) landed; sections 1, 2, 5 and 9 reflect that.
 
 ## 1. Motivation
 
