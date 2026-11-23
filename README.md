@@ -1,6 +1,10 @@
 erlav
 =====
 
+[![CI](https://github.com/mijkenator/erlav/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/mijkenator/erlav/actions/workflows/ci.yml)
+[![Hex.pm](https://img.shields.io/hexpm/v/erlav.svg)](https://hex.pm/packages/erlav)
+[![Hex.pm downloads](https://img.shields.io/hexpm/dt/erlav.svg)](https://hex.pm/packages/erlav)
+
 High performance avro encoding/decoding NIF-based library
 
 Build
