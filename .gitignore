@@ -22,3 +22,9 @@ rebar3.crashdump
 c_src/pgo-data/
 *.profraw
 *.profdata
+*.gcda
+*.gcno
+coverage-summary.json
+coverage.xml
+coverage.txt
+coverage.log
