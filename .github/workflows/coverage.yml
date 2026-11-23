@@ -1,0 +1,78 @@
+name: Coverage
+
+# Prototype: C++ line coverage of the NIF, from the eunit suite run against a
+# GCC --coverage build (ci/cpp_coverage.sh). It does not gate anything and is
+# separate from ci.yml on purpose. `rebar3 eunit --cover` only sees the Erlang
+# wrapper, so it is not used here.
+on:
+  pull_request:
+    paths:
+      - "c_src/**"
+      - "src/**"
+      - "test/**"
+      - "rebar.config"
+      - "ci/cpp_coverage.sh"
+      - ".github/workflows/coverage.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cpp-coverage:
+    name: C++ coverage
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "26"
+          rebar3-version: "3.22"
+
+      - name: Install gcovr
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcovr
+          gcovr --version | head -1
+          gcc --version | head -1
+
+      # CXXFLAGS here is for the test-profile dependencies that rebar3 eunit
+      # builds (snappyer needs <cstdint> on GCC 13). ci/cpp_coverage.sh sets its
+      # own flags, for the NIF only, on its make call.
+      - name: C++ coverage
+        env:
+          CXXFLAGS: -O3 -include cstdint
+        run: ci/cpp_coverage.sh | tee coverage.log
+
+      - name: Summary
+        if: always()
+        run: |
+          if [ -f coverage-summary.json ]; then
+            {
+              echo "### C++ coverage (NIF, from eunit)"
+              echo
+              python3 - <<'PY'
+          import json
+          d = json.load(open("coverage-summary.json"))
+          print("| | Covered | Total | % |")
+          print("|---|---|---|---|")
+          for name, key in (("Lines", "line"), ("Functions", "function"), ("Branches", "branch")):
+              print("| %s | %d | %d | %.1f |" % (name, d[key + "_covered"], d[key + "_total"], d[key + "_percent"]))
+          PY
+              echo
+              echo '```'
+              cat coverage.txt
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cpp-coverage
+          path: |
+            coverage.log
+            coverage.txt
+            coverage-summary.json
+            coverage.xml
